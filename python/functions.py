@@ -200,15 +200,7 @@ class readThread(threading.Thread):
             if self._sock in readable:
                 recvbuf = self._sock.recv(max_buf)
                 fileoutput['fp'].write(recvbuf)
-            else:
                 recvbuf = []
-                
-        while(not len(recvbuf) == 0):
-            rdlist = [self._sock]
-            readable,_,_ = select.select(rdlist, [], [], 0.01)
-            if self._sock in readable:
-                recvbuf = self._sock.recv(max_buf)
-                fileoutput['fp'].write(recvbuf)
             else:
                 recvbuf = []
         

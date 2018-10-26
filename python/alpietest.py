@@ -95,15 +95,53 @@ def DrawPic(filepath):
     plt.title(filepath[ind+1:-4])
     plt.show()
 
-def main():
+import argparse
+
+import argparse
+import os
+import sys
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="ALPIDE test, SiTCP command")
+    parser.add_argument("-v", "--verbosity", action="count", default=0,
+                        help="increase output verbosity")
+    pulse_g = parser.add_mutually_exclusive_group(required=True)
+    pulse_g.add_argument("-d", "--DigitalPulse", action="store_true",
+                         help="DigitalPulse")
+    pulse_g.add_argument("-a", "--AnaloguePulse", type=int, default=-1,
+                         metavar = "N",
+                         help="AnaloguePulse")
+    parser.add_argument("-e", "--ExternalTrigger", action="store_true",
+                        help="ExternalTrigger")
+    parser.add_argument("-s", "--sleep", type=int, default=1,
+                        help="sleep seeconds")
+    parser.add_argument("-i", "--ipaddress", type=str, default="192.168.10.16",
+                        metavar = "ip",
+                        help="IP address of SiTCP device")
+    parser.add_argument("-t", "--tcp", type=int, default=24,
+                        help="tcp port, data channel, sock")
+    parser.add_argument("-u", "--udp", type=int, default=4660,
+                        help="udp port, control channel, rbcp")
+    parser.add_argument("--datafolder", type=str,
+                        default=os.path.dirname(__file__) + "\\outputdata\\",
+                        metavar = "file_path",)
+    
+    if argv is None:
+        argv = sys.argv[1:]
+    args = parser.parse_args(argv)
+
     siTcp = functions.Functions()
     siTcp.InitALPIDE()
-    filepath = siTcp.DigitalPulse()
+
+    if args.DigitalPulse is True:
+        filepath = siTcp.DigitalPulse()
+    if args.AnaloguePulse > 0:
+        # filepath = siTcp.AnaloguePulse(30)
+        filepath = siTcp.AnaloguePulse(args.AnaloguePulse)        
     # siTcp.ReadReg(0x1)
-    time.sleep(1)
-    # filepath = siTcp.DigitalPulse()
-    filepath = siTcp.ExternalTrigger()
-    # filepath = siTcp.AnaloguePulse(30)
+    time.sleep(args.sleep)
+    if args.ExternalTrigger is True:
+        filepath = siTcp.ExternalTrigger()
+
     DrawPic(filepath)
     siTcp.CloseSock()
 
