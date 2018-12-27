@@ -34,7 +34,7 @@ private:
   std::string m_buf;
   
   std::string  m_ip;
-  ushort       m_tcp;
+  uint16_t     m_tcp;
   sockaddr_in  m_tcpaddr;
   int          m_tcpfd;
 
@@ -50,6 +50,8 @@ namespace{
 
 AltelReader::AltelReader(const JadeOption& opt)
   :JadeReader(opt), m_opt(opt){
+  m_ip = "192.168.10.16";
+  m_tcp = 24;
 }
 
 void AltelReader::Open(){
@@ -80,7 +82,7 @@ void AltelReader::Close(){
 }
 
 JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout){
-  size_t size_buf_min = 5;
+  size_t size_buf_min = 7;
   size_t size_buf = size_buf_min;
   std::string buf(size_buf, 0);
   size_t size_filled = 0;
@@ -104,7 +106,7 @@ JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout){
     timeval tv_timeout;
     FD_ZERO(&fds);
     FD_SET(m_tcpfd, &fds);
-    FD_SET(0, &fds);  
+    FD_SET(0, &fds);
     tv_timeout.tv_sec = 0;
     tv_timeout.tv_usec = 10;
     if( !select(m_tcpfd+1, &fds, NULL, NULL, &tv_timeout) || !FD_ISSET(m_tcpfd, &fds) ){
@@ -129,8 +131,16 @@ JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout){
       throw;
     }
     
+    std::cout<<">>>>>>>>>recv<<<<<<"<<std::endl;
+    std::cout<<std::hex;
+    for(int i = 0; i< read_r; i++){
+      std::cout<< static_cast<unsigned int>(static_cast<unsigned char>(buf[size_filled+i]))<<" ";
+    }
+    std::cout<<">>>>>>>>>recv_end<<<<<<"<<std::endl;
+
     size_filled += read_r;
     can_time_out = false;
+    
 
     if(size_buf == size_buf_min  && size_filled >= size_buf_min){
       uint8_t header_byte =  buf.front();

@@ -45,7 +45,8 @@ struct rbcp_header{
 #include <algorithm>
 #include <sstream>
 
-
+using namespace std::chrono_literals;
+ 
 //+++++++++++++++++++++++++++++++++++++++++
 //AltelRegCtrl.hh
 
@@ -64,7 +65,8 @@ public:
   void SetAlpideChipID(uint8_t id);
   void SetAlpideGapLength(uint8_t len);
   void InitAlpide();
-  
+  void SetEventNumber(uint32_t num);  
+  void DigitalPulse();
 private:
   void WriteByte(uint64_t addr, uint8_t val);
   uint8_t ReadByte(uint64_t addr);
@@ -99,6 +101,19 @@ void AltelRegCtrl::Close(){
   
 }
 
+
+void AltelRegCtrl::DigitalPulse(){
+  WriteAlpideRegister(0x487,0xFFFF);
+  WriteAlpideRegister(0x500,0x3);
+  WriteAlpideRegister(0x4,0x0);
+  WriteAlpideRegister(0x5,0x28);                
+  WriteAlpideRegister(0x7,0x32);
+  WriteAlpideRegister(0x8,0x3E8);
+  WriteAlpideRegister(0x1,0x3D);
+  WriteByte(0x20000000, 0);
+}
+
+
 void AltelRegCtrl::WriteByte(uint64_t addr, uint8_t val){
   m_id++;
   rbcp_header sndHeader;
@@ -108,7 +123,7 @@ void AltelRegCtrl::WriteByte(uint64_t addr, uint8_t val){
   sndHeader.length=1;
   sndHeader.address=htonl(addr); //TODO: check
   char rcvdBuf[1024];
-  rbcp_com("192.168.0.16", 4660, &sndHeader, (char*) &val, rcvdBuf, RBCP_DISP_MODE_DEBUG);
+  rbcp_com("192.168.10.16", 4660, &sndHeader, (char*) &val, rcvdBuf, RBCP_DISP_MODE_DEBUG);
   //TODO: if failure
 }
 
@@ -121,7 +136,7 @@ uint8_t AltelRegCtrl::ReadByte(uint64_t addr){
   sndHeader.length=1;
   sndHeader.address=htonl(addr);
   char rcvdBuf[1024];
-  if (rbcp_com("192.168.0.16", 4660, &sndHeader, NULL, rcvdBuf, RBCP_DISP_MODE_DEBUG)!=1){
+  if (rbcp_com("192.168.10.16", 4660, &sndHeader, NULL, rcvdBuf, RBCP_DISP_MODE_DEBUG)!=1){
     std::cout<< "here error"<<std::endl;
   }
   return rcvdBuf[0];
@@ -153,6 +168,11 @@ void AltelRegCtrl::SetAlpideGapLength(uint8_t len){
   WriteByte(addr_base+len, 0);
 }
 
+void AltelRegCtrl::SetEventNumber(uint32_t num){
+  uint64_t addr_base = 0x90000000;
+  WriteByte(addr_base+num, 0);
+}
+
 void AltelRegCtrl::InitAlpide(){
   SetAlpideChipID(0x10);
   BroadcastAlpide(0xD2);
@@ -180,11 +200,31 @@ void AltelRegCtrl::InitAlpide(){
   WriteAlpideRegister(0x1,0x3C);
   BroadcastAlpide(0x63);
 
+  //PLL
   WriteAlpideRegister(0x14,0x008d);
   WriteAlpideRegister(0x15,0x0088);
   WriteAlpideRegister(0x14,0x0085);
   WriteAlpideRegister(0x14,0x0185);
   WriteAlpideRegister(0x14,0x0085);
+
+  //
+
+  DigitalPulse();
+  std::this_thread::sleep_for(2s);
+
+  //continuous mode
+  WriteAlpideRegister(0x487,0xFFFF);
+  WriteAlpideRegister(0x500,0x0);
+  WriteAlpideRegister(0x487,0xFFFF);
+  WriteAlpideRegister(0x500,0x1);
+  WriteAlpideRegister(0x4,0x10);
+  WriteAlpideRegister(0x5,4);   //strobe duration / 25 ns     
+  WriteAlpideRegister(0x1,0x3D);
+  BroadcastAlpide(0x63);
+
+  SetAlpideGapLength(185);
+  SetEventNumber(0);
+
 }
 
 
