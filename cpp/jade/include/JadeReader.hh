@@ -47,8 +47,6 @@ class DLLEXPORT JadeReader: public JadePost{
   virtual void Open(){};
   //close data device
   virtual void Close(){};
-  //read maximum 'nframe' of data with 'timeout'
-  virtual std::vector<JadeDataFrameSP> Read(size_t nframe, const std::chrono::milliseconds &timeout);
   //read a data frame with 'timeout'
   virtual JadeDataFrameSP Read(const std::chrono::milliseconds &timeout);
 };

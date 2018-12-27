@@ -41,7 +41,9 @@ class DLLEXPORT JadeRegCtrl: public JadePost{
     return SendCommand(cmd, "");
   }
   //Read configuration  
-  virtual uint8_t ReadByte(uint16_t addr){return 0;}; 
+  virtual uint8_t ReadByte(uint64_t addr){return 0;};
+  virtual void WriteByte(uint64_t addr, uint8_t val) {};
+
 };
 
 using JadeRegCtrlSP = std::shared_ptr<JadeRegCtrl>;
