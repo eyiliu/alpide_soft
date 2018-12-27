@@ -35,7 +35,7 @@ def DrawPic(filepath):
         if(int.from_bytes(b[n:n+2], byteorder='big') == 21923):
             count = count+1
             j = 3
-            while 1:
+            while j<(len(b)-n-2)/2:
                 if(int.from_bytes(b[n+j*2:n+j*2+2], byteorder='big') == 60304):
                     break
                 else:
@@ -93,56 +93,28 @@ def DrawPic(filepath):
     plt.colorbar()
     ind = filepath.rindex('\\')
     plt.title(filepath[ind+1:-4])
-    plt.show()
+    print('hit map shown in figure')
+    # plt.show()
 
-import argparse
-
-import argparse
-import os
-import sys
-def main(argv=None):
-    parser = argparse.ArgumentParser(description="ALPIDE test, SiTCP command")
-    parser.add_argument("-v", "--verbosity", action="count", default=0,
-                        help="increase output verbosity")
-    pulse_g = parser.add_mutually_exclusive_group(required=True)
-    pulse_g.add_argument("-d", "--DigitalPulse", action="store_true",
-                         help="DigitalPulse")
-    pulse_g.add_argument("-a", "--AnaloguePulse", type=int, default=-1,
-                         metavar = "N",
-                         help="AnaloguePulse")
-    parser.add_argument("-e", "--ExternalTrigger", action="store_true",
-                        help="ExternalTrigger")
-    parser.add_argument("-s", "--sleep", type=int, default=1,
-                        help="sleep seeconds")
-    parser.add_argument("-i", "--ipaddress", type=str, default="192.168.10.16",
-                        metavar = "ip",
-                        help="IP address of SiTCP device")
-    parser.add_argument("-t", "--tcp", type=int, default=24,
-                        help="tcp port, data channel, sock")
-    parser.add_argument("-u", "--udp", type=int, default=4660,
-                        help="udp port, control channel, rbcp")
-    parser.add_argument("--datafolder", type=str,
-                        default=os.path.dirname(__file__) + "\\outputdata\\",
-                        metavar = "file_path",)
-    
-    if argv is None:
-        argv = sys.argv[1:]
-    args = parser.parse_args(argv)
-
+def main():
     siTcp = functions.Functions()
+    # siTcp.ResetDAQ()
+    # print('DAQ Reseted! Wait 5 Seconds until ReConnection')
+    # time.sleep(5)
+    # siTcp = functions.Functions()
     siTcp.InitALPIDE()
-
-    if args.DigitalPulse is True:
-        filepath = siTcp.DigitalPulse()
-    if args.AnaloguePulse > 0:
-        # filepath = siTcp.AnaloguePulse(30)
-        filepath = siTcp.AnaloguePulse(args.AnaloguePulse)        
-    # siTcp.ReadReg(0x1)
-    time.sleep(args.sleep)
-    if args.ExternalTrigger is True:
-        filepath = siTcp.ExternalTrigger()
-
-    DrawPic(filepath)
+    siTcp.alpideregtest()
+    siTcp.ReadReg(0x1)
+    siTcp.ReadReg(0x4)
+    siTcp.ReadReg(0x5)
+    siTcp.StartPLL()
+    filepath = siTcp.DigitalPulse()
+    time.sleep(1)
+    filepath = siTcp.InternalTrigger()
+    # filepath = siTcp.DigitalPulse()
+    # filepath = siTcp.ExternalTrigger()
+    # filepath = siTcp.AnaloguePulse(30)
+    # DrawPic(filepath)
     siTcp.CloseSock()
 
 if __name__ == "__main__":

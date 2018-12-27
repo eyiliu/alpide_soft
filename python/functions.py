@@ -26,10 +26,13 @@ class Functions(object):
             self._sock.connect(("192.168.10.16",24))
         except Exception:
                 LOGGER.error("Internal Device Connection Error %s %s ",
-                        "192.168.10.16", 24)
+                        "192.168.10.1*", 24)
 
     def CloseSock(self):
         self._sock.close()
+
+    def ResetDAQ(self):
+        self._rbcp.write(0xf0000000,b'\x00')
 
     def ChipID(self,ID):
         self._rbcp.write(0x40000000,(ID & 0xff).to_bytes(1,byteorder='big'))
@@ -53,6 +56,15 @@ class Functions(object):
 
     def SetEventNum(self,num):
         self._rbcp.write(0x90000000+num,b'\x00')
+
+    def SetGapLength(self,length):
+        self._rbcp.write(0xc0000000+length,b'\x00')
+
+    def StartConTrig(self):
+        self._rbcp.write(0xa0000000,b'\x00')
+
+    def StopConTrig(self):
+        self._rbcp.write(0xb0000000,b'\x00')
 
     def SetTrigDelay(self,delay):
         self._rbcp.write(0x80000000,(delay & 0xff).to_bytes(1,byteorder='big'))
@@ -84,8 +96,63 @@ class Functions(object):
         self.WriteReg(0x487,0xFFFF)
         self.WriteReg(0x500,0x0)
         self.WriteReg(0x500,0x1)
-        self.WriteReg(0x1,0x3D)
+        self.WriteReg(0x1,0x3C)
         self.Broadcast(0x63)
+
+    def alpideregtest(self):
+        # self.ChipID(0x10)
+        self.WriteReg(0x1,0x3C)
+        self.ReadReg(0x1)
+        self.ReadReg(0x1)
+        print('')
+        self.WriteReg(0x1,0x3D)
+        self.ReadReg(0x1)
+        self.ReadReg(0x1)
+        print('')
+        self.WriteReg(0x1,0x3C)
+        self.ReadReg(0x1)
+        self.ReadReg(0x1)
+        print('')
+        self.WriteReg(0x1,0x3D)
+        self.ReadReg(0x1)
+        self.ReadReg(0x1)
+        print('')
+        self.WriteReg(0x1,0x3C)
+        self.ReadReg(0x1)
+        self.ReadReg(0x1)
+        print('')
+        self.WriteReg(0x1,0x3D)
+        self.ReadReg(0x1)
+        self.ReadReg(0x1)
+        print('')
+        self.WriteReg(0x1,0x3C)
+        self.ReadReg(0x1)
+        self.ReadReg(0x1)
+        print('')
+        self.WriteReg(0x1,0x3D)
+        self.ReadReg(0x1)
+        self.ReadReg(0x1)
+        print('')
+        self.WriteReg(0x1,0x3C)
+        self.ReadReg(0x1)
+        self.ReadReg(0x1)
+        print('')
+        self.WriteReg(0x1,0x3D)
+        self.ReadReg(0x1)
+        self.ReadReg(0x1)
+        print('')
+        self.WriteReg(0x1,0x3C)
+        self.ReadReg(0x1)
+        self.ReadReg(0x1)
+        print('')
+        print('finishtest')
+
+    def StartPLL(self):
+        self.WriteReg(0x14,0x008d)
+        self.WriteReg(0x15,0x0088)
+        self.WriteReg(0x14,0x0085)
+        self.WriteReg(0x14,0x0185)
+        self.WriteReg(0x14,0x0085)
 
 
     def DigitalPulse(self):
@@ -144,6 +211,37 @@ class Functions(object):
 
         return filepath
 
+    def InternalTrigger(self):     
+        self.WriteReg(0x487,0xFFFF)
+        self.WriteReg(0x500,0x0)
+        self.WriteReg(0x487,0xFFFF)
+        self.WriteReg(0x500,0x1)
+        self.WriteReg(0x4,0x10)
+        self.WriteReg(0x5,4)   #strobe duration / 25 ns     
+        self.WriteReg(0x1,0x3D)
+        self.Broadcast(0x63)
+
+        self.SetGapLength(185)
+        self.SetEventNum(0)
+
+        self.StartConTrig()
+
+        stopevt = threading.Event()
+        threadRead = None
+        threadRead = readThread(self._rbcp,self._sock,stopevt,'5Frame')
+        threadRead.start()
+
+        time.sleep(2)
+        self.StopConTrig()
+
+        time.sleep(1)
+
+        stopevt.set()
+        filepath = threadRead.join()
+
+        return filepath
+
+
     def AnaloguePulse(self,charge):
         for region in range(0,32):
             if(region == 0):
@@ -200,7 +298,15 @@ class readThread(threading.Thread):
             if self._sock in readable:
                 recvbuf = self._sock.recv(max_buf)
                 fileoutput['fp'].write(recvbuf)
+            else:
                 recvbuf = []
+                
+        while(not len(recvbuf) == 0):
+            rdlist = [self._sock]
+            readable,_,_ = select.select(rdlist, [], [], 0.05)
+            if self._sock in readable:
+                recvbuf = self._sock.recv(max_buf)
+                fileoutput['fp'].write(recvbuf)
             else:
                 recvbuf = []
         
