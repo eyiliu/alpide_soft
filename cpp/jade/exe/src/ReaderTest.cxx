@@ -73,12 +73,8 @@ int main(int argc, char **argv){
   uint64_t ndf_print_next = 10000;
   uint64_t ndf_print_prev = 0;
   while(1){
-    auto df_v = rd.Read(1, 10ms);
-    ndf += df_v.size();
-    for(auto&e: df_v){
-      //e->Decode();
-    }
-    df_v.clear();
+    auto df = rd.Read(10ms);
+    ndf ++;
     if(ndf >= ndf_print_next){
       auto tp_now = std::chrono::system_clock::now();
       auto dur = tp_now - tp_start;
