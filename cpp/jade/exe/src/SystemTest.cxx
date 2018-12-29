@@ -44,9 +44,12 @@ int main(int argc, char **argv){
   pman->Init();
   
   JadeOption opt_sys_test = opt_conf.GetSubOption("SystemTest");
+  
+
   size_t nsec = opt_sys_test.GetIntValue("SecPerLoop");
   size_t nloop = opt_sys_test.GetIntValue("N_Loops");
-  
+ 
+
   for(size_t i=0; i< nloop; i++){
     std::cout<<"=========start at "<<JadeUtils::GetNowStr()<<"======="<< std::endl;
     pman->StartDataTaking();

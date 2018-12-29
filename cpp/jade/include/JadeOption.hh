@@ -22,6 +22,7 @@ class DLLEXPORT JadeOption{
   bool GetBoolValue(const std::string& key = "") const;
   int32_t GetIntValue(const std::string& key = "" ) const;
   double GetFloatValue(const std::string& key = "") const;
+  bool IsNull() const;
 
  private:
   std::shared_ptr<json11::Json> m_json_ptr;

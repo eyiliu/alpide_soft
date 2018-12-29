@@ -57,8 +57,7 @@ class DLLEXPORT JadeManager: public JadePost{
   JadeReaderSP GetReader() { return m_rd; };
   JadeWriterSP GetWriter() { return m_wrt; };
   JadeFilterSP GetFilter() { return m_flt; };
-  JadeMonitorSP GetMonitor() { return m_mnt; };
-  
+  JadeMonitorSP GetMonitor() { return m_mnt; };  
   
   void MakeComponent();
   void RemoveComponent();

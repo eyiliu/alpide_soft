@@ -11,6 +11,15 @@
 #include <string>
 #include <cstdio>
 
+#ifdef _WIN32
+#include <windows.h>
+#include <intrin.h>
+#pragma intrinsic(_ReturnAddress)
+#else
+#include <dlfcn.h>
+#endif
+
+
 class JadeUtils{
 public:
   static std::type_index GetTypeIndex(const std::string& name);
@@ -27,7 +36,24 @@ public:
   static std::string Base64_btoa(const std::string &bin);
   static std::string Base64_atob(const std::string &base64);
 
-
+  inline std::string GetThisBinaryPath(){
+#ifdef _WIN32
+    void* address_return = _ReturnAddress();
+    HMODULE handle = NULL;
+    ::GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS
+			|GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+			static_cast<LPCSTR>(address_return), &handle);
+    char modpath[MAX_PATH] = {'\0'};
+    ::GetModuleFileNameA(handle, modpath, MAX_PATH);
+    return modpath;
+#else
+    void* address_return = (void*)(__builtin_return_address(0));
+    Dl_info dli;
+    dli.dli_fname = 0;
+    dladdr(address_return, &dli);
+    return dli.dli_fname;
+#endif
+  }
   
   template<typename ... Args>
   static std::string FormatString( const std::string& format, Args ... args ){

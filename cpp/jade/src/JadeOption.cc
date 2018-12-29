@@ -7,6 +7,7 @@ JadeOption::JadeOption()
 }
 
 JadeOption::JadeOption(const std::string& str){
+  //TODO: regex
   size_t found = str.find_first_not_of(" \t\r\n");
   if(found != std::string::npos && str[found] !='{'){
     m_json_ptr = std::make_shared<json11::Json>(str);
@@ -49,6 +50,13 @@ JadeOption::JadeOption(json11::Json&& js)
   :m_json_ptr(new json11::Json(std::move(js))){
   
 }
+
+bool JadeOption::IsNull() const{
+  if(!m_json_ptr || m_json_ptr->is_null()){
+    return true;
+  }
+}
+
 
 JadeOption JadeOption::GetSubOption(const std::string& opt) const{
   return (*m_json_ptr)[opt];

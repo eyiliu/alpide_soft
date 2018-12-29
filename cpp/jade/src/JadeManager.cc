@@ -20,7 +20,7 @@ using namespace std::chrono_literals;
 JadeManager::JadeManager(const JadeOption &opt)
   : m_is_running(false), m_opt(opt){  
   
-  if(opt.GetIntValue("version") < 2){
+  if(opt.GetIntValue("version") < 3){
     std::cerr<<"JadeManager: ERROR version missmatch with json configure file\n";
     throw;
   }  
@@ -46,24 +46,32 @@ JadeManagerSP JadeManager::Make(const std::string& name, const JadeOption& opt){
 
 void JadeManager::MakeComponent(){
   auto rd_opt = m_opt.GetSubOption("JadeReader");
-  m_rd = JadeReader::Make(rd_opt.GetStringValue("type"), rd_opt.GetSubOption("parameter"));
-  AddSubPost(m_rd);
-  
+  if(!rd_opt.IsNull()){
+    m_rd = JadeReader::Make(rd_opt.GetStringValue("type"), rd_opt.GetSubOption("parameter"));
+    AddSubPost(m_rd);
+  }
   auto ctrl_opt = m_opt.GetSubOption("JadeRegCtrl");
-  m_ctrl = JadeRegCtrl::Make(ctrl_opt.GetStringValue("type"), ctrl_opt.GetSubOption("parameter"));
-  AddSubPost(m_ctrl);
-  
+  if(!ctrl_opt.IsNull()){
+    m_ctrl = JadeRegCtrl::Make(ctrl_opt.GetStringValue("type"), ctrl_opt.GetSubOption("parameter"));
+    AddSubPost(m_ctrl);
+  }  
   auto wrt_opt = m_opt.GetSubOption("JadeWriter");
-  m_wrt = JadeWriter::Make(wrt_opt.GetStringValue("type"), wrt_opt.GetSubOption("parameter"));
-  AddSubPost(m_wrt);
+  if(!wrt_opt.IsNull()){
+    m_wrt = JadeWriter::Make(wrt_opt.GetStringValue("type"), wrt_opt.GetSubOption("parameter"));
+    AddSubPost(m_wrt);
+  }
   
   auto flt_opt = m_opt.GetSubOption("JadeFilter");
-  m_flt = JadeFilter::Make(flt_opt.GetStringValue("type"), flt_opt.GetSubOption("parameter"));
-  AddSubPost(m_flt);
+  if(!flt_opt.IsNull()){
+    m_flt = JadeFilter::Make(flt_opt.GetStringValue("type"), flt_opt.GetSubOption("parameter"));
+    AddSubPost(m_flt);
+  }
 
   auto mnt_opt = m_opt.GetSubOption("JadeMonitor");
-  m_mnt = JadeMonitor::Make(mnt_opt.GetStringValue("type"), mnt_opt.GetSubOption("parameter"));
-  AddSubPost(m_mnt);
+  if(!mnt_opt.IsNull()){
+    m_mnt = JadeMonitor::Make(mnt_opt.GetStringValue("type"), mnt_opt.GetSubOption("parameter"));
+    AddSubPost(m_mnt);
+  }
 }
 
 void JadeManager::RemoveComponent(){
@@ -81,24 +89,24 @@ void JadeManager::Init(){
 }
 
 void JadeManager::StartDataTaking(){
-  m_rd->Open();
-  m_ctrl->Open();
-  m_wrt->Open();
-  m_flt->Reset();
-  m_mnt->Reset();
+  if(m_rd) m_rd->Open();
+  if(m_ctrl) m_ctrl->Open();
+  if(m_wrt) m_wrt->Open();
+  if(m_flt) m_flt->Reset();
+  if(m_flt) m_mnt->Reset();
   StartThread();
 }
 
 void JadeManager::StopDataTaking(){
   StopThread();
-  m_rd->Close();
-  m_ctrl->Close();
-  m_wrt->Close();
+  if(m_rd) m_rd->Close();
+  if(m_ctrl) m_ctrl->Close();
+  if(m_wrt) m_wrt->Close();
 }
 
 void JadeManager::DeviceControl(const std::string &cmd)
 {
-  m_ctrl->SendCommand(cmd);
+  if(m_ctrl) m_ctrl->SendCommand(cmd);
 }
 
 uint64_t JadeManager::AsyncReading(){
@@ -108,7 +116,7 @@ uint64_t JadeManager::AsyncReading(){
   uint64_t ndf_print_prev = 0;
   uint64_t n_df = 0;
   while (m_is_running){
-    auto df = m_rd->Read(100ms);
+    auto df = m_rd? m_rd->Read(100ms):nullptr;
     if(!df){
       continue;
     }
@@ -151,8 +159,7 @@ uint64_t JadeManager::AsyncFiltering(){
     lk_in.unlock();
     JadeDataFrameSP df_r = df;
     df_r->Decode();
-    if(m_flt)
-      df_r = m_flt->Filter(df);
+    if(m_flt) df_r = m_flt->Filter(df);
     if(df_r){
       std::unique_lock<std::mutex> lk_out_wrt(m_mx_ev_to_wrt);
       m_qu_ev_to_wrt.push(df_r);
@@ -184,8 +191,7 @@ uint64_t JadeManager::AsyncWriting(){
     auto df = m_qu_ev_to_wrt.front();
     m_qu_ev_to_wrt.pop();
     lk_in.unlock();
-    if(m_wrt)
-      m_wrt->Write(df);
+    if(m_wrt) m_wrt->Write(df);
     n_df ++;
   }
   return n_df;
@@ -211,8 +217,7 @@ uint64_t JadeManager::AsyncMonitoring(){
     auto df = m_qu_ev_to_mnt.front();
     m_qu_ev_to_mnt.pop();
     lk_in.unlock();
-    if(m_mnt)
-      m_mnt->Monitor(df);
+    if(m_mnt) m_mnt->Monitor(df);
     n_df ++;
   }
   return n_df;
