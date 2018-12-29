@@ -6,6 +6,19 @@
 #pragma comment(lib, "Ws2_32.lib")
 #endif
 
+
+
+
+#define PKG_HEADER_BYTE   (0x5a)
+#define PKG_TRAILER_BYTE  (0xa5)
+#define CHIP_HEADER_4B       (0b10100000)
+#define CHIP_TRAILER_4B      (0b10110000)
+#define CHIP_EMPTY_FRAME_4B  (0b11100000)
+#define REGION_HEADER_3B     (0b11000000)
+#define DATA_SHORT_2B =          (0b01000000)
+#define DATA_LONG_2B =           (0b00000000)
+
+
 using _base_c_ = JadeDataFrame;
 using _index_c_ = JadeDataFrame;
 
@@ -107,73 +120,120 @@ uint32_t JadeDataFrame::GetExtension() const
   return m_extension;
 }
 
-void JadeDataFrame::Decode()
-{
+void JadeDataFrame::Decode(){
   m_is_decoded = true;
-  if (m_data_raw.size() <= 4) {
-    std::cerr << "JadeDataFrame: no length word\n";
+  const char* p_raw_beg = m_data_raw.data();
+  const char* p_raw_end = m_data_raw.data() + m_data_raw.size();
+  const char* p_raw = m_data_raw.data();
+  if(m_data_raw.size()<7){
+    std::cerr << "JadeDataFrame: raw data length is less than 7\n";
     throw;
   }
-  const char* p_raw = m_data_raw.data();
-  size_t p_offset = 0;
-  uint32_t len_raw = LE32TOH(*reinterpret_cast<const uint32_t*>(p_raw + p_offset));
-  // Matrix A: size=1936
-  // Matrix B: size=3856
-  if(len_raw == 1936){
-    m_n_x = 16;
-    m_n_y = 48;
-  }else if(len_raw == 3856){
-    m_n_x = 16;
-    m_n_y = 96;
-  }else if (len_raw != m_data_raw.size()) {
+  if(m_data_raw.front()!=PKG_HEADER_BYTE  || m_data_raw.back()!=PKG_TRAILER_BYTE){
+    std::cerr << "JadeDataFrame: pkg header/trailer mismatch\n";
+    throw;
+  }
+  uint32_t len_payload_data = BE32TOH(*reinterpret_cast<const uint32_t*>(p_raw)) & 0x000fffff;
+  if (len_payload_data + 7 != m_data_raw.size()) {
     std::cerr << "JadeDataFrame: raw data length does not match\n";
     throw;
-  }
-  p_offset +=4;
-
+  }  
+  p_raw += 4;
+  m_trigger_n = BE16TOH(*reinterpret_cast<const uint16_t*>(p_raw));
+  p_raw += 2;
   m_data.clear();
-  m_data.resize(m_n_x * m_n_y, 0);
-
-  uint64_t header32 = LE32TOH(*reinterpret_cast<const uint32_t*>(p_raw + p_offset));
-  if (header32 != 0xaaaaaaaa) {
-    std::cerr << "JadeDataFrame: data frame header is incorrect\n";
-    throw;
-  }
-  p_offset += 4;
-  m_extension = LE16TOH(*reinterpret_cast<const uint16_t*>(p_raw + p_offset));
-  p_offset += 2;
-  m_trigger_n = LE16TOH(*reinterpret_cast<const uint16_t*>(p_raw + p_offset));
-  p_offset += 2;
-
-  int16_t* p_data = m_data.data();
-  bool is_first_row = true;
-  for (size_t yn = 0; yn < m_n_y; yn++) {
-    //Y head 4 bytes
-    p_offset += 4;
-    for (size_t xn = 0; xn < m_n_x; xn++) {
-      int16_t val = LE16TOH(*reinterpret_cast<const uint16_t*>(p_raw + p_offset));
-      *p_data = val;
-      p_data++;
-      p_offset += 2;
+  m_data.resize(1024 * 512, 0);
+  uint8_t l_frame_n = -1;
+  uint8_t l_region_id = -1;
+  while(p_raw < p_raw_end){
+    char d = *p_raw;
+    if(d & 0b10000000){
+      //NOT DATA 1
+      if(d & 0b01000000){
+        //empty or region header or busy_on/off 11
+        if(d & 0b00100000){
+          //emtpy or busy_on/off 111
+          if(d & 0b00010000){
+            //busy_on/off
+            p_raw++;
+            continue;
+          }
+          // empty 1110
+          uint8_t chip_id = d & 0b00001111;
+          l_frame_n++;
+          p_raw++;
+          d = *p_raw;
+          uint8_t bunch_counter_h = d;
+          p_raw++;
+          continue;
+        }
+        // region header 110
+        l_region_id = d & 0b00011111;
+        p_raw++;
+        continue;
+      }
+      //CHIP_HEADER/TRAILER or undefined 10
+      if(d & 0b00100000){
+        //CHIP_HEADER/TRAILER 101
+        if(d & 0b000100000){
+          //TRAILER 1011
+          uint8_t readout_flag= d & 0b00001111;
+          p_raw++;
+          continue;
+        }
+        //HEADER 1010
+        uint8_t chip_id = d & 0b00001111;
+        l_frame_n++;
+        p_raw++;
+        d = *p_raw;
+        uint8_t bunch_counter_h = d;
+        p_raw++;
+        continue;
+      }
+      //undefined 100
+      p_raw++;
+      continue;
     }
-    //Y tail 4 bytes
-    if (is_first_row) {
-      m_frame_n = LE16TOH(*reinterpret_cast<const uint16_t*>(p_raw + p_offset));
-      is_first_row = false;
+    else{
+      //DATA 0
+      if(d & 0b01000000){
+        //DATA SHORT 01
+        uint8_t encoder_id = (d & 0b00111100)>> 2;
+        uint16_t addr = (d & 0b00000011)<<8;
+        p_raw++;
+        d = *p_raw;
+        addr += *p_raw;
+        p_raw++;
+
+        uint16_t y = addr>>1;
+        uint16_t x = (l_region_id<<5)+(encoder_id<<1)+((addr&0b1)==(addr>>1&0b1));
+        m_data[x+1024*y] |= (1<<l_frame_n);
+        continue;
+      }
+      //DATA LONG 00
+      uint8_t encoder_id = (d & 0b00111100)>> 2;
+      uint16_t addr = (d & 0b00000011)<<8;
+      p_raw++;
+      d = *p_raw;
+      addr += *p_raw;
+      p_raw++;
+      d = *p_raw;
+      uint8_t hit_map = (d & 0b01111111);
+      p_raw++;
+
+      uint16_t y = addr>>1;
+      uint16_t x = (l_region_id<<5)+(encoder_id<<1)+((addr&0b1)==(addr>>1&0b1));
+      m_data[x+1024*y] |= (1<<l_frame_n);
+      for(int i=1; i<=7; i++){
+        if(hit_map & (1<(i-1))){
+          addr+= i;
+          uint16_t y = addr>>1;
+          uint16_t x = (l_region_id<<5)+(encoder_id<<1)+((addr&0b1)==(addr>>1&0b1));
+          m_data[x+1024*y] |= (1<<l_frame_n);
+        }
+      }
+      continue;
     }
-    p_offset += 4;
-  }
-
-  uint64_t footer32 = LE32TOH(*reinterpret_cast<const uint32_t*>(p_raw + p_offset));
-  if (footer32 != 0xf0f0f0f0) {
-    std::cerr << "JadeDataFrame: data frame footer is incorrect\n";
-    throw;
-  }
-
-  p_offset += 4;
-  if (p_offset != m_data_raw.size()) {
-    std::cerr << "JadeDataFrame: raw data size is incorrect\n";
-    throw;
   }
   return;
 }

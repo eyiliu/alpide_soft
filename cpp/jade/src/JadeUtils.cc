@@ -112,6 +112,16 @@ std::string JadeUtils::GetNowStr(){
     return ss.str();
 }
 
+std::string JadeUtils::GetNowStr(const std::string &format){
+  // "%y%m%d%H%M%S"
+  auto now = std::chrono::system_clock::now();
+  auto now_c = std::chrono::system_clock::to_time_t(now);
+  std::stringstream ss;
+  ss<<std::put_time(std::localtime(&now_c), format.c_str());
+  return ss.str();
+}
+
+
 std::string JadeUtils::GetBinaryPath(){
 #ifdef _WIN32
   void* address_return = _ReturnAddress();

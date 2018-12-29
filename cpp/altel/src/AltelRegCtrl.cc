@@ -13,8 +13,6 @@
 #define RBCP_VER 0xFF
 #define RBCP_CMD_WR 0x80
 #define RBCP_CMD_RD 0xC0
-#define DEFAULT_IP 192.168.0.16
-#define UDP_BUF_SIZE 2048
 
 #define RBCP_DISP_MODE_NO 0
 #define RBCP_DISP_MODE_INTERACTIVE 1
@@ -54,12 +52,12 @@ class AltelRegCtrl: public JadeRegCtrl{
 public:
   AltelRegCtrl(const JadeOption &opt);
   ~AltelRegCtrl() override {};
-  JadeOption Post(const std::string &url, const JadeOption &opt) override;
-
   void Open() override;
   void Close() override;
   std::string SendCommand(const std::string &cmd, const std::string &para) override;
-
+  void WriteByte(uint64_t addr, uint8_t val) override;
+  uint8_t ReadByte(uint64_t addr) override;
+  
   void WriteAlpideRegister(uint16_t addr, uint16_t val);
   void BroadcastAlpide(uint16_t cmd);
   void SetAlpideChipID(uint8_t id);
@@ -67,18 +65,13 @@ public:
   void InitAlpide();
   void SetEventNumber(uint32_t num);  
   void DigitalPulse();
-private:
-  void WriteByte(uint64_t addr, uint8_t val);
-  uint8_t ReadByte(uint64_t addr);
-  std::string GetStatus(const std::string &cmd);
-  int rbcp_com(const char* ipAddr, unsigned int port, struct rbcp_header* sendHeader, char* sendData, char* recvData, char dispMode);
-  
+
+  int rbcp_com(const char* ipAddr, unsigned int port, struct rbcp_header* sendHeader, char* sendData, char* recvData, char dispMode);  
 private:
   JadeOption m_opt;
-  int m_fd;
-  bool m_is_fd_read;
-  bool m_is_fd_write;
-  std::string m_path;
+
+  std::string m_ip_address;
+  uint16_t m_ip_udp_port;
   uint8_t m_id ;
 };
 
@@ -90,7 +83,12 @@ namespace{
 }
 
 AltelRegCtrl::AltelRegCtrl(const JadeOption &opt)
-  :m_opt(opt), m_fd(0), m_is_fd_read(false), m_is_fd_write(false), m_id(0), JadeRegCtrl(opt){
+  :m_opt(opt), m_id(0), m_ip_udp_port(4660), JadeRegCtrl(opt){
+  m_ip_address  = m_opt.GetStringValue("IP_ADDRESS");
+  if(m_ip_address.empty()){
+    std::cerr<<"altelregctrl: error ip address\n";
+  }
+  m_ip_udp_port = (uint16_t) m_opt.GetIntValue("IP_UDP_PORT");
 }
 
 void AltelRegCtrl::Open(){
@@ -123,7 +121,7 @@ void AltelRegCtrl::WriteByte(uint64_t addr, uint8_t val){
   sndHeader.length=1;
   sndHeader.address=htonl(addr); //TODO: check
   char rcvdBuf[1024];
-  rbcp_com("192.168.10.16", 4660, &sndHeader, (char*) &val, rcvdBuf, RBCP_DISP_MODE_DEBUG);
+  rbcp_com(m_ip_address.c_str(), m_ip_udp_port, &sndHeader, (char*) &val, rcvdBuf, RBCP_DISP_MODE_NO);
   //TODO: if failure
 }
 
@@ -136,7 +134,7 @@ uint8_t AltelRegCtrl::ReadByte(uint64_t addr){
   sndHeader.length=1;
   sndHeader.address=htonl(addr);
   char rcvdBuf[1024];
-  if (rbcp_com("192.168.10.16", 4660, &sndHeader, NULL, rcvdBuf, RBCP_DISP_MODE_DEBUG)!=1){
+  if (rbcp_com(m_ip_address.c_str(), m_ip_udp_port, &sndHeader, NULL, rcvdBuf, RBCP_DISP_MODE_NO)!=1){
     std::cout<< "here error"<<std::endl;
   }
   return rcvdBuf[0];
@@ -209,9 +207,6 @@ void AltelRegCtrl::InitAlpide(){
 
   //
 
-  // DigitalPulse();
-  // std::this_thread::sleep_for(2s);
-
   //continuous mode
   WriteAlpideRegister(0x487,0xFFFF);
   WriteAlpideRegister(0x500,0x0);
@@ -243,20 +238,6 @@ std::string AltelRegCtrl::SendCommand(const std::string &cmd, const std::string 
   
   return "";
 }
-
-
-JadeOption AltelRegCtrl::Post(const std::string &url, const JadeOption &opt){
-  if(url == "/set_path"){
-    m_path=opt.GetStringValue("PATH");
-    return "{\"status\":true}";
-  }    
-  static const std::string url_base_class("/JadeRegCtrl/");
-  if( ! url.compare(0, url_base_class.size(), url_base_class) ){
-    return JadeRegCtrl::Post(url.substr(url_base_class.size()-1), opt);
-  }
-  return JadePost::Post(url, opt);
-}
-
 
 int AltelRegCtrl::rbcp_com(const char* ipAddr, unsigned int port, struct rbcp_header* sendHeader, char* sendData, char* recvData, char dispMode){
 

@@ -30,6 +30,7 @@ public:
   static void PrintTypeIndexMap();
   static std::string LoadFileToString(const std::string &path);
   static std::string GetNowStr();
+  static std::string GetNowStr(const std::string &format);
   static std::string GetBinaryPath();
   static bool LoadBinary(const std::string& file);
 
