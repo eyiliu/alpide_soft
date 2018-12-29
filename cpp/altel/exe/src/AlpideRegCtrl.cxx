@@ -13,11 +13,14 @@ int main(int argc, char **argv){
   JadeUtils::PrintTypeIndexMap();
   auto ctrl = JadeRegCtrl::Make("AltelRegCtrl", "{}");
   auto reader = JadeReader::Make("AltelReader", "{}");
+  //ctrl->WriteByte(0xf0000000, 0);
+  //std::this_thread::sleep_for(5s);
+
   ctrl->SendCommand("INIT");
   reader->Open();
-  ctrl->WriteByte(0xa0000000, 0);
+  ctrl->SendCommand("START");
   reader->Read(1s);
-  ctrl->WriteByte(0xb0000000, 0);
+  ctrl->SendCommand("STOP");
 
   // int n = 0;
   // while(1){

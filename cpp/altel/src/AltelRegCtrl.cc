@@ -94,13 +94,13 @@ AltelRegCtrl::AltelRegCtrl(const JadeOption &opt)
 }
 
 void AltelRegCtrl::Open(){
-
+  SendCommand("INIT", "");
+  SendCommand("START", "");
 }
 
-void AltelRegCtrl::Close(){  
-  
+void AltelRegCtrl::Close(){
+  SendCommand("STOP", "");
 }
-
 
 void AltelRegCtrl::DigitalPulse(){
   WriteAlpideRegister(0x487,0xFFFF);
@@ -209,8 +209,8 @@ void AltelRegCtrl::InitAlpide(){
 
   //
 
-  DigitalPulse();
-  std::this_thread::sleep_for(2s);
+  // DigitalPulse();
+  // std::this_thread::sleep_for(2s);
 
   //continuous mode
   WriteAlpideRegister(0x487,0xFFFF);
@@ -231,6 +231,14 @@ void AltelRegCtrl::InitAlpide(){
 std::string AltelRegCtrl::SendCommand(const std::string &cmd, const std::string &para){
   if(cmd=="INIT"){
     InitAlpide();
+  }
+
+  if(cmd=="START"){
+    WriteByte(0xa0000000, 0);
+  }
+
+  if(cmd=="STOP"){
+    WriteByte(0xb0000000, 0);
   }
   
   return "";

@@ -27,6 +27,10 @@ public:
   ~AltelReader() override {};
   JadeOption Post(const std::string &url, const JadeOption &opt) override;
   JadeDataFrameSP Read(const std::chrono::milliseconds &timeout) override;
+  std::vector<JadeDataFrameSP> Read(size_t size_max_pkg,
+                                    const std::chrono::milliseconds &timeout_idel,
+                                    const std::chrono::milliseconds &timeout_total) override;
+
   void Open() override;
   void Close() override;
 private:
@@ -54,6 +58,7 @@ AltelReader::AltelReader(const JadeOption& opt)
   m_tcp = 24;
 }
 
+
 void AltelReader::Open(){
   m_tcpfd = socket(AF_INET, SOCK_STREAM, 0);
   m_tcpaddr.sin_family = AF_INET;
@@ -63,7 +68,7 @@ void AltelReader::Open(){
     //when connect fails, go to follow lines
     if(errno != EINPROGRESS) perror("TCP connection");
     if(errno == 29)
-      std::cerr<<"timeout";
+      std::cerr<<"reader open timeout";
     fd_set fds;
     FD_ZERO(&fds);
     FD_SET(m_tcpfd, &fds);
@@ -81,12 +86,35 @@ void AltelReader::Close(){
   close(m_tcpfd);
 }
 
-JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout){
+std::vector<JadeDataFrameSP> AltelReader::Read(size_t size_max_pkg,
+                                               const std::chrono::milliseconds &timeout_idel,
+                                               const std::chrono::milliseconds &timeout_total){
+  std::chrono::system_clock::time_point tp_timeout_total = std::chrono::system_clock::now() + timeout_total;
+  std::vector<JadeDataFrameSP> pkg_v;
+  while(1){
+    JadeDataFrameSP pkg = Read(timeout_idel);
+    if(pkg){
+      pkg_v.push_back(pkg);
+      if(pkg_v.size()>=size_max_pkg){
+        break;
+      }
+    }
+    else{
+      break; 
+    }
+    if(std::chrono::system_clock::now() > tp_timeout_total){
+      break;
+    }
+  }
+  return pkg_v;
+}
+
+JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout_idel){ //timeout_read_interval
   size_t size_buf_min = 7;
   size_t size_buf = size_buf_min;
   std::string buf(size_buf, 0);
   size_t size_filled = 0;
-  std::chrono::system_clock::time_point tp_timeout;
+  std::chrono::system_clock::time_point tp_timeout_idel;
   bool can_time_out = false;
   uint32_t n = 0;
   uint32_t n_next_print = 4;
@@ -110,15 +138,19 @@ JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout){
     tv_timeout.tv_sec = 0;
     tv_timeout.tv_usec = 10;
     if( !select(m_tcpfd+1, &fds, NULL, NULL, &tv_timeout) || !FD_ISSET(m_tcpfd, &fds) ){
-      std::cout<<"timeout"<<std::endl;
+      std::cout<<"reader select timeout"<<std::endl;
       if(!can_time_out){
 	can_time_out = true;
-	tp_timeout = std::chrono::system_clock::now() + timeout;
+	tp_timeout_idel = std::chrono::system_clock::now() + timeout_idel;
       }
       else{
-	if(std::chrono::system_clock::now() > tp_timeout){
+	if(std::chrono::system_clock::now() > tp_timeout_idel){
 	  std::cerr<<"JadeRead: reading timeout\n";
-	  //TODO: keep remain data, nothrow
+          if(size_filled == 0){
+            std::cerr<<"JadeRead: no data at all\n";
+            return nullptr;
+          }
+	  //TODO: keep remain data, nothrow, ? try a again?
 	  throw;
 	}
       }
@@ -140,7 +172,6 @@ JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout){
 
     size_filled += read_r;
     can_time_out = false;
-    
 
     if(size_buf == size_buf_min  && size_filled >= size_buf_min){
       uint8_t header_byte =  buf.front();
@@ -153,12 +184,15 @@ JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout){
 	throw;
       }
       size_buf = size_buf_min + size_payload;
+      buf.resize(size_buf);
     }
   }
   uint8_t footer_byte =  buf.back();
   if(footer_byte != FOOTER_BYTE){
     std::cerr<<"wrong footer\n";
-    //TODO: skip brocken data
+    std::cout<<static_cast<unsigned int>(static_cast<unsigned char>(buf.back()))<<std::endl;
+ 
+   //TODO: skip brocken data
     throw;
   }
   return std::make_shared<JadeDataFrame>(std::move(buf));
