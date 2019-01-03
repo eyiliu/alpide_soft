@@ -13,6 +13,8 @@
 
 #define __GETOPT_H__
 
+#ifdef _WIN32
+
 /* All the headers include this file. */
 #include <crtdefs.h>
 
@@ -25,6 +27,13 @@
 #else
 # define WINGETOPT_API __declspec(dllimport)
 #endif
+
+#else
+
+#define WINGETOPT_API
+
+#endif
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -62,6 +71,8 @@ extern int optreset;
  * to declare the extended API.
  */
 #endif /* !defined(__GETOPT_H__) */
+
+
 
 #if !defined(__UNISTD_H_SOURCED__) && !defined(__GETOPT_LONG_H__)
 #define __GETOPT_LONG_H__
@@ -102,5 +113,6 @@ extern int getopt_long_only(int nargc, char * const *nargv, const char *options,
 #ifdef __cplusplus
 }
 #endif
+
 
 #endif /* !defined(__UNISTD_H_SOURCED__) && !defined(__GETOPT_LONG_H__) */

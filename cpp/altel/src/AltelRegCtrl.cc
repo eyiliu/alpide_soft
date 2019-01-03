@@ -79,10 +79,10 @@ private:
 
 //+++++++++++++++++++++++++++++++++++++++++
 //AltelRegCtrl.cc
-//namespace{
-//  auto _test_index_ = JadeUtils::SetTypeIndex(std::type_index(typeid(AltelRegCtrl)));
-//  auto _test_ = JadeFactory<JadeRegCtrl>::Register<AltelRegCtrl, const JadeOption&>(typeid(AltelRegCtrl));
-//}
+namespace{
+  auto _test_index_ = JadeUtils::SetTypeIndex(std::type_index(typeid(AltelRegCtrl)));
+  auto _test_ = JadeFactory<JadeRegCtrl>::Register<AltelRegCtrl, const JadeOption&>(typeid(AltelRegCtrl));
+}
 
 AltelRegCtrl::AltelRegCtrl(const JadeOption &opt)
   :m_opt(opt), m_id(0), m_ip_udp_port(4660), JadeRegCtrl(opt){
