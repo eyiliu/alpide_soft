@@ -1,4 +1,4 @@
-option(JADE_BUILD_EUDAQ_PRODUCER "build JadeProducer against EUDAQ2?" ON)
+option(JADE_BUILD_EUDAQ_PRODUCER "build JadeProducer against EUDAQ2?" OFF)
 if(NOT JADE_BUILD_EUDAQ_PRODUCER)
   return()
 endif()

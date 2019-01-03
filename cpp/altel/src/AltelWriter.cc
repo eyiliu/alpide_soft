@@ -15,6 +15,7 @@ class AltelWriter: public JadeWriter{
   std::string m_path;
   JadeOption m_opt;
   bool m_disable_file_write;
+  bool m_enable_decode;
   int m_n_ev;
 };
 
@@ -26,8 +27,9 @@ namespace{
 }
 
 AltelWriter::AltelWriter(const JadeOption &opt)
-  :m_opt(opt), m_fd(0), m_disable_file_write(false), JadeWriter(opt){
+  :m_opt(opt), m_fd(0), m_disable_file_write(false), m_enable_decode(false), JadeWriter(opt){
   m_disable_file_write = m_opt.GetBoolValue("DISABLE_FILE_WRITE");
+  m_enable_decode = m_opt.GetBoolValue("ENABLE_DECODE");
 }
 
 void AltelWriter::Open(){
@@ -64,6 +66,9 @@ void AltelWriter::Write(JadeDataFrameSP df){
     throw;
   }
   //TODO
+  if(m_enable_decode)
+    df->Decode();
+  
   m_n_ev++;
   std::string &rawstring = df->RawData();
   if(rawstring.size()){

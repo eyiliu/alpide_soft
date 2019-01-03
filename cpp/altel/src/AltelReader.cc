@@ -32,6 +32,8 @@ private:
   JadeOption m_opt;
   int m_fd;  
   bool m_flag_file;
+  bool m_flag_terminate_file;
+  
 };
 
 namespace{
@@ -43,6 +45,7 @@ AltelReader::AltelReader(const JadeOption& opt)
   :JadeReader(opt), m_opt(opt){
   m_fd = 0;
   m_flag_file = false;
+  m_flag_terminate_file = m_opt.GetBoolValue("TERMINATE_AT_FILE_END"); 
 }
 
 void AltelReader::Open(){
@@ -149,9 +152,12 @@ JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout_idel)
         }
         else{
           if(std::chrono::system_clock::now() > tp_timeout_idel){
-            std::cerr<<"JadeRead: reading timeout\n";
+            // std::cerr<<"JadeRead: reading timeout\n";
             if(size_filled == 0){
-              std::cerr<<"JadeRead: no data at all\n";
+	      if(m_flag_terminate_file)
+		return nullptr;
+	      else
+		std::cerr<<"JadeRead: no data at all\n";
               return nullptr;
             }
             //TODO: keep remain data, nothrow

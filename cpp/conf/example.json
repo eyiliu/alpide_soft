@@ -13,8 +13,9 @@
 	    "JadeReader":{
 		"type":"AltelReader",
 		"parameter":{
-		    "IS_DISK_FILE":false,
-		    "FILE_PATH":"/home/yiliu/workspace/alpide/data/save_190103134346.df",
+		    "IS_DISK_FILE":true,
+		    "TERMINATE_AT_FILE_END":true,
+		    "FILE_PATH":"/home/yiliu/workspace/alpide/data/savz_190103155133.df",
 		    "IP_ADDRESS": "192.168.10.16",
 		    "IP_TCP_PORT":24
 		}
@@ -22,20 +23,9 @@
 	    "JadeWriter":{
 		"type":"AltelWriter",
 		"parameter":{
+		    "ENABLE_DECODE":true,
 		    "DISABLE_FILE_WRITE": false,
-		    "PATH":"/home/yiliu/workspace/alpide/data/save"
-		}
-	    },
-	    "JadeFilter":{
-		"type":"JadeFilter",
-		"parameter":{
-		    "something": "something"
-		}
-	    },
-	    "JadeMonitor":{
-		"type":"JadeMonitor",
-		"parameter":{
-		    "something": "something"
+		    "PATH":"/home/yiliu/workspace/alpide/data/savz"
 		}
 	    }
 	}

@@ -19,7 +19,6 @@ public:
   void Write(JadeDataFrameSP df) override;
   void Close() override;
 
-  JadeOption Post(const std::string &url, const JadeOption &opt) override;  
   void SetProducerCallback(eudaq::Producer *producer);
 private:
   eudaq::Producer *m_producer;
@@ -45,14 +44,6 @@ EudaqWriter::EudaqWriter(const JadeOption &opt)
 
 EudaqWriter::~EudaqWriter(){
   
-}
-
-JadeOption EudaqWriter::Post(const std::string &url, const JadeOption &opt){
-  static const std::string url_base_class("/JadeWriter/");
-  if( ! url.compare(0, url_base_class.size(), url_base_class) ){
-    return JadeWriter::Post(url.substr(url_base_class.size()-1), opt);
-  }
-  return JadePost::Post(url, opt);
 }
 
 void EudaqWriter::Close(){

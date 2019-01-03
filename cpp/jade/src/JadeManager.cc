@@ -139,7 +139,7 @@ uint64_t JadeManager::AsyncWriting(){
     auto df = m_qu_ev_to_wrt.front();
     m_qu_ev_to_wrt.pop();
     lk_in.unlock();
-    df->Decode();
+    // df->Decode();
     if(m_wrt) m_wrt->Write(df);
     n_df ++;
     if(n_df >= ndf_print_next){
