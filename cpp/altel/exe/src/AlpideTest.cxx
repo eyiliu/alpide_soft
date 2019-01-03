@@ -1,4 +1,4 @@
-include "JadeCore.hh"
+#include "JadeCore.hh"
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -6,34 +6,61 @@ include "JadeCore.hh"
 #include <chrono>
 #include <thread>
 #include <ctime>
+#include <regex>
+#include <map>
+#include <utility>
+#include <algorithm>
+
 
 using namespace std::chrono_literals;
 
 int main(int argc, char **argv){
   JadeUtils::PrintTypeIndexMap();  
-  std::cout<<"options: -c <config_file>"<<std::endl;
-  std::string config_file = "alpide_test.json";
+
+  const std::string help_usage("\n\
+Usage:\n\
+-c config_file: configure file\n\
+-h : Print usage information to standard error and stop\n\
+");
   
-  for(int i = 1; i < argc; i++){
-    std::string opt(argv[i]);
-    if(opt=="-c"){ 
-      if(i+1<argc){
-	i++;
-	config_file = argv[i];
-      }
+  int c;
+  std::string c_opt;
+  while ( (c = getopt(argc, argv, "c:h")) != -1) {
+    switch (c) {
+    case 'c':
+      c_opt = optarg;
+      break;
+    case 'h':
+      std::cout<<help_usage;
+      return 0;
+      break;
+    default:
+      std::cerr<<help_usage;
+      return 1;
     }
   }
-  
-  size_t found = config_file.find_last_of(".");
-  if(found == std::string::npos  ||
-     found+1 >= config_file.size() ||
-     config_file.substr(found+1) != "json"){
-    std::cerr<<"Please provide configure file with json suffix\n";
-    throw;
+  if (optind < argc) {
+    std::cerr<<"non-option ARGV-elements: ";
+    while (optind < argc)
+      std::cerr<<argv[optind++]<<" \n";
+    std::cerr<<"\n";
+    return 1;
   }
 
+  ////////////////////////
+  //test if all opts
+  if(c_opt.empty()){
+    std::cerr<<"configure file [-c] is not specified\n";
+    std::cerr<<help_usage;
+    return 1;
+  }
+  //////////////////////////////////
+
   
-  std::string config_str = JadeUtils::LoadFileToString(config_file);
+  
+  std::string config_file = c_opt;  
+  std::string config_str = JadeUtils::LoadFileToString(config_file);  
+
   
   JadeOption opt_conf(config_str);
   JadeOption opt_man = opt_conf.GetSubOption("JadeManager");
@@ -45,10 +72,9 @@ int main(int argc, char **argv){
   std::cout<<"=========start at "<<JadeUtils::GetNowStr()<<"======="<< std::endl;
   pman->StartDataTaking();
   std::cout<<"========="<<std::endl;
-  std::this_thread::sleep_for(std::chrono::seconds(nsec));
+  std::this_thread::sleep_for(std::chrono::seconds(10));
   std::cout<<"========="<<std::endl;
   pman->StopDataTaking();
   std::cout<<"=========exit at "<<JadeUtils::GetNowStr()<<"======="<< std::endl;
   return 0;
-
 }

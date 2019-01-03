@@ -140,6 +140,8 @@ JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout_idel)
         std::cerr<<"JadeRead: reading error\n";
         throw;
       }
+      std::cout<<"recv len "<<read_len_real<<std::endl;
+
       if(read_len_real== 0){
         if(!can_time_out){
           can_time_out = true;
@@ -191,6 +193,7 @@ JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout_idel)
         std::cerr<<"JadeRead: reading error\n";
         throw;
       }
+      std::cout<<"recv len "<<read_len_real<<std::endl;
     }
     
     size_filled += read_len_real;

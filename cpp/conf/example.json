@@ -1,0 +1,43 @@
+{
+    "JadeManager":{
+	"type":"JadeManager",
+	"parameter":{
+	    "version":3,
+	    "JadeRegCtrl":{
+		"type":"AltelRegCtrl",
+		"parameter":{
+		    "IP_ADDRESS": "192.168.10.16",
+		    "IP_UDP_PORT": 4660
+		}
+	    },
+	    "JadeReader":{
+		"type":"AltelReader",
+		"parameter":{
+		    "IS_DISK_FILE":true,
+		    "FILE_PATH":"/home/yiliu/workspace/alpide/alpide_soft/Frame_20190102_165302.dat",
+		    "IP_ADDRESS": "192.168.10.16",
+		    "IP_TCP_PORT":24
+		}
+	    },
+	    "JadeWriter":{
+		"type":"AltelWriter",
+		"parameter":{
+		    "DISABLE_FILE_WRITE": false,
+		    "PATH":"/home/yiliu/workspace/alpide/data/save"
+		}
+	    },
+	    "JadeFilter":{
+		"type":"JadeFilter",
+		"parameter":{
+		    "something": "something"
+		}
+	    },
+	    "JadeMonitor":{
+		"type":"JadeMonitor",
+		"parameter":{
+		    "something": "something"
+		}
+	    }
+	}
+    }
+}

@@ -55,6 +55,9 @@ bool JadeOption::IsNull() const{
   if(!m_json_ptr || m_json_ptr->is_null()){
     return true;
   }
+  else{
+    return false;
+  }
 }
 
 

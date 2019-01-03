@@ -35,12 +35,7 @@ void AltelWriter::Open(){
 
   if(m_disable_file_write)
     return;
-  std::time_t time_now = std::time(nullptr);
-  char time_buff[13];
-  time_buff[12] = 0;
-  std::strftime(time_buff, sizeof(time_buff),
-		"%y%m%d%H%M%S", std::localtime(&time_now));
-  std::string time_str(time_buff);
+  std::string time_str=JadeUtils::GetNowStr("%y%m%d%H%M%S");
   std::string data_path = m_path+"_"+time_str +".df";
   m_fd = std::fopen(data_path.c_str(), "wb" );
   if(m_fd == NULL){

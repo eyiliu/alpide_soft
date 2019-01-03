@@ -57,19 +57,27 @@ public:
   std::string SendCommand(const std::string &cmd, const std::string &para) override;
   void WriteByte(uint64_t addr, uint8_t val) override;
   uint8_t ReadByte(uint64_t addr) override;
-  
-  void WriteAlpideRegister(uint16_t addr, uint16_t val);
-  void BroadcastAlpide(uint16_t cmd);
-  void SetAlpideChipID(uint8_t id);
-  void SetAlpideGapLength(uint8_t len);
-  void InitAlpide();
-  void SetEventNumber(uint32_t num);  
-  void DigitalPulse();
 
+  
+  void ChipID(uint8_t id);
+  void WriteReg(uint16_t addr, uint16_t val);
+  uint16_t ReadReg(uint16_t addr);
+  void Broadcast(uint8_t opcode);
+  void SetFrameDuration(uint16_t len);
+  void SetFramePhase(uint16_t len);
+  void SetInTrigGap(uint16_t len);
+  void SetFPGAMode(uint8_t mode);
+  void SetFrameNumber(uint8_t n);
+  void InitALPIDE();
+  void StartPLL();
+  void StartWorking(uint8_t trigmode);
+  void ResetDAQ();
+  
+    
   int rbcp_com(const char* ipAddr, unsigned int port, struct rbcp_header* sendHeader, char* sendData, char* recvData, char dispMode);  
 private:
   JadeOption m_opt;
-
+  
   std::string m_ip_address;
   uint16_t m_ip_udp_port;
   uint8_t m_id ;
@@ -100,17 +108,6 @@ void AltelRegCtrl::Close(){
   SendCommand("STOP", "");
 }
 
-void AltelRegCtrl::DigitalPulse(){
-  WriteAlpideRegister(0x487,0xFFFF);
-  WriteAlpideRegister(0x500,0x3);
-  WriteAlpideRegister(0x4,0x0);
-  WriteAlpideRegister(0x5,0x28);                
-  WriteAlpideRegister(0x7,0x32);
-  WriteAlpideRegister(0x8,0x3E8);
-  WriteAlpideRegister(0x1,0x3D);
-  WriteByte(0x20000000, 0);
-}
-
 
 void AltelRegCtrl::WriteByte(uint64_t addr, uint8_t val){
   m_id++;
@@ -121,7 +118,7 @@ void AltelRegCtrl::WriteByte(uint64_t addr, uint8_t val){
   sndHeader.length=1;
   sndHeader.address=htonl(addr); //TODO: check
   char rcvdBuf[1024];
-  rbcp_com(m_ip_address.c_str(), m_ip_udp_port, &sndHeader, (char*) &val, rcvdBuf, RBCP_DISP_MODE_NO);
+  rbcp_com(m_ip_address.c_str(), m_ip_udp_port, &sndHeader, (char*) &val, rcvdBuf, 0);
   //TODO: if failure
 }
 
@@ -134,108 +131,165 @@ uint8_t AltelRegCtrl::ReadByte(uint64_t addr){
   sndHeader.length=1;
   sndHeader.address=htonl(addr);
   char rcvdBuf[1024];
-  if (rbcp_com(m_ip_address.c_str(), m_ip_udp_port, &sndHeader, NULL, rcvdBuf, RBCP_DISP_MODE_NO)!=1){
+  if (rbcp_com(m_ip_address.c_str(), m_ip_udp_port, &sndHeader, NULL, rcvdBuf, 0)!=1){
     std::cout<< "here error"<<std::endl;
   }
   return rcvdBuf[0];
 }
 
-
-void AltelRegCtrl::WriteAlpideRegister(uint16_t addr, uint16_t val){
-  uint64_t addr_base_l = 0x00000000;
-  uint64_t addr_base_h = 0x00010000;
-  uint8_t val_l = val & 0xff;
-  uint8_t val_h = (val >> 8) & 0xff;
-  WriteByte(addr_base_l+addr, val_l);
-  WriteByte(addr_base_h+addr, val_h);
+void AltelRegCtrl::ChipID(uint8_t id){
+  uint64_t addr = 0x10000001;
+  WriteByte(addr, id);
 }
 
-void AltelRegCtrl::BroadcastAlpide(uint16_t cmd){
-  uint64_t addr_base = 0x10000000;
-  WriteByte(addr_base+cmd, 0);
+void AltelRegCtrl::WriteReg(uint16_t addr, uint16_t val){
+  uint64_t chip_addr_base_h = 0x10000002;
+  uint64_t chip_addr_base_l = 0x10000003;
+  uint64_t chip_data_h = 0x10000004;
+  uint64_t chip_data_l = 0x10000005;
+  WriteByte(chip_addr_base_h, (addr>>8)&0xff);
+  WriteByte(chip_addr_base_l, addr&0xff);
+  WriteByte(chip_data_h, (val>>8)&0xff);
+  WriteByte(chip_data_l, val&0xff);
+  WriteByte(0, 0x9c);
 }
 
-void AltelRegCtrl::SetAlpideChipID(uint8_t id){
-  uint64_t addr_base = 0x40000000;
-  uint8_t val = id & 0x7f;
-  WriteByte(addr_base, val);
+uint16_t AltelRegCtrl::ReadReg(uint16_t addr){
+  uint64_t chip_addr_base_h = 0x10000002;
+  uint64_t chip_addr_base_l = 0x10000003;
+  uint64_t chip_data_c = 0x1000000d;
+  uint64_t chip_data_h = 0x1000000e;
+  uint64_t chip_data_l = 0x1000000f;
+  WriteByte(chip_addr_base_h, (addr>>8)&0xff);
+  WriteByte(chip_addr_base_l, addr&0xff);
+  WriteByte(0, 0x4e);
+  uint16_t val_c = ReadByte(chip_data_c);
+  uint8_t val_h = ReadByte(chip_data_h);
+  uint8_t val_l = ReadByte(chip_data_l);
+  uint16_t val = val_h * 0xff + val_h;
+  std::cout<<">>>>>>>>>>>>>read "<<val<< " count "<< val_c<<std::endl;
+  
+  return val;
 }
 
-void AltelRegCtrl::SetAlpideGapLength(uint8_t len){
-  uint64_t addr_base = 0xc0000000;
-  WriteByte(addr_base+len, 0);
+void AltelRegCtrl::Broadcast(uint8_t opcode){
+  uint64_t addr = 0x10000006;
+  WriteByte(addr, opcode);
+  WriteByte(0, 0x50);
 }
 
-void AltelRegCtrl::SetEventNumber(uint32_t num){
-  uint64_t addr_base = 0x90000000;
-  WriteByte(addr_base+num, 0);
+void AltelRegCtrl::SetFrameDuration(uint16_t len){
+  uint64_t addr_h = 0x10000007;
+  uint64_t addr_l = 0x10000008;
+  WriteByte(addr_h, (len>>8)&0xff);
+  WriteByte(addr_l, len&0xff);
 }
 
-void AltelRegCtrl::InitAlpide(){
-  SetAlpideChipID(0x10);
-  BroadcastAlpide(0xD2);
-  WriteAlpideRegister(0x10,0x70);
-  WriteAlpideRegister(0x4,0x10);
-  WriteAlpideRegister(0x5,0x28);
-  WriteAlpideRegister(0x601,0x75);
-  WriteAlpideRegister(0x602,0x93);
-  WriteAlpideRegister(0x603,0x56);
-  WriteAlpideRegister(0x604,0x32);
-  WriteAlpideRegister(0x605,0xFF);
-  WriteAlpideRegister(0x606,0x0);
-  WriteAlpideRegister(0x607,0x39);
-  WriteAlpideRegister(0x608,0x0);
-  WriteAlpideRegister(0x609,0x0);
-  WriteAlpideRegister(0x60A,0x0);
-  WriteAlpideRegister(0x60B,0x32);
-  WriteAlpideRegister(0x60C,0x40);
-  WriteAlpideRegister(0x60D,0x40);
-  WriteAlpideRegister(0x60E,0x32);
-  WriteAlpideRegister(0x701,0x400);
-  WriteAlpideRegister(0x487,0xFFFF);
-  WriteAlpideRegister(0x500,0x0);
-  WriteAlpideRegister(0x500,0x1);
-  WriteAlpideRegister(0x1,0x3C);
-  BroadcastAlpide(0x63);
-
-  //PLL
-  WriteAlpideRegister(0x14,0x008d);
-  WriteAlpideRegister(0x15,0x0088);
-  WriteAlpideRegister(0x14,0x0085);
-  WriteAlpideRegister(0x14,0x0185);
-  WriteAlpideRegister(0x14,0x0085);
-
-  //
-
-  //continuous mode
-  WriteAlpideRegister(0x487,0xFFFF);
-  WriteAlpideRegister(0x500,0x0);
-  WriteAlpideRegister(0x487,0xFFFF);
-  WriteAlpideRegister(0x500,0x1);
-  WriteAlpideRegister(0x4,0x10);
-  WriteAlpideRegister(0x5,4);   //strobe duration / 25 ns     
-  WriteAlpideRegister(0x1,0x3D);
-  BroadcastAlpide(0x63);
-
-  SetAlpideGapLength(185);
-  SetEventNumber(0);
-
+void AltelRegCtrl::SetFramePhase(uint16_t len){
+  uint64_t addr_h = 0x10000009;
+  uint64_t addr_l = 0x1000000a;
+  WriteByte(addr_h, (len>>8)&0xff);
+  WriteByte(addr_l, len&0xff);
 }
 
+void AltelRegCtrl::SetInTrigGap(uint16_t len){
+  uint64_t addr_h = 0x1000000b;
+  uint64_t addr_l = 0x1000000c;
+  WriteByte(addr_h, (len>>8)&0xff);
+  WriteByte(addr_l, len&0xff);
+}
+
+void AltelRegCtrl::SetFPGAMode(uint8_t mode){
+  uint64_t addr = 0x10000010;
+  WriteByte(addr, mode);
+}
+
+void AltelRegCtrl::SetFrameNumber(uint8_t n){
+  uint64_t addr = 0x10000011;
+  WriteByte(addr, n);
+}
+
+
+
+void AltelRegCtrl::InitALPIDE(){
+  SetFPGAMode(0);
+  //ResetDAQ();
+
+  ChipID(0x10);
+
+  // ReadReg(0x04);
+  // ReadReg(0x05);
+  
+
+  Broadcast(0xD2);
+  WriteReg(0x10,0x70);
+  WriteReg(0x4,0x10);
+  WriteReg(0x5,0x28);
+  WriteReg(0x601,0x75);
+  WriteReg(0x602,0x93);
+  WriteReg(0x603,0x56);
+  WriteReg(0x604,0x32);
+  WriteReg(0x605,0xFF);
+  WriteReg(0x606,0x0);
+  WriteReg(0x607,0x39);
+  WriteReg(0x608,0x0);
+  WriteReg(0x609,0x0);
+  WriteReg(0x60A,0x0);
+  WriteReg(0x60B,0x32);
+  WriteReg(0x60C,0x40);
+  WriteReg(0x60D,0x40);
+  WriteReg(0x60E,0x32);
+  WriteReg(0x701,0x400);
+  WriteReg(0x487,0xFFFF);
+  WriteReg(0x500,0x0);
+  WriteReg(0x500,0x1);
+  WriteReg(0x1,0x3C);
+  Broadcast(0x63);
+  StartPLL();
+}
+
+void AltelRegCtrl::StartPLL(){
+  WriteReg(0x14,0x008d);
+  WriteReg(0x15,0x0088);
+  WriteReg(0x14,0x0085);
+  WriteReg(0x14,0x0185);
+  WriteReg(0x14,0x0085);
+}
+
+void AltelRegCtrl::StartWorking(uint8_t trigmode){
+  WriteReg(0x487,0xFFFF);
+  WriteReg(0x500,0x0);
+  WriteReg(0x487,0xFFFF);
+  WriteReg(0x500,0x1);
+  WriteReg(0x4,0x10);
+  WriteReg(0x5,4);    
+  WriteReg(0x1,0x3D);
+  Broadcast(0x63);
+  SetFrameDuration(200);
+  SetFPGAMode(0x1+trigmode*2);
+}
+
+void AltelRegCtrl::ResetDAQ(){
+  WriteByte(0, 0xff);
+}
 
 std::string AltelRegCtrl::SendCommand(const std::string &cmd, const std::string &para){
   if(cmd=="INIT"){
-    InitAlpide();
+    InitALPIDE();
   }
 
   if(cmd=="START"){
-    WriteByte(0xa0000000, 0);
+    StartWorking(1);//ext trigger
   }
 
   if(cmd=="STOP"){
-    WriteByte(0xb0000000, 0);
+    SetFPGAMode(0);
   }
-  
+
+  if(cmd=="RESET"){
+    ResetDAQ();
+  }
+
   return "";
 }
 
