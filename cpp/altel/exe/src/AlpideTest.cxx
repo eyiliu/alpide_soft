@@ -72,7 +72,7 @@ Usage:\n\
   std::cout<<"=========start at "<<JadeUtils::GetNowStr()<<"======="<< std::endl;
   pman->StartDataTaking();
   std::cout<<"========="<<std::endl;
-  std::this_thread::sleep_for(std::chrono::seconds(10));
+  std::this_thread::sleep_for(std::chrono::seconds(20));
   std::cout<<"========="<<std::endl;
   pman->StopDataTaking();
   std::cout<<"=========exit at "<<JadeUtils::GetNowStr()<<"======="<< std::endl;

@@ -140,7 +140,7 @@ JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout_idel)
         std::cerr<<"JadeRead: reading error\n";
         throw;
       }
-      std::cout<<"recv len "<<read_len_real<<std::endl;
+      // std::cout<<"recv len "<<read_len_real<<std::endl;
 
       if(read_len_real== 0){
         if(!can_time_out){
@@ -188,22 +188,23 @@ JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout_idel)
         }
         continue;
       } 
-      int read_len_real = recv(m_fd, &buf[size_filled], (unsigned int)(size_buf-size_filled), MSG_WAITALL);
+      read_len_real = recv(m_fd, &buf[size_filled], (unsigned int)(size_buf-size_filled), MSG_WAITALL);
       if(read_len_real <= 0){
         std::cerr<<"JadeRead: reading error\n";
         throw;
       }
-      std::cout<<"recv len "<<read_len_real<<std::endl;
+      // std::cout<<"recv len "<<read_len_real<<std::endl;
     }
     
     size_filled += read_len_real;
     can_time_out = false;
-
+    // std::cout<<" size_buf size_buf_min  size_filled"<< size_buf << " "<< size_buf_min<<" " << size_filled<<std::endl;    
     if(size_buf == size_buf_min  && size_filled >= size_buf_min){
       uint8_t header_byte =  buf.front();
       uint32_t w1 = BE32TOH(*reinterpret_cast<const uint32_t*>(buf.data()));
       uint8_t rsv = (w1>>20) & 0xf;
       uint32_t size_payload = (w1 & 0xfffff)/2;
+      // std::cout<<" size_payload "<< size_payload<<std::endl;      
       if(header_byte != HEADER_BYTE){
 	std::cerr<<"wrong header\n";
 	//TODO: skip brocken data

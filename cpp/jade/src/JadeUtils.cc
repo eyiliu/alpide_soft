@@ -188,3 +188,42 @@ std::string JadeUtils::Base64_atob(const std::string &base64){
   return bin;
 }
 
+
+
+
+std::string JadeUtils::ToHexString(const char *bin, int len){
+  constexpr char hexmap[] = {'0', '1', '2', '3', '4', '5', '6', '7',
+			     '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+  const unsigned char* data = (const unsigned char*)bin;
+  std::string s(len * 2, ' ');
+  for (int i = 0; i < len; ++i) {
+    s[2 * i]     = hexmap[(data[i] & 0xF0) >> 4];
+    s[2 * i + 1] = hexmap[data[i] & 0x0F];
+  }
+  return s;
+}
+
+
+std::string JadeUtils::ToHexString(const std::string& bin){
+  constexpr char hexmap[] = {'0', '1', '2', '3', '4', '5', '6', '7',
+			     '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+  const unsigned char *data = (const unsigned char*)bin.data();
+  int len = bin.size();
+  std::string s(len * 2, ' ');
+  for (int i = 0; i < len; ++i) {
+    s[2 * i]     = hexmap[(data[i] & 0xF0) >> 4];
+    s[2 * i + 1] = hexmap[data[i] & 0x0F];
+  }
+  return s;
+}
+
+
+std::string JadeUtils::ToHexString(char bin){
+  constexpr char hexmap[] = {'0', '1', '2', '3', '4', '5', '6', '7',
+			     '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+  unsigned char data = (unsigned char)bin;
+  std::string s(2, ' ');
+  s[0] = hexmap[(data & 0xF0) >> 4];
+  s[1] = hexmap[data & 0x0F];
+  return s;
+}

@@ -7,18 +7,6 @@
 #endif
 
 
-
-
-#define PKG_HEADER_BYTE   (0x5a)
-#define PKG_TRAILER_BYTE  (0xa5)
-#define CHIP_HEADER_4B       (0b10100000)
-#define CHIP_TRAILER_4B      (0b10110000)
-#define CHIP_EMPTY_FRAME_4B  (0b11100000)
-#define REGION_HEADER_3B     (0b11000000)
-#define DATA_SHORT_2B =          (0b01000000)
-#define DATA_LONG_2B =           (0b00000000)
-
-
 using _base_c_ = JadeDataFrame;
 using _index_c_ = JadeDataFrame;
 
@@ -118,24 +106,29 @@ uint32_t JadeDataFrame::GetTriggerN() const
 uint32_t JadeDataFrame::GetExtension() const
 {
   return m_extension;
-}
+} // 
 
 void JadeDataFrame::Decode(){
   m_is_decoded = true;
-  const char* p_raw_beg = m_data_raw.data();
-  const char* p_raw_end = m_data_raw.data() + m_data_raw.size();
-  const char* p_raw = m_data_raw.data();
+  const uint8_t* p_raw_beg = reinterpret_cast<const uint8_t *>(m_data_raw.data());
+  const uint8_t* p_raw_end = p_raw_beg + m_data_raw.size();
+  const uint8_t* p_raw = p_raw_beg;
   if(m_data_raw.size()<7){
     std::cerr << "JadeDataFrame: raw data length is less than 7\n";
     throw;
   }
-  if(m_data_raw.front()!=PKG_HEADER_BYTE  || m_data_raw.back()!=PKG_TRAILER_BYTE){
+  if( *p_raw_beg!=0x5a || *(p_raw_end-1)!=0xa5){
     std::cerr << "JadeDataFrame: pkg header/trailer mismatch\n";
+    std::cerr << JadeUtils::ToHexString(m_data_raw)<<std::endl;
+    std::cerr <<uint16_t((*p_raw_beg))<<std::endl;
+    std::cerr <<uint16_t((*(p_raw_end-1)))<<std::endl;
     throw;
   }
   uint32_t len_payload_data = BE32TOH(*reinterpret_cast<const uint32_t*>(p_raw)) & 0x000fffff;
-  if (len_payload_data + 7 != m_data_raw.size()) {
+  if (len_payload_data/2 + 7 != m_data_raw.size()) {
     std::cerr << "JadeDataFrame: raw data length does not match\n";
+    std::cerr << len_payload_data<<std::endl;
+    std::cerr << m_data_raw.size()<<std::endl;
     throw;
   }  
   p_raw += 4;

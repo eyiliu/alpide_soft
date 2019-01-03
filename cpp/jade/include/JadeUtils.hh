@@ -37,6 +37,11 @@ public:
   static std::string Base64_btoa(const std::string &bin);
   static std::string Base64_atob(const std::string &base64);
 
+  static std::string ToHexString(const char *bin, int len);
+  static std::string ToHexString(const std::string &bin);
+  static std::string ToHexString(char bin);
+  
+  
   inline std::string GetThisBinaryPath(){
 #ifdef _WIN32
     void* address_return = _ReturnAddress();

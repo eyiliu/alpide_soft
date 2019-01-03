@@ -15,6 +15,7 @@ class AltelWriter: public JadeWriter{
   std::string m_path;
   JadeOption m_opt;
   bool m_disable_file_write;
+  int m_n_ev;
 };
 
 //+++++++++++++++++++++++++++++++++++++++++
@@ -42,6 +43,7 @@ void AltelWriter::Open(){
     std::cerr<<"JadeWrite: Failed to open/create file: "<<data_path<<"\n";
     throw;
   }
+  m_n_ev= 0;
 }
 
 void AltelWriter::Close(){
@@ -51,6 +53,7 @@ void AltelWriter::Close(){
     std::fclose(m_fd);
     m_fd = 0;
   }
+  std::cout<< "AltelWriter::Close m_n_ev "<< m_n_ev<<std::endl;
 }
 
 void AltelWriter::Write(JadeDataFrameSP df){
@@ -61,6 +64,7 @@ void AltelWriter::Write(JadeDataFrameSP df){
     throw;
   }
   //TODO
+  m_n_ev++;
   std::string &rawstring = df->RawData();
   if(rawstring.size()){
     std::fwrite(&(rawstring.at(0)), 1, rawstring.size(), m_fd);
