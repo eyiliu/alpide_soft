@@ -25,10 +25,16 @@ set(CMAKE_SKIP_BUILD_RPATH  FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+
+
 if(WIN32)
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+  #set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
   add_definitions("/wd4251")
   add_definitions("/wd4996")
   add_definitions("/wd4251")
+
   if(NOT MSVC)
     message(FATAL_ERROR "only VC++ is support on Windows")
   endif()
