@@ -41,6 +41,7 @@ private:
   }
 };
 
+
 template <typename B>
 template <typename ...ARGS>
 typename JadeFactory<B>::UP
@@ -51,7 +52,7 @@ JadeFactory<B>::MakeUnique(const std::type_index& id, ARGS&& ...args){
     it = ins.at(id);
   }
   catch (const std::out_of_range& oor){
-    std::cerr<<"JadeFactory:: ERROR, unable to find  "<< id.name() << " in " << (typeid(ins)).name() <<"\n";
+    std::cerr<<"JadeFactory:: ERROR ("<<oor.what()<<"), unable to find  "<< id.name() << " in " << (typeid(ins)).name() <<"\n";
     return nullptr;
   }
   return (*it)(std::forward<ARGS>(args)...);

@@ -16,8 +16,6 @@
 #include <cstring>
 #include <cctype>
 
-namespace __cxxabiv1
-{
 
 namespace
 {
@@ -4979,4 +4977,3 @@ char * __cxa_demangle(const char *mangled_name, char *buf, size_t *n, int *statu
     return buf;
 }
 
-}  // __cxxabiv1

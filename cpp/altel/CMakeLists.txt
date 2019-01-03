@@ -1,6 +1,7 @@
 include_directories(include)
 
 include_directories(../jade/include)
+add_definitions("-DJADE_DLL_EXPORT")
 
 aux_source_directory(src ALTEL_SRC)
 set(ALTEL_LIBRARY altel CACHE INTERNAL "alpide telescope library")

@@ -11,6 +11,7 @@
 #include <utility>
 #include <algorithm>
 
+#include "getopt.h"
 
 using namespace std::chrono_literals;
 

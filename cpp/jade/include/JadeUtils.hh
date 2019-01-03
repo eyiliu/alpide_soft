@@ -11,16 +11,9 @@
 #include <string>
 #include <cstdio>
 
-#ifdef _WIN32
-#include <windows.h>
-#include <intrin.h>
-#pragma intrinsic(_ReturnAddress)
-#else
-#include <dlfcn.h>
-#endif
+#include "JadeSystem.hh"
 
-
-class JadeUtils{
+class DLLEXPORT JadeUtils{
 public:
   static std::type_index GetTypeIndex(const std::string& name);
   static bool SetTypeIndex(const std::type_index& index);

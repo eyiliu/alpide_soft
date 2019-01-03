@@ -4,9 +4,9 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include <arpa/inet.h>
 #include <fcntl.h>
-#include <unistd.h>
+
+
 
 #define MAX_LINE_LENGTH 1024
 #define MAX_PARAM_LENGTH 20
@@ -32,12 +32,6 @@ struct rbcp_header{
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-
-#ifdef _WIN32
-#include <io.h>
-#else
-#include <unistd.h>
-#endif
 
 #include <thread>
 #include <algorithm>
@@ -85,10 +79,10 @@ private:
 
 //+++++++++++++++++++++++++++++++++++++++++
 //AltelRegCtrl.cc
-namespace{
-  auto _test_index_ = JadeUtils::SetTypeIndex(std::type_index(typeid(AltelRegCtrl)));
-  auto _test_ = JadeFactory<JadeRegCtrl>::Register<AltelRegCtrl, const JadeOption&>(typeid(AltelRegCtrl));
-}
+//namespace{
+//  auto _test_index_ = JadeUtils::SetTypeIndex(std::type_index(typeid(AltelRegCtrl)));
+//  auto _test_ = JadeFactory<JadeRegCtrl>::Register<AltelRegCtrl, const JadeOption&>(typeid(AltelRegCtrl));
+//}
 
 AltelRegCtrl::AltelRegCtrl(const JadeOption &opt)
   :m_opt(opt), m_id(0), m_ip_udp_port(4660), JadeRegCtrl(opt){

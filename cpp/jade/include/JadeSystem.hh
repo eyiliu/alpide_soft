@@ -19,7 +19,6 @@ using std::uint64_t;
 #ifdef _WIN32
 #include <crtdefs.h>
 #include <winsock2.h>
-#include <ws2tcpip.h>
 #define BE16TOH ntohs
 #define BE32TOH ntohl
 #define BE64TOH ntohll
@@ -32,6 +31,7 @@ using std::uint64_t;
 #define DLLEXPORT __declspec(dllimport)
 #else
 #define DLLEXPORT __declspec(dllexport)
+
 #pragma warning(disable: 4251)
 #pragma warning(disable: 4996)
 #endif
@@ -62,6 +62,24 @@ using std::uint64_t;
 using std::size_t;
 #define DLLEXPORT
 #endif
+
+#ifdef _WIN32
+#include <intrin.h>
+#pragma intrinsic(_ReturnAddress)
+#else
+#include <dlfcn.h>
+#endif
+
+
+#ifdef _WIN32
+#include <io.h>
+#else
+#include <arpa/inet.h>
+#include <unistd.h>
+#endif
+
+
+using socket_t = decltype(socket(0, 0, 0));
 
 #include <memory>
 #include <string>

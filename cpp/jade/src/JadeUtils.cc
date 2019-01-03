@@ -5,14 +5,6 @@
 #include <iomanip>
 #include <sstream>
 
-#ifdef _WIN32
-#include <windows.h>
-#include <intrin.h>
-#pragma intrinsic(_ReturnAddress)
-#else
-#include <dlfcn.h>
-#endif
-
 std::unordered_map<std::string, std::type_index>& JadeUtils::TypeIndexMap(){
   static std::unordered_map<std::string, std::type_index> s_um_name_typeindex;
   return s_um_name_typeindex;
@@ -40,12 +32,13 @@ bool JadeUtils::SetTypeIndex(const std::type_index& index){
   return SetTypeIndex(demangled_name, index);
 }
 
-extern "C" {
+
 char* __cxa_demangle(const char* mangled_name,
                      char* buf,
                      size_t* n,
                      int* status);
 
+extern "C" {
 typedef void* (*malloc_func_t)(size_t);
 typedef void (*free_func_t)(void*);
 char* __unDName(char* buffer,
@@ -67,7 +60,7 @@ std::string JadeUtils::NameDemangle(const std::string& mang) {
       mang.compare(0, zprefix_l.size() , zprefix_l) == 0 ){
     cxa_in += 1;
   }
-  
+  //if(0){
   if (char* lx = __cxa_demangle(cxa_in, NULL, NULL, NULL)) {
     std::string demang(lx);    
     free(lx);

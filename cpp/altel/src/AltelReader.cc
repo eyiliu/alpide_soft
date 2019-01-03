@@ -7,18 +7,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
-#include <unistd.h>
+
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <arpa/inet.h>
-
 #include <chrono>
+
+
+#ifdef _WIN32
+#pragma comment(lib, "Ws2_32.lib")
+#endif
 
 #define HEADER_BYTE  (0x5a)
 #define FOOTER_BYTE  (0xa5)
 
-class AltelReader: public JadeReader{
+class DLLEXPORT AltelReader: public JadeReader{
 public:
   AltelReader(const JadeOption &opt);
   ~AltelReader() override {};
@@ -30,7 +33,7 @@ public:
   void Close() override;
 private:
   JadeOption m_opt;
-  int m_fd;  
+  int m_fd;
   bool m_flag_file;
   bool m_flag_terminate_file;
   
@@ -76,8 +79,8 @@ void AltelReader::Open(){
       FD_ZERO(&fds);
       FD_SET(m_fd, &fds);
       timeval tv_timeout;
-      tv_timeout.tv_sec = 0.1;
-      tv_timeout.tv_usec = 0;
+      tv_timeout.tv_sec = 0;
+      tv_timeout.tv_usec = 10000;
       int rc = select(m_fd+1, &fds, NULL, NULL, &tv_timeout);
       if(rc<=0)
         perror("connect-select error");

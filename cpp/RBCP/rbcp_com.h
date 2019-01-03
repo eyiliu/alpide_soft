@@ -5,9 +5,13 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include <arpa/inet.h>
 #include <fcntl.h>
+#ifdef _WIN32
+#include <winsock.h>  
+#else
+#include <arpa/inet.h>
 #include <unistd.h>
+#endif
 
 #define MAX_LINE_LENGTH 1024
 #define MAX_PARAM_LENGTH 20
