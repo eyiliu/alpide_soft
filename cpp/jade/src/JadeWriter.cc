@@ -37,7 +37,3 @@ JadeWriterSP JadeWriter::Make(const std::string& name, const JadeOption& opt){
 void JadeWriter::Write(JadeDataFrameSP df){
 }
 
-JadeOption JadeWriter::Post(const std::string &url, const JadeOption &opt){
-  return JadePost::Post(url, opt);
-}
-

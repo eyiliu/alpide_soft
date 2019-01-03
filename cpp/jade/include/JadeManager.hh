@@ -7,9 +7,7 @@
 #include "JadeOption.hh"
 #include "JadeDataFrame.hh"
 #include "JadeReader.hh"
-#include "JadeFilter.hh"
 #include "JadeWriter.hh"
-#include "JadeMonitor.hh"
 #include "JadeRegCtrl.hh"
 
 #include <string>
@@ -29,12 +27,12 @@ std::unordered_map<std::type_index, typename JadeFactory<JadeManager>::UP (*)(co
 JadeFactory<JadeManager>::Instance<const JadeOption&>();
 #endif
 
-class DLLEXPORT JadeManager: public JadePost{
+
+class DLLEXPORT JadeManager{
  public:
   JadeManager(const JadeOption &opt);
   virtual ~JadeManager();
   static JadeManagerSP Make(const std::string& name, const JadeOption& opt);
-  JadeOption Post(const std::string &url, const JadeOption &opt) override;
 
   //do the system initialize: 
   virtual void Init();
@@ -50,14 +48,11 @@ class DLLEXPORT JadeManager: public JadePost{
   }
   // regcrtl config
   virtual void DeviceControl(const std::string &cmd);
-
   
   //TODO: weak_ptr
   JadeRegCtrlSP GetRegCtrl() { return m_ctrl; };
   JadeReaderSP GetReader() { return m_rd; };
   JadeWriterSP GetWriter() { return m_wrt; };
-  JadeFilterSP GetFilter() { return m_flt; };
-  JadeMonitorSP GetMonitor() { return m_mnt; };  
   
   void MakeComponent();
   void RemoveComponent();
@@ -65,33 +60,21 @@ class DLLEXPORT JadeManager: public JadePost{
   void StopThread();
  private:
   uint64_t AsyncReading();
-  uint64_t AsyncFiltering();
   uint64_t AsyncWriting();
-  uint64_t AsyncMonitoring();
   
  private:
   JadeOption m_opt;
   
   JadeRegCtrlSP m_ctrl;
   JadeReaderSP m_rd;
-  JadeFilterSP m_flt;
   JadeWriterSP m_wrt;
-  JadeMonitorSP m_mnt;
   
   bool m_is_running;
   std::future<uint64_t> m_fut_async_rd;
-  std::future<uint64_t> m_fut_async_flt;
   std::future<uint64_t> m_fut_async_wrt;
-  std::future<uint64_t> m_fut_async_mnt;
-  std::mutex m_mx_ev_to_flt;
   std::mutex m_mx_ev_to_wrt;
-  std::mutex m_mx_ev_to_mnt;
-  std::queue<JadeDataFrameSP> m_qu_ev_to_flt;
   std::queue<JadeDataFrameSP> m_qu_ev_to_wrt;
-  std::queue<JadeDataFrameSP> m_qu_ev_to_mnt;
-  std::condition_variable m_cv_valid_ev_to_flt;
   std::condition_variable m_cv_valid_ev_to_wrt;
-  std::condition_variable m_cv_valid_ev_to_mnt;    
 };
 
 #endif

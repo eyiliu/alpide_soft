@@ -31,8 +31,3 @@ JadeRegCtrlSP JadeRegCtrl::Make(const std::string& name, const JadeOption& opt){
     return nullptr;
   }
 }
-
-JadeOption JadeRegCtrl::Post(const std::string &url, const JadeOption &opt){
-  return JadePost::Post(url, opt);
-}
-

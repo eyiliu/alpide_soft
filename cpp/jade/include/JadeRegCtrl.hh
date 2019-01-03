@@ -4,9 +4,7 @@
 #include "JadeSystem.hh"
 #include "JadeFactory.hh"
 #include "JadeOption.hh"
-#include "JadePost.hh"
 #include "JadeUtils.hh"
-
 
 #include <string>
 #include <map>
@@ -23,12 +21,11 @@ JadeFactory<JadeRegCtrl>::Instance<const JadeOption&>();
 #endif
 
 
-class DLLEXPORT JadeRegCtrl: public JadePost{
+class DLLEXPORT JadeRegCtrl{
  public:
   JadeRegCtrl(const JadeOption &opt);
-  ~JadeRegCtrl() override;
+  virtual ~JadeRegCtrl();
   static JadeRegCtrlSP Make(const std::string& name, const JadeOption &opt);
-  JadeOption Post(const std::string &url, const JadeOption &opt) override;
 
   //open controller device;
   virtual void Open() {};

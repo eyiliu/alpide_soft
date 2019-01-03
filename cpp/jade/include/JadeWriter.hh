@@ -3,7 +3,6 @@
 
 #include "JadeSystem.hh"
 #include "JadeFactory.hh"
-#include "JadePost.hh"
 #include "JadeDataFrame.hh"
 #include "JadeOption.hh"
 #include "JadeUtils.hh"
@@ -27,12 +26,11 @@ std::unordered_map<std::type_index, typename JadeFactory<JadeWriter>::UP (*)(con
 JadeFactory<JadeWriter>::Instance<const JadeOption&>();
 #endif
 
-class DLLEXPORT JadeWriter: public JadePost{
+class DLLEXPORT JadeWriter{
  public:
   JadeWriter(const JadeOption &opt);
-  ~JadeWriter() override;
+  virtual ~JadeWriter();
   static JadeWriterSP Make(const std::string& name, const JadeOption& opt);  
-  JadeOption Post(const std::string &url, const JadeOption &opt) override;
 
   //open file for written 
   virtual void Open() {};

@@ -47,10 +47,6 @@ JadeReaderSP JadeReader::Make(const std::string& name, const JadeOption& opt){
   }
 }
 
-JadeOption JadeReader::Post(const std::string &url, const JadeOption &opt){
-  return JadePost::Post(url, opt);
-}
-
 JadeDataFrameSP JadeReader::Read(const std::chrono::milliseconds &timeout){
   std::this_thread::sleep_for(timeout);
   return nullptr;

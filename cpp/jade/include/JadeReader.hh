@@ -4,7 +4,6 @@
 #include "JadeSystem.hh"
 #include "JadeFactory.hh"
 #include "JadeOption.hh"
-#include "JadePost.hh"
 #include "JadeUtils.hh"
 
 #include "JadeDataFrame.hh"
@@ -36,12 +35,11 @@ std::unordered_map<std::type_index, typename JadeFactory<JadeReader>::UP (*)(con
 JadeFactory<JadeReader>::Instance<const JadeOption&>();
 #endif
 
-class DLLEXPORT JadeReader: public JadePost{
+class DLLEXPORT JadeReader{
  public:
   JadeReader(const JadeOption &opt);
-  ~JadeReader() override;
+  virtual ~JadeReader();
   static JadeReaderSP Make(const std::string&name, const JadeOption &opt);
-  JadeOption Post(const std::string &url, const JadeOption &opt) override;
 
   //open data device for read
   virtual void Open(){};
@@ -51,8 +49,7 @@ class DLLEXPORT JadeReader: public JadePost{
   virtual JadeDataFrameSP Read(const std::chrono::milliseconds &timeout);
   virtual std::vector<JadeDataFrameSP> Read(size_t size_max_pkg,
                                             const std::chrono::milliseconds &timeout_idel,
-                                            const std::chrono::milliseconds &timeout_total) {return std::vector<JadeDataFrameSP>();};
-  
+                                            const std::chrono::milliseconds &timeout_total) {return std::vector<JadeDataFrameSP>();};  
 };
 
 
