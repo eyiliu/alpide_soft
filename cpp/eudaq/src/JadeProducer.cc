@@ -22,7 +22,6 @@ public:
   void SetProducerCallback(eudaq::Producer *producer);
 private:
   eudaq::Producer *m_producer;
-  eudaq::EventUP m_evup_to_send;
 };
 
 //+++++++++++++++++++++++++++++++++++++++++
@@ -37,17 +36,14 @@ void EudaqWriter::SetProducerCallback(eudaq::Producer *producer){
 }
 
 EudaqWriter::EudaqWriter(const JadeOption &opt)
-  :JadeWriter(opt), m_producer(nullptr)
-{
+  :JadeWriter(opt), m_producer(nullptr){
   
 }
 
 EudaqWriter::~EudaqWriter(){
-  
 }
 
 void EudaqWriter::Close(){
-  m_evup_to_send.reset();
 }
 
 void EudaqWriter::Write(JadeDataFrameSP df){
@@ -56,27 +52,11 @@ void EudaqWriter::Write(JadeDataFrameSP df){
     throw;
   }
   
-  if(m_evup_to_send){ //1st CDS frame exists in  evup
-    if(m_evup_to_send->GetTriggerN() == df->GetTriggerN()){
-      m_evup_to_send->AddBlock<int16_t>((uint32_t)2, df->Data());
-      m_producer->SendEvent(std::move(m_evup_to_send));
-      return;
-    }
-    else{ 
-      std::cout<<"EudaqWriter: WARNING, current CDS has different trigger number to the existing CDS"<<std::endl;
-      // m_producer->SendEvent(std::move(m_evup_to_send));
-      throw;
-    }
-  }
-  
-  m_evup_to_send = eudaq::Event::MakeUnique("JadeRaw");
-  m_evup_to_send->SetTriggerN(df->GetTriggerN());
-  
-  std::vector<uint16_t> v_info;
-  v_info.push_back(df->GetMatrixSizeX());
-  v_info.push_back(df->GetMatrixSizeY());
-  m_evup_to_send->AddBlock<uint16_t>((uint32_t)0, v_info);
-  m_evup_to_send->AddBlock<int16_t>((uint32_t)1, df->Data());
+  auto evup_to_send = eudaq::Event::MakeUnique("JadeRaw");
+  df->Decode(1); //level 1, header-only
+  evup_to_send->SetTriggerN(df->GetCounter());
+  evup_to_send->AddBlock<char>( (uint32_t)0, df->Raw().data(), (size_t)(df->Raw().size()) );
+  m_producer->SendEvent(std::move(evup_to_send));  
 }
 
 class JadeProducer : public eudaq::Producer {

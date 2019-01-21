@@ -20,39 +20,50 @@ class DLLEXPORT JadeDataFrame {
   JadeDataFrame() = delete;
   // JadeDataFrame();
   virtual ~JadeDataFrame();
-  virtual void Decode();
+  virtual void Decode(uint32_t level);
 
   //const version
-  const std::chrono::system_clock::time_point& TimeStamp() const;
-  const std::vector<int16_t>& Data() const;
-  const std::string& RawData() const;
-  const std::string& Description() const;
+  const std::string& Raw() const;
+  const std::string& Meta() const;
 
   //none const version
-  std::chrono::system_clock::time_point& TimeStamp();
-  std::vector<int16_t>& Data();
-  std::string& RawData();
-  std::string& Description();
+  std::string& Raw();
+  std::string& Meta();
 
-  int16_t GetHitValue(size_t x, size_t y) const;
-  uint32_t GetFrameCount() const;
+  uint32_t GetMatrixDepth() const;
   uint32_t GetMatrixSizeX() const; //x row, y column
   uint32_t GetMatrixSizeY() const;
-  uint32_t GetTriggerN() const;
-  uint32_t GetExtension() const;
+  uint64_t GetCounter() const;
+  uint64_t GetExtension() const;
+
+  const std::string& Data_Flat() const {return m_data_flat; }
+  const std::vector<uint16_t>& Data_X() const {return m_data_x; }
+  const std::vector<uint16_t>& Data_Y() const {return m_data_y; }
+  const std::vector<uint16_t>& Data_D() const {return m_data_d; }
+  const std::vector<uint32_t>& Data_T() const {return m_data_t; }
+  const std::vector<uint32_t>& Data_V() const {return m_data_v; }
+  
   void Print(std::ostream& os, size_t ws = 0) const;
 
  private:
-  bool m_is_decoded;
   std::string m_data_raw;
-  std::string m_description;
-  std::chrono::system_clock::time_point m_ts;
-  uint32_t m_trigger_n;
-  uint16_t m_extension;
-  uint32_t m_frame_n;
+  std::string m_meta;
+  
+  uint16_t m_level_decode;  
+
+  uint64_t m_counter;
+  uint64_t m_extension;
+  
   uint16_t m_n_x;
   uint16_t m_n_y;
-  std::vector<int16_t> m_data;
+  uint16_t m_n_d; //Z
+  std::string m_data_flat;
+
+  std::vector<uint16_t> m_data_x;
+  std::vector<uint16_t> m_data_y;
+  std::vector<uint16_t> m_data_d;
+  std::vector<uint32_t> m_data_t;
+  std::vector<uint32_t> m_data_v;
 };
 
 #endif

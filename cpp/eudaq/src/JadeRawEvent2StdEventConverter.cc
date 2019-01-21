@@ -1,8 +1,10 @@
 #include "eudaq/StdEventConverter.hh"
 #include "eudaq/RawEvent.hh"
 
+#include "JadeDataFrame.hh"
+
 #define PLANE_NUMBER_OFFSET 50
-#define SIGNAL_THRESHOLD 0
+
 class JadeRawEvent2StdEventConverter: public eudaq::StdEventConverter{
 public:
   bool Converting(eudaq::EventSPC d1, eudaq::StdEventSP d2, eudaq::ConfigSPC conf) const override;
@@ -18,38 +20,45 @@ bool JadeRawEvent2StdEventConverter::Converting(eudaq::EventSPC d1, eudaq::StdEv
   auto ev = std::dynamic_pointer_cast<const eudaq::RawEvent>(d1);
   size_t nblocks= ev->NumBlocks();
   auto block_n_list = ev->GetBlockNumList();
-  //TODO: check block;
-  //TODO: check description;
-  if(nblocks < 2)
+  if(nblocks !=1 || block_n_list.front()!=0 )
     EUDAQ_THROW("Unknown data");
   
-  std::vector<uint8_t> block_info = ev->GetBlock(0);
-  uint16_t *data_info = reinterpret_cast<uint16_t*>( block_info.data());
-  uint16_t x_n_pixel = *data_info;
-  uint16_t y_n_pixel = *(data_info+1);
-  uint32_t n_pixel = x_n_pixel * y_n_pixel;
+  char* block_raw = reinterpret_cast<char*>(ev->GetBlock(0).data());
+  JadeDataFrame df(std::string(block_raw, ev->GetBlock(0).size()));
+  df.Decode(3);
+  
+  size_t x_n_pixel = df.GetMatrixSizeX();
+  size_t y_n_pixel = df.GetMatrixSizeY();
+  size_t z_n_pixel = df.GetMatrixDepth();
+  size_t n_pixel = x_n_pixel*y_n_pixel;
 
-  for(auto bn: block_n_list){
-    if(bn == 0){
-      //info block
-      continue;
-    }
-    
-    std::vector<uint8_t> block_decoded = ev->GetBlock(bn);
-    uint16_t *data_decoded = reinterpret_cast<uint16_t*>( block_decoded.data());
-    if(! block_decoded.size() || block_decoded.size() != n_pixel *2 ){
-      EUDAQ_THROW("Unknown data, pixel size mismatch");
-    }
-    
-    eudaq::StandardPlane plane(PLANE_NUMBER_OFFSET+bn, "Jade", "Jade");
-    plane.SetSizeZS(x_n_pixel, y_n_pixel, 0); //TODO: check this function for its real meaning
-    for(uint32_t i = 0; i< n_pixel; i++){
-      uint16_t signal = *(data_decoded+i);
-      if(signal > SIGNAL_THRESHOLD ){
-        plane.PushPixel( i%x_n_pixel , i/x_n_pixel , 1);
-      }
-    }
-    d2->AddPlane(plane);
+  const std::vector<uint16_t> &data_x = df.Data_X();
+  const std::vector<uint16_t> &data_y = df.Data_X();
+  const std::vector<uint16_t> &data_z = df.Data_D();
+
+  size_t n_hit = data_x.size();
+  if(n_hit!=data_y.size() || n_hit!=data_z.size()){
+    std::cerr<<"converter: wrong data\n";
+    throw;
   }
+  
+  uint16_t bn = 0;//TODO, multiple-planes/producer
+  std::vector<eudaq::StandardPlane*> v_planes;
+  for(size_t i=0; i<z_n_pixel; i++){
+    eudaq::StandardPlane* p =  & (d2->AddPlane(eudaq::StandardPlane(PLANE_NUMBER_OFFSET+bn+i, "Jade", "Jade")));
+    p->SetSizeZS(x_n_pixel, y_n_pixel, 0); //TODO: check this function for its real meaning
+    v_planes.push_back(p);
+  }
+
+  auto it_x = data_x.begin();
+  auto it_y = data_y.begin();
+  auto it_z = data_z.begin();
+  while(it_x!=data_x.end()){
+    v_planes[*it_z]->PushPixel( *it_x , *it_y , 1);
+    it_x ++;
+    it_y ++;
+    it_z ++;
+  }
+  
   return true;
 }

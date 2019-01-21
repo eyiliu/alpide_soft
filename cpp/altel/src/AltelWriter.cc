@@ -67,10 +67,10 @@ void AltelWriter::Write(JadeDataFrameSP df){
   }
   //TODO
   if(m_enable_decode)
-    df->Decode();
+    df->Decode(3);
   
   m_n_ev++;
-  std::string &rawstring = df->RawData();
+  std::string &rawstring = df->Raw();
   if(rawstring.size()){
     std::fwrite(&(rawstring.at(0)), 1, rawstring.size(), m_fd);
   }

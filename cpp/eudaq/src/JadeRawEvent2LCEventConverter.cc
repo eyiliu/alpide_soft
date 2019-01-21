@@ -5,6 +5,7 @@
 #include "IMPL/TrackerDataImpl.h"
 #include "UTIL/CellIDEncoder.h"
 
+#include "JadeDataFrame.hh"
 
 #define PLANE_ID_OFFSET_LICO 50
 
@@ -22,19 +23,32 @@ namespace{
 
 bool JadeRawEvent2LCEventConverter::Converting(eudaq::EventSPC d1, eudaq::LCEventSP d2,
 						 eudaq::ConfigSPC conf) const{
+
   auto ev = std::dynamic_pointer_cast<const eudaq::RawEvent>(d1);
   size_t nblocks= ev->NumBlocks();
   auto block_n_list = ev->GetBlockNumList();
-  //TODO: check block;
-  //TODO: check description;
-  if(nblocks < 2)
+  if(nblocks !=1 || block_n_list.front()!=0 )
     EUDAQ_THROW("Unknown data");
   
-  std::vector<uint8_t> block_info = ev->GetBlock(0);
-  uint16_t *data_info = reinterpret_cast<uint16_t*>( block_info.data());
-  uint16_t x_n_pixel = *data_info;
-  uint16_t y_n_pixel = *(data_info+1);
-  uint32_t n_pixel = x_n_pixel * y_n_pixel;
+  char* block_raw = reinterpret_cast<char*>(ev->GetBlock(0).data());
+  JadeDataFrame df(std::string(block_raw, ev->GetBlock(0).size()));
+  df.Decode(3);
+  
+  size_t x_n_pixel = df.GetMatrixSizeX();
+  size_t y_n_pixel = df.GetMatrixSizeY();
+  size_t z_n_pixel = df.GetMatrixDepth();
+  size_t n_pixel = x_n_pixel*y_n_pixel;
+
+  const std::vector<uint16_t> &data_x = df.Data_X();
+  const std::vector<uint16_t> &data_y = df.Data_X();
+  const std::vector<uint16_t> &data_z = df.Data_D();
+
+  size_t n_hit = data_x.size();
+  if(n_hit!=data_y.size() || n_hit!=data_z.size()){
+    std::cerr<<"converter: wrong data\n";
+    throw;
+  }
+
 
   lcio::LCCollectionVec *zsDataCollection = nullptr;
   auto p_col_names = d2->getCollectionNames();
@@ -46,33 +60,37 @@ bool JadeRawEvent2LCEventConverter::Converting(eudaq::EventSPC d1, eudaq::LCEven
   else{
     zsDataCollection = new lcio::LCCollectionVec(lcio::LCIO::TRACKERDATA);
     d2->addCollection(zsDataCollection, "zsdata_jade");
-  }  
+  }
   
-  for(auto bn: block_n_list){
-    if(bn == 0){
-      //info block
-      continue;
-    }  
-    std::vector<uint8_t> block_decoded = ev->GetBlock(bn);
-    uint16_t *data_decoded = reinterpret_cast<uint16_t*>( block_decoded.data());
-    if(! block_decoded.size() || block_decoded.size() != n_pixel *2 ){
-      EUDAQ_THROW("Unknown data, pixel size mismatch");
-    }
-
-    lcio::CellIDEncoder<lcio::TrackerDataImpl> zsDataEncoder("sensorID:7,sparsePixelType:5",
+  lcio::CellIDEncoder<lcio::TrackerDataImpl> zsDataEncoder("sensorID:7,sparsePixelType:2",
                                                            zsDataCollection);
-    zsDataEncoder["sensorID"] = PLANE_ID_OFFSET_LICO + bn;
-    zsDataEncoder["sparsePixelType"] = 2;
-    auto zsFrame = new lcio::TrackerDataImpl;
+  uint16_t bn = 0;//TODO, multiple-planes/producer
+  std::vector<lcio::TrackerDataImpl*> v_zsFrames;
+  for(size_t i=0; i<z_n_pixel; i++){
+    lcio::TrackerDataImpl* zsFrame = new lcio::TrackerDataImpl;
+    zsDataEncoder["sensorID"] = PLANE_ID_OFFSET_LICO + bn + i;
     zsDataEncoder.setCellID(zsFrame);
+    v_zsFrames.push_back(zsFrame);
+  }
 
-    for(uint32_t i = 0; i< n_pixel; i++){    
-      zsFrame->chargeValues().push_back(i%x_n_pixel);//x
-      zsFrame->chargeValues().push_back(i/x_n_pixel);//y
-      zsFrame->chargeValues().push_back(*(data_decoded+i));//signal
-      zsFrame->chargeValues().push_back(0);//time
-    }
+  auto it_x = data_x.begin();
+  auto it_y = data_y.begin();
+  auto it_z = data_z.begin();
+  while(it_x!=data_x.end()){
+    auto zsFrame = v_zsFrames[*it_z];
+    zsFrame->chargeValues().push_back(*it_x);//x
+    zsFrame->chargeValues().push_back(*it_y);//y
+    zsFrame->chargeValues().push_back(1);//signal
+    zsFrame->chargeValues().push_back(0);//time
+    it_x ++;
+    it_y ++;
+    it_z ++;
+  }
+
+  for(auto &zsFrame: v_zsFrames){
     zsDataCollection->push_back(zsFrame);
   }
+
   return true; 
 }
+  

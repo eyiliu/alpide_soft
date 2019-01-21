@@ -22,18 +22,25 @@ using _index_c_ = JadeDataFrame;
 
 JadeDataFrame::JadeDataFrame(std::string&& data)
   : m_data_raw(std::move(data))
-  , m_is_decoded(false)
+  , m_level_decode(0)
+  , m_counter(0)
+  , m_extension(0)
   , m_n_x(0)
-    , m_n_y(0)
+  , m_n_y(1)
+  , m_n_d(1)
 {
 }
 
 JadeDataFrame::JadeDataFrame(std::string& data)
   : m_data_raw(data)
-  , m_is_decoded(false)
+  , m_level_decode(0)
+  , m_counter(0)
+  , m_extension(0)
   , m_n_x(0)
-    , m_n_y(0)
+  , m_n_y(1)
+  , m_n_d(1)
 {
+  
 }
 
 
@@ -41,51 +48,29 @@ JadeDataFrame::~JadeDataFrame()
 {
 }
 
-const std::vector<int16_t>& JadeDataFrame::Data() const
-{
-  return m_data;
-}
-
-const std::string& JadeDataFrame::RawData() const
+const std::string& JadeDataFrame::Raw() const
 {
   return m_data_raw;
 }
 
-const std::string& JadeDataFrame::Description() const
+const std::string& JadeDataFrame::Meta() const
 {
-  return m_description;
+  return m_meta;
 }
 
-const std::chrono::system_clock::time_point&
-JadeDataFrame::TimeStamp() const
-{
-  return m_ts;
-}
-
-std::vector<int16_t>& JadeDataFrame::Data()
-{
-  return m_data;
-}
-
-std::string& JadeDataFrame::RawData()
+std::string& JadeDataFrame::Raw()
 {
   return m_data_raw;
 }
 
-std::string& JadeDataFrame::Description()
+std::string& JadeDataFrame::Meta()
 {
-  return m_description;
+  return m_meta;
 }
 
-  std::chrono::system_clock::time_point&
-JadeDataFrame::TimeStamp()
+uint32_t JadeDataFrame::GetMatrixDepth() const
 {
-  return m_ts;
-}
-
-uint32_t JadeDataFrame::GetFrameCount() const
-{
-  return m_frame_n;
+  return m_n_d;
 }
 
 uint32_t JadeDataFrame::GetMatrixSizeX() const
@@ -98,18 +83,19 @@ uint32_t JadeDataFrame::GetMatrixSizeY() const
   return m_n_y;
 }
 
-uint32_t JadeDataFrame::GetTriggerN() const
+uint64_t JadeDataFrame::GetCounter() const
 {
-  return m_trigger_n;
+  return m_counter;
 }
 
-uint32_t JadeDataFrame::GetExtension() const
+uint64_t JadeDataFrame::GetExtension() const
 {
   return m_extension;
 } // 
 
-void JadeDataFrame::Decode(){
-  m_is_decoded = true;
+void JadeDataFrame::Decode(uint32_t level){
+  if(level <= m_level_decode)
+    return;
   const uint8_t* p_raw_beg = reinterpret_cast<const uint8_t *>(m_data_raw.data());
   const uint8_t* p_raw_end = p_raw_beg + m_data_raw.size();
   const uint8_t* p_raw = p_raw_beg;
@@ -130,12 +116,22 @@ void JadeDataFrame::Decode(){
     std::cerr << len_payload_data<<std::endl;
     std::cerr << m_data_raw.size()<<std::endl;
     throw;
-  }  
+  }
   p_raw += 4;
-  m_trigger_n = BE16TOH(*reinterpret_cast<const uint16_t*>(p_raw));
+  m_counter = BE16TOH(*reinterpret_cast<const uint16_t*>(p_raw));
   p_raw += 2;
-  m_data.clear();
-  m_data.resize(1024 * 512, 0);
+  m_n_x = 1024;
+  m_n_y = 512;
+
+  if(level<2){
+    m_level_decode = level;
+    return;
+  }
+  
+  if(level>2){
+    m_data_flat.clear();
+    m_data_flat.resize(m_n_x * m_n_y, 0);
+  }  
   uint8_t l_frame_n = -1;
   uint8_t l_region_id = -1;
   while(p_raw < p_raw_end){
@@ -191,79 +187,93 @@ void JadeDataFrame::Decode(){
       //DATA 0
       if(d & 0b01000000){
         //DATA SHORT 01
+        if(level>2){
+          uint8_t encoder_id = (d & 0b00111100)>> 2;
+          uint16_t addr = (d & 0b00000011)<<8;
+          p_raw++;
+          d = *p_raw;
+          addr += *p_raw;
+          p_raw++;
+
+          uint16_t y = addr>>1;
+          uint16_t x = (l_region_id<<5)+(encoder_id<<1)+((addr&0b1)==(addr>>1&0b1));
+          m_data_flat[x+m_n_x*y] |= (1<<l_frame_n);
+          m_data_x.push_back(x);
+          m_data_y.push_back(y);
+          m_data_d.push_back(l_frame_n);
+        }
+        else{
+          p_raw++;
+          p_raw++;
+        }
+        continue;
+      }
+      //DATA LONG 00
+      if(level>2){
         uint8_t encoder_id = (d & 0b00111100)>> 2;
         uint16_t addr = (d & 0b00000011)<<8;
         p_raw++;
         d = *p_raw;
         addr += *p_raw;
         p_raw++;
-
+        d = *p_raw;
+        uint8_t hit_map = (d & 0b01111111);
+        p_raw++;
         uint16_t y = addr>>1;
         uint16_t x = (l_region_id<<5)+(encoder_id<<1)+((addr&0b1)==(addr>>1&0b1));
-        m_data[x+1024*y] |= (1<<l_frame_n);
-        continue;
-      }
-      //DATA LONG 00
-      uint8_t encoder_id = (d & 0b00111100)>> 2;
-      uint16_t addr = (d & 0b00000011)<<8;
-      p_raw++;
-      d = *p_raw;
-      addr += *p_raw;
-      p_raw++;
-      d = *p_raw;
-      uint8_t hit_map = (d & 0b01111111);
-      p_raw++;
-
-      uint16_t y = addr>>1;
-      uint16_t x = (l_region_id<<5)+(encoder_id<<1)+((addr&0b1)==(addr>>1&0b1));
-      m_data[x+1024*y] |= (1<<l_frame_n);
-      for(int i=1; i<=7; i++){
-        if(hit_map & (1<(i-1))){
-          addr+= i;
-          uint16_t y = addr>>1;
-          uint16_t x = (l_region_id<<5)+(encoder_id<<1)+((addr&0b1)==(addr>>1&0b1));
-          m_data[x+1024*y] |= (1<<l_frame_n);
+        m_data_flat[x+m_n_x*y] |= (1<<l_frame_n);
+        m_data_x.push_back(x);
+        m_data_y.push_back(y);
+        m_data_d.push_back(l_frame_n);
+        for(int i=1; i<=7; i++){
+          if(hit_map & (1<(i-1))){
+            addr+= i;
+            uint16_t y = addr>>1;
+            uint16_t x = (l_region_id<<5)+(encoder_id<<1)+((addr&0b1)==(addr>>1&0b1));
+            m_data_flat[x+m_n_x*y] |= (1<<l_frame_n);
+            m_data_x.push_back(x);
+            m_data_y.push_back(y);
+            m_data_d.push_back(l_frame_n);
+          }
         }
+      }
+      else{
+        p_raw++;
+        p_raw++;
+        p_raw++;
       }
       continue;
     }
   }
+  m_n_d = l_frame_n+1;
+  m_level_decode = level;
   return;
-}
-
-int16_t JadeDataFrame::GetHitValue(size_t x, size_t y) const
-{
-  size_t pos = x + m_n_x * y;
-  int16_t val = m_data.at(pos);
-  return val;
 }
 
 void JadeDataFrame::Print(std::ostream& os, size_t ws) const
 {
   os << std::string(ws, ' ') << "{ name:JadeDataFrame,\n";
-  os << std::string(ws + 2, ' ') << "is_decoded:" << m_is_decoded << ",\n";
-  if (m_is_decoded) {
-    os << std::string(ws + 2, ' ') << "description:"
+  os << std::string(ws + 2, ' ') << "level_decode:" << m_level_decode << ",\n";
+  if (m_level_decode) {
+    os << std::string(ws + 2, ' ') << "meta:"
       << "TODO"
       << ",\n";
-    os << std::string(ws + 2, ' ') << "ts:"
-      << "TODO"
-      << ",\n";
-    os << std::string(ws + 2, ' ') << "frame_n:" << m_frame_n << ",\n";
+    os << std::string(ws + 2, ' ') << "counter:" << m_counter << ",\n";
     os << std::string(ws + 2, ' ') << "n_x:" << m_n_x << ",\n";
     os << std::string(ws + 2, ' ') << "n_y:" << m_n_y << ",\n";
-    if (m_n_x != 0 && m_n_y != 0) {
-      os << std::string(ws + 2, ' ') << "data:[\n";
-      for (size_t iy = 0; iy < m_n_y; iy++) {
-        os << std::string(ws + 4, ' ') << "{row_y:" << iy
-          << ",value:[" << GetHitValue(0, 0);
-        for (size_t ix = 1; ix < m_n_x; ix++) {
-          os << "," << GetHitValue(ix, iy);
-        }
-        os << "]}\n";
-      }
-      os << std::string(ws + 2, ' ') << "]\n";
-    }
+    os << std::string(ws + 2, ' ') << "n_d:" << m_n_d << ",\n";
+    // if (m_n_x != 0 && m_n_y != 0) {
+    //   os << std::string(ws + 2, ' ') << "data:[\n";
+    //   for (size_t iy = 0; iy < m_n_y; iy++) {
+    //     os << std::string(ws + 4, ' ') << "{row_y:" << iy
+    //        << ",value:[" << GetHitValue(0, 0);
+    //     for (size_t ix = 1; ix < m_n_x; ix++) {
+    //       os << "," << GetHitValue(ix, iy);
+    //     }
+    //     os << "]}\n";
+    //   }
+    //   os << std::string(ws + 2, ' ') << "]\n";
+    // }
   }
   os << std::string(ws, ' ') << "}\n";
 }
