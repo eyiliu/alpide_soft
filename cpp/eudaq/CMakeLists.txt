@@ -3,7 +3,7 @@ if(NOT JADE_BUILD_EUDAQ_PRODUCER)
   return()
 endif()
 
-include_directories(../core/include)
+include_directories(../jade/include)
 include_directories(include)
 aux_source_directory(src MODULE_SRC)
 
