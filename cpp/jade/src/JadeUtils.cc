@@ -70,6 +70,10 @@ std::string JadeUtils::NameDemangle(const std::string& mang) {
     free(ms);
     return demang;
   } else {
+    const static std::string win_class_prefix("class ");
+    if(mang.compare(0, win_class_prefix.size(), win_class_prefix)==0){
+      return mang.substr(win_class_prefix.size());
+    }
     return mang;
   }  
 }
