@@ -1,5 +1,8 @@
-#include "eudaq/Producer.hh"
+#define WIN32_LEAN_AND_MEAN
+
 #include "JadeCore.hh"
+
+#include "eudaq/Producer.hh"
 
 #include <iostream>
 #include <chrono>
@@ -103,9 +106,10 @@ void JadeProducer::DoInitialise(){
   auto eudaq_writer = std::dynamic_pointer_cast<EudaqWriter>(writer);
   if(!eudaq_writer){
     std::cerr<<"JadeProducer: there is no instance of EudaqWriter in "<<man_type<<std::endl;
-    return;
   }
-  eudaq_writer->SetProducerCallback(this);
+  else{
+    eudaq_writer->SetProducerCallback(this);
+  }
 }
 
 void JadeProducer::DoConfigure(){

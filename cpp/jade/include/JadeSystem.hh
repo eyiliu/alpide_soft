@@ -19,6 +19,7 @@ using std::uint64_t;
 #ifdef _WIN32
 #include <crtdefs.h>
 #include <winsock2.h>
+// https://stackoverflow.com/questions/5971332/redefinition-errors-in-winsock2-h
 #define BE16TOH ntohs
 #define BE32TOH ntohl
 #define BE64TOH ntohll

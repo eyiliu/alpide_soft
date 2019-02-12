@@ -1,11 +1,10 @@
+#define WIN32_LEAN_AND_MEAN
+#include "JadeDataFrame.hh"
 #include "eudaq/LCEventConverter.hh"
 #include "eudaq/RawEvent.hh"
-
 #include "IMPL/TrackerRawDataImpl.h"
 #include "IMPL/TrackerDataImpl.h"
 #include "UTIL/CellIDEncoder.h"
-
-#include "JadeDataFrame.hh"
 
 #define PLANE_ID_OFFSET_LICO 50
 

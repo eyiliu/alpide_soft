@@ -57,6 +57,7 @@ void AltelReader::Open(){
     std::string data_path = m_opt.GetStringValue("FILE_PATH"); 
     // std::string time_str= JadeUtils::GetNowStr("%y%m%d%H%M%S");
 #ifdef _WIN32
+    std::cout<< "here"<<std::endl;
     m_fd = _open(data_path.c_str(), _O_RDONLY | _O_BINARY);
 #else
     m_fd = open(data_path.c_str(), O_RDONLY);
@@ -128,7 +129,7 @@ std::vector<JadeDataFrameSP> AltelReader::Read(size_t size_max_pkg,
 }
 
 JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout_idel){ //timeout_read_interval
-  size_t size_buf_min = 7;
+  size_t size_buf_min = 8;
   size_t size_buf = size_buf_min;
   std::string buf(size_buf, 0);
   size_t size_filled = 0;
@@ -210,9 +211,9 @@ JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout_idel)
     // std::cout<<" size_buf size_buf_min  size_filled"<< size_buf << " "<< size_buf_min<<" " << size_filled<<std::endl;    
     if(size_buf == size_buf_min  && size_filled >= size_buf_min){
       uint8_t header_byte =  buf.front();
-      uint32_t w1 = BE32TOH(*reinterpret_cast<const uint32_t*>(buf.data()));
+      uint32_t w1 = BE32TOH(*reinterpret_cast<const uint32_t*>(buf.data()+1));
       uint8_t rsv = (w1>>20) & 0xf;
-      uint32_t size_payload = (w1 & 0xfffff)/2;
+      uint32_t size_payload = (w1 & 0xfffff);
       // std::cout<<" size_payload "<< size_payload<<std::endl;      
       if(header_byte != HEADER_BYTE){
 	std::cerr<<"wrong header\n";
@@ -226,7 +227,10 @@ JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout_idel)
   uint8_t footer_byte =  buf.back();
   if(footer_byte != FOOTER_BYTE){
     std::cerr<<"wrong footer\n";
-   //TODO: skip brocken data
+    std::cerr<<"\n";
+    std::cout<<JadeUtils::ToHexString(buf)<<std::endl;
+    std::cerr<<"\n";
+    //TODO: skip brocken data
     throw;
   }
   return std::make_shared<JadeDataFrame>(std::move(buf));

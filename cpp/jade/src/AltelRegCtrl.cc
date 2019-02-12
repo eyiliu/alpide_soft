@@ -94,8 +94,11 @@ AltelRegCtrl::AltelRegCtrl(const JadeOption &opt)
 }
 
 void AltelRegCtrl::Open(){
+  std::cout<<"sending INIT"<<std::endl;
   SendCommand("INIT", "");
+  std::cout<<"sending INIT"<<std::endl;
   SendCommand("START", "");
+  std::cout<<"open done"<<std::endl;
 }
 
 void AltelRegCtrl::Close(){
@@ -112,8 +115,9 @@ void AltelRegCtrl::WriteByte(uint64_t addr, uint8_t val){
   sndHeader.length=1;
   sndHeader.address=htonl(addr); //TODO: check
   char rcvdBuf[1024];
-  rbcp_com(m_ip_address.c_str(), m_ip_udp_port, &sndHeader, (char*) &val, rcvdBuf, 0);
+  rbcp_com(m_ip_address.c_str(), m_ip_udp_port, &sndHeader, (char*) &val, rcvdBuf, RBCP_DISP_MODE_NO);
   //TODO: if failure
+  
 }
 
 uint8_t AltelRegCtrl::ReadByte(uint64_t addr){
@@ -125,7 +129,7 @@ uint8_t AltelRegCtrl::ReadByte(uint64_t addr){
   sndHeader.length=1;
   sndHeader.address=htonl(addr);
   char rcvdBuf[1024];
-  if (rbcp_com(m_ip_address.c_str(), m_ip_udp_port, &sndHeader, NULL, rcvdBuf, 0)!=1){
+  if (rbcp_com(m_ip_address.c_str(), m_ip_udp_port, &sndHeader, NULL, rcvdBuf, RBCP_DISP_MODE_NO)!=1){
     std::cout<< "here error"<<std::endl;
   }
   return rcvdBuf[0];
@@ -262,7 +266,7 @@ void AltelRegCtrl::StartWorking(uint8_t trigmode){
   SetFrameDuration(200);
 
   SetInTrigGap(20); //200->1k, defualt 20 -> 10k
-  SetFPGAMode(0x1+trigmode*2);
+  SetFPGAMode(0x1);
 }
 
 void AltelRegCtrl::ResetDAQ(){
@@ -291,8 +295,8 @@ std::string AltelRegCtrl::SendCommand(const std::string &cmd, const std::string 
 
 int AltelRegCtrl::rbcp_com(const char* ipAddr, unsigned int port, struct rbcp_header* sendHeader, char* sendData, char* recvData, char dispMode){
 
-   struct sockaddr_in sitcpAddr;
-   int sock;
+  struct sockaddr_in sitcpAddr;
+  SOCKET  sock;
 
   struct timeval timeout;
   fd_set setSelect;
@@ -380,13 +384,13 @@ int AltelRegCtrl::rbcp_com(const char* ipAddr, unsigned int port, struct rbcp_he
 
 	if(rcvdBytes<sizeof(struct rbcp_header)){
 	  puts("ERROR: ACK packet is too short");
-	  close(sock);
+	  closesocket(sock);
 	  return -1;
 	}
 
 	if((0x0f & rcvdBuf[1])!=0x8){
 	  puts("ERROR: Detected bus error");
-	  close(sock);
+	  closesocket(sock);
 	  return -1;
 	}
 
@@ -415,7 +419,6 @@ int AltelRegCtrl::rbcp_com(const char* ipAddr, unsigned int port, struct rbcp_he
 	    }
 	    if(i==7) printf("\n Data:\n");
 	  }
-
 	  if(j!=3) puts(" ");
 	}else if(dispMode==RBCP_DISP_MODE_INTERACTIVE){
 	  if(sendHeader->command==RBCP_CMD_RD){
@@ -444,11 +447,11 @@ int AltelRegCtrl::rbcp_com(const char* ipAddr, unsigned int port, struct rbcp_he
 	  }
 	}
 	numReTrans = 4;
-	close(sock);
+	closesocket(sock);
 	return(rcvdBytes);
       }
     }
   }
-  close(sock);
+  closesocket(sock);
   return -3;
 }

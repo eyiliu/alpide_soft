@@ -55,13 +55,11 @@ Usage:\n\
     std::cerr<<help_usage;
     return 1;
   }
-  //////////////////////////////////
+  ///////////////////////
 
-  
   
   std::string config_file = c_opt;  
   std::string config_str = JadeUtils::LoadFileToString(config_file);  
-
   
   JadeOption opt_conf(config_str);
   JadeOption opt_man = opt_conf.GetSubOption("JadeManager");

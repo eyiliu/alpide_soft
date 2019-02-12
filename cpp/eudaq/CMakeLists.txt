@@ -7,10 +7,15 @@ include_directories(../jade/include)
 include_directories(include)
 aux_source_directory(src MODULE_SRC)
 
+if(NOT EUDAQ_LCIO_LIBRARY)
+  list(REMOVE_ITEM MODULE_SRC src/JadeRawEvent2LCEventConverter.cc)
+endif()
+
 find_package(eudaq CONFIG REQUIRED NO_DEFAULT_PATH)
 include_directories(${EUDAQ_INCLUDE_DIRS})
 
-set(EUDAQ_MODULE eudaq_module_jade)
+
+set(EUDAQ_MODULE libeudaq_module_jade)
 add_library(${EUDAQ_MODULE} SHARED ${MODULE_SRC})
 target_link_libraries(${EUDAQ_MODULE} ${EUDAQ_LIBRARIES} ${JADE_CORE_LIBRARY})
 set_property( TARGET ${EUDAQ_MODULE} APPEND PROPERTY INSTALL_RPATH ${EUDAQ_LIBRARIES_DIRS})

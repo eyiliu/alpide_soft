@@ -32,12 +32,14 @@ JadeManager::~JadeManager(){
 
 JadeManagerSP JadeManager::Make(const std::string& name, const JadeOption& opt){  
   try{
+    JadeUtils::PrintTypeIndexMap();  
+
     std::type_index index = JadeUtils::GetTypeIndex(name);
     JadeManagerSP wrt =  JadeFactory<JadeManager>::MakeUnique<const JadeOption&>(index, opt);
     return wrt;
   }
-  catch(...){
-    std::cout<<"TODO: JadeManager"<<std::endl;
+  catch(std::exception& e){
+    std::cout<<"JadeManager::Make  exception  "<<e.what() <<std::endl;
     return nullptr;
   }
 }
@@ -69,10 +71,25 @@ void JadeManager::Init(){
 }
 
 void JadeManager::StartDataTaking(){
-  if(m_rd) m_rd->Open();
-  if(m_ctrl) m_ctrl->Open();
-  if(m_wrt) m_wrt->Open();
+  std::cout<<"openning rd"<<std::endl;
+  if(m_rd){
+    std::cout<<"openning"<<std::endl;
+    m_rd->Open();
+  }
+  std::cout<<"openning ctrl"<<std::endl;
+  if(m_ctrl){
+    std::cout<<"openning"<<std::endl;
+    m_ctrl->Open();
+    
+  }
+  std::cout<<"openning wrt"<<std::endl;
+  if(m_wrt) {
+    std::cout<<"openning"<<std::endl;
+    m_wrt->Open();
+  }
+  std::cout<<"open done"<<std::endl;
   StartThread();
+  std::cout<<"thread started"<<std::endl;  
 }
 
 void JadeManager::StopDataTaking(){
@@ -111,7 +128,7 @@ uint64_t JadeManager::AsyncReading(){
       dur = tp_now - tp_print_prev;
       dur_sec_c = dur.count() * decltype(dur)::period::num * 1.0/ decltype(dur)::period::den;
       double cr_hz = (n_df-ndf_print_prev) / dur_sec_c;
-      //std::cout<<"JadeManager:: average data rate (reading)<"<< av_hz<<"> current data rate<"<<cr_hz<<">"<<std::endl;
+      std::cout<<"JadeManager:: data "<<n_df <<"  average data rate (reading)<"<< av_hz<<"> current data rate<"<<cr_hz<<">"<<std::endl;
       ndf_print_next += 10000;
       ndf_print_prev = n_df;
       tp_print_prev = tp_now;
@@ -150,7 +167,7 @@ uint64_t JadeManager::AsyncWriting(){
       dur = tp_now - tp_print_prev;
       dur_sec_c = dur.count() * decltype(dur)::period::num * 1.0/ decltype(dur)::period::den;
       double cr_hz = (n_df-ndf_print_prev) / dur_sec_c;
-      std::cout<<"JadeManager:: average data rate (reading)<"<< av_hz<<"> current data rate<"<<cr_hz<<">"<<std::endl;
+      //std::cout<<"JadeManager:: average data rate (Writing)<"<< av_hz<<"> current data rate<"<<cr_hz<<">"<<std::endl;
       ndf_print_next += 10000;
       ndf_print_prev = n_df;
       tp_print_prev = tp_now;
@@ -162,7 +179,7 @@ uint64_t JadeManager::AsyncWriting(){
 
 void JadeManager::StartThread(){
   if(!m_rd || !m_wrt || !m_ctrl) {
-    std::cerr<<"JadeManager: m_rd, m_flt, m_wrt, m_mnt or m_ctrl is not set"<<std::endl;
+    std::cerr<<"JadeManager: m_rd, m_wrt, or m_ctrl is not set"<<std::endl;
     throw;
   }
   m_is_running = true;

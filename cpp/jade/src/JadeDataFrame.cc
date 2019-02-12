@@ -99,8 +99,8 @@ void JadeDataFrame::Decode(uint32_t level){
   const uint8_t* p_raw_beg = reinterpret_cast<const uint8_t *>(m_data_raw.data());
   const uint8_t* p_raw_end = p_raw_beg + m_data_raw.size();
   const uint8_t* p_raw = p_raw_beg;
-  if(m_data_raw.size()<7){
-    std::cerr << "JadeDataFrame: raw data length is less than 7\n";
+  if(m_data_raw.size()<8){
+    std::cerr << "JadeDataFrame: raw data length is less than 8\n";
     throw;
   }
   if( *p_raw_beg!=0x5a || *(p_raw_end-1)!=0xa5){
@@ -110,8 +110,9 @@ void JadeDataFrame::Decode(uint32_t level){
     std::cerr <<uint16_t((*(p_raw_end-1)))<<std::endl;
     throw;
   }
+  p_raw++;
   uint32_t len_payload_data = BE32TOH(*reinterpret_cast<const uint32_t*>(p_raw)) & 0x000fffff;
-  if (len_payload_data/2 + 7 != m_data_raw.size()) {
+  if (len_payload_data + 8 != m_data_raw.size()) {
     std::cerr << "JadeDataFrame: raw data length does not match\n";
     std::cerr << len_payload_data<<std::endl;
     std::cerr << m_data_raw.size()<<std::endl;

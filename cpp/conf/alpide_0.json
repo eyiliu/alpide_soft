@@ -21,11 +21,9 @@
 		}
 	    },
 	    "JadeWriter":{
-		"type":"AltelWriter",
+		"type":"EudaqWriter",
 		"parameter":{
-		    "ENABLE_DECODE":false,
-		    "DISABLE_FILE_WRITE": true,
-		    "PATH":"/home/yiliu/workspace/alpide/data/savz"
+		    "nothing":"nothing"
 		}
 	    }
 	}

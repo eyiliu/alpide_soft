@@ -1,7 +1,8 @@
+#define WIN32_LEAN_AND_MEAN
+#include "JadeDataFrame.hh"
+
 #include "eudaq/StdEventConverter.hh"
 #include "eudaq/RawEvent.hh"
-
-#include "JadeDataFrame.hh"
 
 #define PLANE_NUMBER_OFFSET 50
 

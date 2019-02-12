@@ -6,7 +6,7 @@
 	    "JadeRegCtrl":{
 		"type":"AltelRegCtrl",
 		"parameter":{
-		    "IP_ADDRESS": "192.168.10.16",
+		    "IP_ADDRESS": "192.168.10.17",
 		    "IP_UDP_PORT": 4660
 		}
 	    },
@@ -16,16 +16,14 @@
 		    "IS_DISK_FILE":false,
 		    "TERMINATE_AT_FILE_END":true,
 		    "FILE_PATH":"/home/yiliu/workspace/alpide/data/savz_190103155133.df",
-		    "IP_ADDRESS": "192.168.10.16",
+		    "IP_ADDRESS": "192.168.10.17",
 		    "IP_TCP_PORT":24
 		}
 	    },
 	    "JadeWriter":{
-		"type":"AltelWriter",
+		"type":"EeudaqWriter",
 		"parameter":{
-		    "ENABLE_DECODE":false,
-		    "DISABLE_FILE_WRITE": true,
-		    "PATH":"/home/yiliu/workspace/alpide/data/savz"
+		    "nothing":"nothing"
 		}
 	    }
 	}
