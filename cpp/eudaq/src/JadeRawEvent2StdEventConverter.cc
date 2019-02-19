@@ -18,26 +18,30 @@ namespace{
 }
 
 bool JadeRawEvent2StdEventConverter::Converting(eudaq::EventSPC d1, eudaq::StdEventSP d2, eudaq::ConfigSPC conf) const{
+
   auto ev = std::dynamic_pointer_cast<const eudaq::RawEvent>(d1);
   size_t nblocks= ev->NumBlocks();
   auto block_n_list = ev->GetBlockNumList();
   if(nblocks !=1 || block_n_list.front()!=0 )
     EUDAQ_THROW("Unknown data");
-  
-  char* block_raw = reinterpret_cast<char*>(ev->GetBlock(0).data());
-  JadeDataFrame df(std::string(block_raw, ev->GetBlock(0).size()));
+
+  auto rawblock = ev->GetBlock(0);
+  char* block_raw = reinterpret_cast<char*>(rawblock.data());
+  JadeDataFrame df(std::string(block_raw, rawblock.size()));
   df.Decode(3);
   
   size_t x_n_pixel = df.GetMatrixSizeX();
   size_t y_n_pixel = df.GetMatrixSizeY();
   size_t z_n_pixel = df.GetMatrixDepth();
   size_t n_pixel = x_n_pixel*y_n_pixel;
-
+  
   const std::vector<uint16_t> &data_x = df.Data_X();
-  const std::vector<uint16_t> &data_y = df.Data_X();
+  const std::vector<uint16_t> &data_y = df.Data_Y();
   const std::vector<uint16_t> &data_z = df.Data_D();
 
   size_t n_hit = data_x.size();
+  // std::cout<<"x_n_pixel:y_n_pixel:z_n_pixel:n_pixel:n_hit "<<x_n_pixel<<":"<<y_n_pixel<<":"<<z_n_pixel<<":"<<n_pixel<<":"<<n_hit<<std::endl;
+
   if(n_hit!=data_y.size() || n_hit!=data_z.size()){
     std::cerr<<"converter: wrong data\n";
     throw;
@@ -46,11 +50,10 @@ bool JadeRawEvent2StdEventConverter::Converting(eudaq::EventSPC d1, eudaq::StdEv
   uint16_t bn = 0;//TODO, multiple-planes/producer
   std::vector<eudaq::StandardPlane*> v_planes;
   for(size_t i=0; i<z_n_pixel; i++){
-    eudaq::StandardPlane* p =  & (d2->AddPlane(eudaq::StandardPlane(PLANE_NUMBER_OFFSET+bn+i, "Jade", "Jade")));
+    eudaq::StandardPlane* p =  & (d2->AddPlane(eudaq::StandardPlane(PLANE_NUMBER_OFFSET+bn+i, "alpide", "alpide")));
     p->SetSizeZS(x_n_pixel, y_n_pixel, 0); //TODO: check this function for its real meaning
     v_planes.push_back(p);
   }
-
   auto it_x = data_x.begin();
   auto it_y = data_y.begin();
   auto it_z = data_z.begin();
@@ -60,6 +63,6 @@ bool JadeRawEvent2StdEventConverter::Converting(eudaq::EventSPC d1, eudaq::StdEv
     it_y ++;
     it_z ++;
   }
-  
+
   return true;
 }

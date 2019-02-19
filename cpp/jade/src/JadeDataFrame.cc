@@ -103,6 +103,7 @@ void JadeDataFrame::Decode(uint32_t level){
     std::cerr << "JadeDataFrame: raw data length is less than 8\n";
     throw;
   }
+  // std::cout << JadeUtils::ToHexString(m_data_raw)<<std::endl;
   if( *p_raw_beg!=0x5a || *(p_raw_end-1)!=0xa5){
     std::cerr << "JadeDataFrame: pkg header/trailer mismatch\n";
     std::cerr << JadeUtils::ToHexString(m_data_raw)<<std::endl;
@@ -135,20 +136,21 @@ void JadeDataFrame::Decode(uint32_t level){
   }  
   uint8_t l_frame_n = -1;
   uint8_t l_region_id = -1;
-  while(p_raw < p_raw_end){
+  while(p_raw < p_raw_end-1){
     char d = *p_raw;
+    // std::cout << JadeUtils::ToHexString(&d, 1)<<std::endl;    
     if(d & 0b10000000){
-      //NOT DATA 1
+      // std::cout<<"//NOT DATA 1"<<std::endl;
       if(d & 0b01000000){
-        //empty or region header or busy_on/off 11
+        // std::cout<<"//empty or region header or busy_on/off 11"<<std::endl;
         if(d & 0b00100000){
-          //emtpy or busy_on/off 111
+          // std::cout<<"//emtpy or busy_on/off 111"<<std::endl;
           if(d & 0b00010000){
-            //busy_on/off
+            // std::cout<<"//busy_on/off"<<std::endl;
             p_raw++;
             continue;
           }
-          // empty 1110
+          // std::cout<<"// empty 1110"<<std::endl;
           uint8_t chip_id = d & 0b00001111;
           l_frame_n++;
           p_raw++;
@@ -157,21 +159,21 @@ void JadeDataFrame::Decode(uint32_t level){
           p_raw++;
           continue;
         }
-        // region header 110
+        // std::cout<<"// region header 110"<<std::endl;
         l_region_id = d & 0b00011111;
         p_raw++;
         continue;
       }
-      //CHIP_HEADER/TRAILER or undefined 10
+      // std::cout<<"//CHIP_HEADER/TRAILER or undefined 10"<<std::endl;
       if(d & 0b00100000){
-        //CHIP_HEADER/TRAILER 101
-        if(d & 0b000100000){
-          //TRAILER 1011
+        // std::cout<<"//CHIP_HEADER/TRAILER 101"<<std::endl;
+        if(d & 0b00010000){
+          // std::cout<<"//TRAILER 1011"<<std::endl;
           uint8_t readout_flag= d & 0b00001111;
           p_raw++;
           continue;
         }
-        //HEADER 1010
+        // std::cout<<"//HEADER 1010"<<std::endl;
         uint8_t chip_id = d & 0b00001111;
         l_frame_n++;
         p_raw++;
@@ -180,14 +182,14 @@ void JadeDataFrame::Decode(uint32_t level){
         p_raw++;
         continue;
       }
-      //undefined 100
+      std::cout<<"//undefined 100"<<std::endl;
       p_raw++;
       continue;
     }
     else{
-      //DATA 0
+      // std::cout<<"//DATA 0"<<std::endl;
       if(d & 0b01000000){
-        //DATA SHORT 01
+        // std::cout<<"//DATA SHORT 01"<<std::endl;
         if(level>2){
           uint8_t encoder_id = (d & 0b00111100)>> 2;
           uint16_t addr = (d & 0b00000011)<<8;
@@ -197,11 +199,12 @@ void JadeDataFrame::Decode(uint32_t level){
           p_raw++;
 
           uint16_t y = addr>>1;
-          uint16_t x = (l_region_id<<5)+(encoder_id<<1)+((addr&0b1)==(addr>>1&0b1));
+          uint16_t x = (l_region_id<<5)+(encoder_id<<1)+((addr&0b1)!=((addr>>1)&0b1));
           m_data_flat[x+m_n_x*y] |= (1<<l_frame_n);
           m_data_x.push_back(x);
           m_data_y.push_back(y);
           m_data_d.push_back(l_frame_n);
+	  // std::cout<<"x:y:d "<<x<<":"<<y<<":"<<(uint16_t)l_frame_n<<std::endl;
         }
         else{
           p_raw++;
@@ -209,7 +212,7 @@ void JadeDataFrame::Decode(uint32_t level){
         }
         continue;
       }
-      //DATA LONG 00
+      // std::cout<<"//DATA LONG 00"<<std::endl;
       if(level>2){
         uint8_t encoder_id = (d & 0b00111100)>> 2;
         uint16_t addr = (d & 0b00000011)<<8;
@@ -221,20 +224,22 @@ void JadeDataFrame::Decode(uint32_t level){
         uint8_t hit_map = (d & 0b01111111);
         p_raw++;
         uint16_t y = addr>>1;
-        uint16_t x = (l_region_id<<5)+(encoder_id<<1)+((addr&0b1)==(addr>>1&0b1));
+        uint16_t x = (l_region_id<<5)+(encoder_id<<1)+((addr&0b1)!=((addr>>1)&0b1));
         m_data_flat[x+m_n_x*y] |= (1<<l_frame_n);
         m_data_x.push_back(x);
         m_data_y.push_back(y);
         m_data_d.push_back(l_frame_n);
+	// std::cout<<"x:y:d "<<x<<":"<<y<<":"<<(uint16_t)l_frame_n<<std::endl;
         for(int i=1; i<=7; i++){
-          if(hit_map & (1<(i-1))){
-            addr+= i;
-            uint16_t y = addr>>1;
-            uint16_t x = (l_region_id<<5)+(encoder_id<<1)+((addr&0b1)==(addr>>1&0b1));
+          if(hit_map & (1<<(i-1))){
+	    uint16_t addr_l = addr + i;
+            uint16_t y = addr_l>>1;
+            uint16_t x = (l_region_id<<5)+(encoder_id<<1)+((addr_l&0b1)!=((addr_l>>1)&0b1));
             m_data_flat[x+m_n_x*y] |= (1<<l_frame_n);
             m_data_x.push_back(x);
             m_data_y.push_back(y);
             m_data_d.push_back(l_frame_n);
+	    // std::cout<<"x:y:d "<<x<<":"<<y<<":"<<(uint16_t)l_frame_n<<std::endl;
           }
         }
       }
