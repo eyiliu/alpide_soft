@@ -111,7 +111,7 @@ uint64_t JadeManager::AsyncReading(){
   uint64_t ndf_print_prev = 0;
   uint64_t n_df = 0;
   while (m_is_running){
-    auto df = m_rd? m_rd->Read(100ms):nullptr;
+    auto df = m_rd? m_rd->Read(1000ms):nullptr;
     if(!df){
       continue;
     }

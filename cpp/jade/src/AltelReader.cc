@@ -192,6 +192,8 @@ JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout_idel)
               std::cerr<<"JadeRead: no data at all\n";
               return nullptr;
             }
+	    std::cerr<<"JadeRead: remaining data\n";
+	    std::cerr<<JadeUtils::ToHexString(buf.data(), size_filled)<<"\n";
             //TODO: keep remain data, nothrow, ? try a again?
             throw;
           }
@@ -208,7 +210,7 @@ JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout_idel)
     
     size_filled += read_len_real;
     can_time_out = false;
-    // std::cout<<" size_buf size_buf_min  size_filled"<< size_buf << " "<< size_buf_min<<" " << size_filled<<std::endl;    
+    // std::cout<<" size_buf size_buf_min  size_filled<< size_buf << " "<< size_buf_min<<" " << size_filled<<std::endl;    
     if(size_buf == size_buf_min  && size_filled >= size_buf_min){
       uint8_t header_byte =  buf.front();
       uint32_t w1 = BE32TOH(*reinterpret_cast<const uint32_t*>(buf.data()+1));
@@ -233,5 +235,7 @@ JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout_idel)
     //TODO: skip brocken data
     throw;
   }
+  
+  std::cout<<JadeUtils::ToHexString(buf)<<std::endl;
   return std::make_shared<JadeDataFrame>(std::move(buf));
 }

@@ -236,7 +236,7 @@ void AltelRegCtrl::InitALPIDE(){
   WriteReg(0x60B,0x32);
   WriteReg(0x60C,0x40);
   WriteReg(0x60D,0x40);
-  WriteReg(0x60E,0x10); //empty 0x32; 0x12 data, not full. 
+  WriteReg(0x60E,0x32); //empty 0x32; 0x12 data, not full. 
   WriteReg(0x701,0x400);
   WriteReg(0x487,0xFFFF);
   WriteReg(0x500,0x0);
@@ -260,12 +260,12 @@ void AltelRegCtrl::StartWorking(uint8_t trigmode){
   WriteReg(0x487,0xFFFF);
   WriteReg(0x500,0x1);
   WriteReg(0x4,0x10);
-  WriteReg(0x5,4);    
+  WriteReg(0x5,200);   //5us    
   WriteReg(0x1,0x3D);
   Broadcast(0x63);
-  SetFrameDuration(200);
-
-  SetInTrigGap(20); //200->1k, defualt 20 -> 10k
+  Broadcast(0xe4);
+  SetFrameDuration(0);
+  SetInTrigGap(20);
   SetFPGAMode(0x1);
 }
 
@@ -296,7 +296,8 @@ std::string AltelRegCtrl::SendCommand(const std::string &cmd, const std::string 
 int AltelRegCtrl::rbcp_com(const char* ipAddr, unsigned int port, struct rbcp_header* sendHeader, char* sendData, char* recvData, char dispMode){
 
   struct sockaddr_in sitcpAddr;
-  SOCKET  sock;
+  
+  int  sock;
 
   struct timeval timeout;
   fd_set setSelect;
@@ -384,13 +385,13 @@ int AltelRegCtrl::rbcp_com(const char* ipAddr, unsigned int port, struct rbcp_he
 
 	if(rcvdBytes<sizeof(struct rbcp_header)){
 	  puts("ERROR: ACK packet is too short");
-	  closesocket(sock);
+	  close(sock);
 	  return -1;
 	}
 
 	if((0x0f & rcvdBuf[1])!=0x8){
 	  puts("ERROR: Detected bus error");
-	  closesocket(sock);
+	  close(sock);
 	  return -1;
 	}
 
@@ -447,11 +448,11 @@ int AltelRegCtrl::rbcp_com(const char* ipAddr, unsigned int port, struct rbcp_he
 	  }
 	}
 	numReTrans = 4;
-	closesocket(sock);
+	close(sock);
 	return(rcvdBytes);
       }
     }
   }
-  closesocket(sock);
+  close(sock);
   return -3;
 }
