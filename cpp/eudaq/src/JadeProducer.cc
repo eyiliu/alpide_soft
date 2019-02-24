@@ -20,11 +20,16 @@ public:
   EudaqWriter(const JadeOption &opt);
   ~EudaqWriter() override;
   void Write(JadeDataFrameSP df) override;
+  void Open() override;
   void Close() override;
 
+  uint32_t ExtendTriggerN(uint16_t tg_l15);
   void SetProducerCallback(eudaq::Producer *producer);
 private:
   eudaq::Producer *m_producer;
+  uint32_t m_tg_h17;
+  uint16_t m_last_tg_l15;
+  
 };
 
 //+++++++++++++++++++++++++++++++++++++++++
@@ -39,14 +44,20 @@ void EudaqWriter::SetProducerCallback(eudaq::Producer *producer){
 }
 
 EudaqWriter::EudaqWriter(const JadeOption &opt)
-  :JadeWriter(opt), m_producer(nullptr){
+  :JadeWriter(opt), m_producer(nullptr), m_tg_h17(0), m_last_tg_l15(0){
   
 }
 
 EudaqWriter::~EudaqWriter(){
 }
 
+void EudaqWriter::Open(){
+  m_tg_h17 = 0;
+  m_last_tg_l15 = 0;
+}
+
 void EudaqWriter::Close(){
+  
 }
 
 void EudaqWriter::Write(JadeDataFrameSP df){
@@ -57,7 +68,18 @@ void EudaqWriter::Write(JadeDataFrameSP df){
   
   auto evup_to_send = eudaq::Event::MakeUnique("JadeRaw");
   df->Decode(1); //level 1, header-only
-  evup_to_send->SetTriggerN(df->GetCounter());
+  
+  uint16_t tg_l15 = 0x7fff & df->GetCounter();
+  if(tg_l15 < m_last_tg_l15 && m_last_tg_l15>0x6000 && tg_l15<0x2000){
+    m_tg_h17++;
+    EUDAQ_INFO("increase high 17bits of trigger number, last_tg_l15("+ 
+	       std::to_string(m_last_tg_l15)+") tg_l15("+ 
+	       std::to_string(tg_l15)+")" );
+  }
+  uint32_t tg_n = (m_tg_h17<<15) + tg_l15;
+  m_last_tg_l15 = tg_l15;
+  
+  evup_to_send->SetTriggerN(tg_n);
   evup_to_send->AddBlock<char>( (uint32_t)0, df->Raw().data(), (size_t)(df->Raw().size()) );
   m_producer->SendEvent(std::move(evup_to_send));  
 }
@@ -72,10 +94,11 @@ public:
   void DoStopRun() override;
   void DoTerminate() override;
   void DoReset() override;
-  
+
   static const uint32_t m_id_factory = eudaq::cstr2hash("JadeProducer");
 private:
   JadeManagerSP m_jade_man;
+  
 };
 
 namespace{
