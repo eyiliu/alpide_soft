@@ -8,6 +8,11 @@
 
 #define PLANE_ID_OFFSET_LICO 50
 
+//         X     Y
+//pitch  29.24 x 26.88
+//matrix 1024  x 512
+
+
 class JadeRawEvent2LCEventConverter: public eudaq::LCEventConverter{
   typedef std::vector<uint8_t>::const_iterator datait;
 public:
@@ -37,9 +42,11 @@ bool JadeRawEvent2LCEventConverter::Converting(eudaq::EventSPC d1, eudaq::LCEven
   size_t y_n_pixel = df.GetMatrixSizeY();
   size_t z_n_pixel = df.GetMatrixDepth();
   size_t n_pixel = x_n_pixel*y_n_pixel;
+  uint64_t ext = df.GetExtension();
 
+  
   const std::vector<uint16_t> &data_x = df.Data_X();
-  const std::vector<uint16_t> &data_y = df.Data_X();
+  const std::vector<uint16_t> &data_y = df.Data_Y();
   const std::vector<uint16_t> &data_z = df.Data_D();
 
   size_t n_hit = data_x.size();
@@ -51,23 +58,23 @@ bool JadeRawEvent2LCEventConverter::Converting(eudaq::EventSPC d1, eudaq::LCEven
 
   lcio::LCCollectionVec *zsDataCollection = nullptr;
   auto p_col_names = d2->getCollectionNames();
-  if(std::find(p_col_names->begin(), p_col_names->end(), "zsdata_jade") != p_col_names->end()){
-    zsDataCollection = dynamic_cast<lcio::LCCollectionVec*>(d2->getCollection("zsdata_jade"));
+  if(std::find(p_col_names->begin(), p_col_names->end(), "zsdata_alpide") != p_col_names->end()){
+    zsDataCollection = dynamic_cast<lcio::LCCollectionVec*>(d2->getCollection("zsdata_alpide"));
     if(!zsDataCollection)
       EUDAQ_THROW("dynamic_cast error: from lcio::LCCollection to lcio::LCCollectionVec");
   }
   else{
     zsDataCollection = new lcio::LCCollectionVec(lcio::LCIO::TRACKERDATA);
-    d2->addCollection(zsDataCollection, "zsdata_jade");
+    d2->addCollection(zsDataCollection, "zsdata_alpide");
   }
   
-  lcio::CellIDEncoder<lcio::TrackerDataImpl> zsDataEncoder("sensorID:7,sparsePixelType:2",
-                                                           zsDataCollection);
+  lcio::CellIDEncoder<lcio::TrackerDataImpl> zsDataEncoder("sensorID:10,sparsePixelType:10", zsDataCollection);
   uint16_t bn = 0;//TODO, multiple-planes/producer
   std::vector<lcio::TrackerDataImpl*> v_zsFrames;
   for(size_t i=0; i<z_n_pixel; i++){
     lcio::TrackerDataImpl* zsFrame = new lcio::TrackerDataImpl;
-    zsDataEncoder["sensorID"] = PLANE_ID_OFFSET_LICO + bn + i;
+    zsDataEncoder["sensorID"] = PLANE_ID_OFFSET_LICO + bn + i + ext;
+    zsDataEncoder["sparsePixelType"] = 2;
     zsDataEncoder.setCellID(zsFrame);
     v_zsFrames.push_back(zsFrame);
   }
@@ -77,7 +84,7 @@ bool JadeRawEvent2LCEventConverter::Converting(eudaq::EventSPC d1, eudaq::LCEven
   auto it_z = data_z.begin();
   while(it_x!=data_x.end()){
     auto zsFrame = v_zsFrames[*it_z];
-    zsFrame->chargeValues().push_back(*it_x);//x
+    zsFrame->chargeValues().push_back(1023 - *it_x);// swap
     zsFrame->chargeValues().push_back(*it_y);//y
     zsFrame->chargeValues().push_back(1);//signal
     zsFrame->chargeValues().push_back(0);//time

@@ -34,6 +34,7 @@ bool JadeRawEvent2StdEventConverter::Converting(eudaq::EventSPC d1, eudaq::StdEv
   size_t y_n_pixel = df.GetMatrixSizeY();
   size_t z_n_pixel = df.GetMatrixDepth();
   size_t n_pixel = x_n_pixel*y_n_pixel;
+  uint64_t ext = df.GetExtension();
   
   const std::vector<uint16_t> &data_x = df.Data_X();
   const std::vector<uint16_t> &data_y = df.Data_Y();
@@ -50,7 +51,7 @@ bool JadeRawEvent2StdEventConverter::Converting(eudaq::EventSPC d1, eudaq::StdEv
   uint16_t bn = 0;//TODO, multiple-planes/producer
   std::vector<eudaq::StandardPlane*> v_planes;
   for(size_t i=0; i<z_n_pixel; i++){
-    eudaq::StandardPlane* p =  & (d2->AddPlane(eudaq::StandardPlane(PLANE_NUMBER_OFFSET+bn+i, "alpide", "alpide")));
+    eudaq::StandardPlane* p = &(d2->AddPlane(eudaq::StandardPlane(PLANE_NUMBER_OFFSET+bn+i+ext, "alpide", "alpide")));
     p->SetSizeZS(x_n_pixel, y_n_pixel, 0); //TODO: check this function for its real meaning
     v_planes.push_back(p);
   }
@@ -58,7 +59,8 @@ bool JadeRawEvent2StdEventConverter::Converting(eudaq::EventSPC d1, eudaq::StdEv
   auto it_y = data_y.begin();
   auto it_z = data_z.begin();
   while(it_x!=data_x.end()){
-    v_planes[*it_z]->PushPixel( *it_x , *it_y , 1);
+    v_planes[*it_z]->PushPixel(1023 - *it_x , *it_y , 1);
+    // std::cout<<"n:x:y "<<d1->GetEventN()<<":"<<*it_x<<":"<<*it_y<<std::endl;
     it_x ++;
     it_y ++;
     it_z ++;
