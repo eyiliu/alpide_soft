@@ -6,7 +6,7 @@
 	    "JadeRegCtrl":{
 		"type":"AltelRegCtrl",
 		"parameter":{
-		    "IP_ADDRESS": "192.168.10.16",
+		    "IP_ADDRESS": "192.168.22.16",
 		    "IP_UDP_PORT": 4660
 		}
 	    },
@@ -15,8 +15,8 @@
 		"parameter":{
 		    "IS_DISK_FILE":false,
 		    "TERMINATE_AT_FILE_END":true,
-		    "FILE_PATH":"/home/yiliu/workspace/alpide/data/savz_190103155133.df",
-		    "IP_ADDRESS": "192.168.10.16",
+		    "FILE_PATH":"D:/VSCode_workspace/ALPIDE/SiTCP/ALPIDE-SiTCPY/outputdata/Layerdata/20190129_210525_Layer0.dat",
+		    "IP_ADDRESS": "192.168.22.16",
 		    "IP_TCP_PORT":24
 		}
 	    },
