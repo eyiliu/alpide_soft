@@ -6,7 +6,7 @@
 #include <string.h>
 #include <fcntl.h>
 
-
+#include "json11.hpp"
 
 #define MAX_LINE_LENGTH 1024
 #define MAX_PARAM_LENGTH 20
@@ -48,30 +48,25 @@ public:
   ~AltelRegCtrl() override {};
   void Open() override;
   void Close() override;
-  std::string SendCommand(const std::string &cmd, const std::string &para) override;
-  void WriteByte(uint64_t addr, uint8_t val) override;
-  uint8_t ReadByte(uint64_t addr) override;
 
-  
-  void ChipID(uint8_t id);
-  void WriteReg(uint16_t addr, uint16_t val);
-  uint16_t ReadReg(uint16_t addr);
-  void Broadcast(uint8_t opcode);
-  void SetFrameDuration(uint16_t len);
-  void SetFramePhase(uint16_t len);
-  void SetInTrigGap(uint16_t len);
-  void SetFPGAMode(uint8_t mode);
-  void SetFrameNumber(uint8_t n);
-  void InitALPIDE();
-  void StartPLL();
-  void StartWorking(uint8_t trigmode);
-  void ResetDAQ();
-  
+  void FirmwareWriteReg(const std::string &reg_name, uint64_t reg_val);
+  uint64_t FirmwareReadReg(const std::string &reg_name);
+  void FirmwareSendCommand(const std::string &cmd_name);
+  void ChipWriteReg(const std::string &reg_name, uint64_t reg_val);
+  uint64_t ChipReadReg(const std::string &reg_name);
+  void ChipSendCommand(const std::string &cmd_name);
+  void ChipSendBroadcast(const std::string &cmd_name);
+
+  std::string SendCommand(const std::string &cmd, const std::string &para) override;
+
     
+  void InitALPIDE();
+  void StartWorking();  
+  
   int rbcp_com(const char* ipAddr, unsigned int port, struct rbcp_header* sendHeader, char* sendData, char* recvData, char dispMode);  
 private:
   JadeOption m_opt;
-  
+  std::unique_ptr<json11::Json>  m_reg_json;
   std::string m_ip_address;
   uint16_t m_ip_udp_port;
   uint8_t m_id ;
@@ -91,12 +86,156 @@ AltelRegCtrl::AltelRegCtrl(const JadeOption &opt)
     std::cerr<<"altelregctrl: error ip address\n";
   }
   m_ip_udp_port = (uint16_t) m_opt.GetIntValue("IP_UDP_PORT");
+  std::string reg_json_file_path = m_opt.GetStringValue("REG_JSON_FILE_PATH");
+  if(reg_json_file_path.empty()){
+    std::cerr<<"altelregctrl: error no reg file\n";
+  }
+  std::string reg_json_str = JadeUtils::LoadFileToString(reg_json_file_path);
+  std::string err_str;
+  m_reg_json = std::make_shared<json11::Json>(json11::Json::parse(reg_json, err_str));
+  if(!err_str.empty()){
+    std::cerr<<"json11: error<"<<err_str
+	       <<">, unable to parse string: "<<str<<"\n";
+    throw;
+  }
+}
+
+void AltelRegCtrl::FirmwareWriteReg(const std::string &reg_name, uint64_t reg_val){
+  auto& reg_obj = (*m_reg_json)["FIRMWARE_REG_LIST_V2"][reg_name];
+  auto& addr_obj = reg_obj["address"];
+  if(addr_obj.is_array()){
+    for(auto &n : addr_obj.array_items()) {
+      std::string name = n["name"].string_value();
+      uint64_t offset = n["offset"].int_value();
+      std::string mask_str = n["mask"].string_value();
+      uint64_t mask = std::stoull(mask_str);
+      uint64_t val =  (reg_val>>offset)&mask;
+      FirmwareWriteReg(name, val);
+    }
+  }  
+  else{
+    std::string addr_str = addr_obj.string_value();
+    uint64_t addr = std::stoull(addr_str);
+    uint8_t val = std::static_cast<uint8_t>reg_val
+    m_id++;
+    rbcp_header sndHeader;
+    sndHeader.type=RBCP_VER;
+    sndHeader.command= RBCP_CMD_WR;
+    sndHeader.id=m_id;
+    sndHeader.length=1;
+    sndHeader.address=htonl(addr); //TODO: check
+    char rcvdBuf[1024];
+    rbcp_com(m_ip_address.c_str(), m_ip_udp_port, &sndHeader, (char*) &val, rcvdBuf, RBCP_DISP_MODE_NO);
+  }
+  return;
+}
+
+uint64_t AltelRegCtrl::FirmwareReadReg(const std::string &reg_name){
+  auto& reg_obj = (*m_reg_json)["FIRMWARE_REG_LIST_V2"][reg_name];
+  auto& addr_obj = reg_obj["address"];
+  uint64_t return_val = 0;
+  if(addr_obj.is_array()){
+    for(auto &n : addr_obj.array_items()) {
+      std::string name = n["name"].string_value();
+      uint64_t offset = n["offset"].int_value();
+      std::string mask_str = n["mask"].string_value();
+      uint64_t mask = std::stoull(mask_str);
+      uint64_t val =  FirmwareReadReg(name)
+      return_val += (val&mask)<<offest;
+    }
+  }
+  else{
+    std::string addr_str = addr_obj.string_value();
+    uint64_t addr = std::stoull(addr_str);
+    m_id++;
+    rbcp_header sndHeader;
+    sndHeader.type=RBCP_VER;
+    sndHeader.command= RBCP_CMD_RD;
+    sndHeader.id=m_id;
+    sndHeader.length=1;
+    sndHeader.address=htonl(addr);
+    char rcvdBuf[1024];
+    if (rbcp_com(m_ip_address.c_str(), m_ip_udp_port, &sndHeader, NULL, rcvdBuf, RBCP_DISP_MODE_NO)!=1){
+      std::cout<< "here error"<<std::endl;
+    }
+    return_val = rcvdBuf[0];
+  }
+  return return_val;
+}
+
+void AltelRegCtrl::FirmwareSendCommand(const std::string &cmd_name){
+  auto& cmd_obj = (*m_reg_json)["FIRMWARE_CMD_LIST_V2"][cmd_name];
+  uint64_t cmd = reg_obj["value"].int_value();
+  FirmwareWriteReg("FIRMWARE_CMD", cmd);
+  return;
+}
+
+void AltelRegCtrl::ChipWriteReg(const std::string &reg_name, uint64_t reg_val){
+  auto& reg_obj = (*m_reg_json)["CHIP_REG_LIST"][reg_name];
+  auto& addr_obj = reg_obj["address"];
+  if(addr_obj.is_array()){
+    for(auto &n : addr_obj.array_items()) {
+      std::string name = n["name"].string_value();
+      uint64_t offset = n["offset"].int_value();
+      std::string mask_str = n["mask"].string_value();
+      uint64_t mask = std::stoull(mask_str);
+      uint64_t val =  (reg_val>>offset)&mask;
+      ChipWriteReg(name, val);
+    }
+  }
+  else{
+    std::string addr_str = addr_obj.string_value();
+    uint64_t addr = std::stoull(addr_str);
+    FirmwareWriteReg("ADDR_CHIP_REG", addr);    
+    FirmwareWriteReg("DATA_WRITE", reg_val);
+    FirmwareSendCommand("WRITE");
+  }
+  return;
+}
+
+uint64_t AltelRegCtrl::ChipReadReg(const std::string &reg_name){
+  auto& reg_obj = (*m_reg_json)["CHIP_REG_LIST"][reg_name];
+  auto& addr_obj = reg_obj["address"];
+  uint64_t return_val = 0;
+  if(addr_obj.is_array()){
+    for(auto &n : addr_obj.array_items()) {
+      std::string name = n["name"].string_value();
+      uint64_t offset = n["offset"].int_value();
+      std::string mask_str = n["mask"].string_value();
+      uint64_t mask = std::stoull(mask_str);
+      uint64_t val =  ChipReadReg(name)
+      return_val += (val&mask)<<offest;
+    }
+  }
+  else{
+    std::string addr_str = addr_obj.string_value();
+    uint64_t addr = std::stoull(addr_str);
+    FirmwareWriteReg("ADDR_CHIP_REG", addr);    
+    FirmwareSendCommand("READ");
+    return_val = FirmwareReadReg("DATA_READ");
+  }
+  return return_val;
+}
+
+void AltelRegCtrl::ChipSendCommand(const std::string &cmd_name){
+  auto& cmd_obj = (*m_reg_json)["CHIP_CMD_LIST"][cmd_name];
+  uint64_t cmd = reg_obj["value"].int_value();
+  ChipWriteReg("CHIP_CMD", cmd);
+  return;
+}
+
+void AltelRegCtrl::ChipSendBroadcast(const std::string &cmd_name){
+  auto& cmd_obj = (*m_reg_json)["CHIP_CMD_LIST"][cmd_name];
+  uint64_t cmd = reg_obj["value"].int_value();
+  FirmwareWriteReg("BROADCAST_OPCODE", cmd);
+  FirewareSendCommand("BROADCAST");
+  return;
 }
 
 void AltelRegCtrl::Open(){
   std::cout<<"sending INIT"<<std::endl;
   SendCommand("INIT", "");
-  std::cout<<"sending INIT"<<std::endl;
+  std::cout<<"sending START"<<std::endl;
   SendCommand("START", "");
   std::cout<<"open done"<<std::endl;
 }
@@ -105,173 +244,139 @@ void AltelRegCtrl::Close(){
   SendCommand("STOP", "");
 }
 
-
-void AltelRegCtrl::WriteByte(uint64_t addr, uint8_t val){
-  m_id++;
-  rbcp_header sndHeader;
-  sndHeader.type=RBCP_VER;
-  sndHeader.command= RBCP_CMD_WR;
-  sndHeader.id=m_id;
-  sndHeader.length=1;
-  sndHeader.address=htonl(addr); //TODO: check
-  char rcvdBuf[1024];
-  rbcp_com(m_ip_address.c_str(), m_ip_udp_port, &sndHeader, (char*) &val, rcvdBuf, RBCP_DISP_MODE_NO);
-  //TODO: if failure
-  
-}
-
-uint8_t AltelRegCtrl::ReadByte(uint64_t addr){
-  m_id++;
-  rbcp_header sndHeader;
-  sndHeader.type=RBCP_VER;
-  sndHeader.command= RBCP_CMD_RD;
-  sndHeader.id=m_id;
-  sndHeader.length=1;
-  sndHeader.address=htonl(addr);
-  char rcvdBuf[1024];
-  if (rbcp_com(m_ip_address.c_str(), m_ip_udp_port, &sndHeader, NULL, rcvdBuf, RBCP_DISP_MODE_NO)!=1){
-    std::cout<< "here error"<<std::endl;
-  }
-  return rcvdBuf[0];
-}
-
-void AltelRegCtrl::ChipID(uint8_t id){
-  uint64_t addr = 0x10000001;
-  WriteByte(addr, id);
-}
-
-void AltelRegCtrl::WriteReg(uint16_t addr, uint16_t val){
-  uint64_t chip_addr_base_h = 0x10000002;
-  uint64_t chip_addr_base_l = 0x10000003;
-  uint64_t chip_data_h = 0x10000004;
-  uint64_t chip_data_l = 0x10000005;
-  WriteByte(chip_addr_base_h, (addr>>8)&0xff);
-  WriteByte(chip_addr_base_l, addr&0xff);
-  WriteByte(chip_data_h, (val>>8)&0xff);
-  WriteByte(chip_data_l, val&0xff);
-  WriteByte(0, 0x9c);
-}
-
-uint16_t AltelRegCtrl::ReadReg(uint16_t addr){
-  uint64_t chip_addr_base_h = 0x10000002;
-  uint64_t chip_addr_base_l = 0x10000003;
-  uint64_t chip_data_c = 0x1000000d;
-  uint64_t chip_data_h = 0x1000000e;
-  uint64_t chip_data_l = 0x1000000f;
-  WriteByte(chip_addr_base_h, (addr>>8)&0xff);
-  WriteByte(chip_addr_base_l, addr&0xff);
-  WriteByte(0, 0x4e);
-  uint16_t val_c = ReadByte(chip_data_c);
-  uint8_t val_h = ReadByte(chip_data_h);
-  uint8_t val_l = ReadByte(chip_data_l);
-  uint16_t val = val_h * 0xff + val_h;
-  std::cout<<">>>>>>>>>>>>>read "<<val<< " count "<< val_c<<std::endl;
-  
-  return val;
-}
-
-void AltelRegCtrl::Broadcast(uint8_t opcode){
-  uint64_t addr = 0x10000006;
-  WriteByte(addr, opcode);
-  WriteByte(0, 0x50);
-}
-
-void AltelRegCtrl::SetFrameDuration(uint16_t len){
-  uint64_t addr_h = 0x10000007;
-  uint64_t addr_l = 0x10000008;
-  WriteByte(addr_h, (len>>8)&0xff);
-  WriteByte(addr_l, len&0xff);
-}
-
-void AltelRegCtrl::SetFramePhase(uint16_t len){
-  uint64_t addr_h = 0x10000009;
-  uint64_t addr_l = 0x1000000a;
-  WriteByte(addr_h, (len>>8)&0xff);
-  WriteByte(addr_l, len&0xff);
-}
-
-void AltelRegCtrl::SetInTrigGap(uint16_t len){
-  uint64_t addr_h = 0x1000000b;
-  uint64_t addr_l = 0x1000000c;
-  WriteByte(addr_h, (len>>8)&0xff);
-  WriteByte(addr_l, len&0xff);
-}
-
-void AltelRegCtrl::SetFPGAMode(uint8_t mode){
-  uint64_t addr = 0x10000010;
-  WriteByte(addr, mode);
-}
-
-void AltelRegCtrl::SetFrameNumber(uint8_t n){
-  uint64_t addr = 0x10000011;
-  WriteByte(addr, n);
-}
-
-
-
 void AltelRegCtrl::InitALPIDE(){
-  SetFPGAMode(0);
+  // SetFPGAMode(0);
+  FirmwareWriteReg("FIRMWARE_MODE", 0x0)
+  
   //ResetDAQ();
 
-  ChipID(0x10);
-
-  // ReadReg(0x04);
-  // ReadReg(0x05);
+  // ChipID(0x10);
+  FirmwareWriteReg("ADDR_CHIP_ID",0x10);
   
+  // Broadcast(0xD2);
+  ChipSendBroadcast("GRST");
 
-  Broadcast(0xD2);
-  WriteReg(0x10,0x70);
-  WriteReg(0x4,0x10);
-  WriteReg(0x5,0x28);
-  WriteReg(0x601,0x75);
-  WriteReg(0x602,0x93);
-  WriteReg(0x603,0x56);
-  WriteReg(0x604,0x32);
-  WriteReg(0x605,0xFF);
-  WriteReg(0x606,0x0);
-  WriteReg(0x607,0x39);
-  WriteReg(0x608,0x0);
-  WriteReg(0x609,0x0);
-  WriteReg(0x60A,0x0);
-  WriteReg(0x60B,0x32);
-  WriteReg(0x60C,0x40);
-  WriteReg(0x60D,0x40);
-  WriteReg(0x60E,60); //empty 0x32; 0x12 data, not full. 
-  WriteReg(0x701,0x400);
-  WriteReg(0x487,0xFFFF);
-  WriteReg(0x500,0x0);
-  WriteReg(0x500,0x1);
-  WriteReg(0x1,0x3C);
-  Broadcast(0x63);
-  StartPLL();
+  // WriteReg(0x10,0x70);
+  ChipWriteReg("CMU_DMU_CONF", 0x70);
+
+  // WriteReg(0x4,0x10);
+  ChipWriteReg("FROMU_CONF_1", 0x10);
+
+  // WriteReg(0x5,0x28);
+  ChipWriteReg("FROMU_CONF_2", 0x28);
+
+  // WriteReg(0x601,0x75);
+  ChipWriteReg("VRESETP", 0x75);
+    
+  // WriteReg(0x602,0x93);
+  ChipWriteReg("VRESETD", 0x93);
+
+  // WriteReg(0x603,0x56);
+  ChipWriteReg("VCASP", 0x56);
+
+  // WriteReg(0x604,0x32);
+  ChipWriteReg("VCASN", 0x32);
+
+  // WriteReg(0x605,0xFF);
+  ChipWriteReg("VPULSEH", 0xff);
+  
+  // WriteReg(0x606,0x0);
+  ChipWriteReg("VPULSEL", 0x0);
+
+  // WriteReg(0x607,0x39);
+  ChipWriteReg("VCASN2", 0x39);  
+  
+  // WriteReg(0x608,0x0);
+  ChipWriteReg("VCLIP", 0x0);
+
+  // WriteReg(0x609,0x0);
+  ChipWriteReg("VTEMP", 0x0);
+
+  // WriteReg(0x60A,0x0);
+  ChipWriteReg("IAUX2", 0x0);
+
+  // WriteReg(0x60B,0x32);
+  ChipWriteReg("IRESET", 0x32);
+
+  // WriteReg(0x60C,0x40);
+  ChipWriteReg("IDB", 0x40);
+
+  // WriteReg(0x60D,0x40);
+  ChipWriteReg("IBIAS", 0x40);
+
+  // WriteReg(0x60E,60); //empty 0x32; 0x12 data, not full. 
+  ChipWriteReg("ITHR", 60);
+
+  // WriteReg(0x701,0x400);
+  ChipWriteReg("BUFF_BYPASS", 0x400);
+  
+  // WriteReg(0x487,0xFFFF);
+  ChipWriteReg("TODO_MASK_PULSE", 0xFFFF);
+  
+  // WriteReg(0x500,0x0);
+  ChipWriteReg("PIX_CONF_GLOBAL", 0x0);
+
+  // WriteReg(0x500,0x1);
+  ChipWriteReg("PIX_CONF_GLOBAL", 0x1);
+
+  // WriteReg(0x1,0x3C);
+  ChipWriteReg("CHIP_MODE", 0x3c);
+  
+  // Broadcast(0x63);
+  ChipSendBroadcast("PORST");
+
+  // StartPLL();
+  // WriteReg(0x14,0x008d);
+  ChipWriteReg("DTU_CONF", 0x008d);
+  // WriteReg(0x15,0x0088);
+  ChipWriteReg("DTU_DAC", 0x0088);
+  // WriteReg(0x14,0x0085);
+  ChipWriteReg("DTU_CONF", 0x0085);
+  // WriteReg(0x14,0x0185);
+  ChipWriteReg("DTU_CONF", 0x0185);
+  // WriteReg(0x14,0x0085);
+  ChipWriteReg("DTU_CONF", 0x0085);
+  //end of PLL setup
 }
 
-void AltelRegCtrl::StartPLL(){
-  WriteReg(0x14,0x008d);
-  WriteReg(0x15,0x0088);
-  WriteReg(0x14,0x0085);
-  WriteReg(0x14,0x0185);
-  WriteReg(0x14,0x0085);
+void AltelRegCtrl::StartWorking(){
+  // WriteReg(0x487,0xFFFF);
+  ChipWriteReg("TODO_MASK_PULSE", 0xFFFF);
+
+  // WriteReg(0x500,0x0);
+  ChipWriteReg("PIX_CONF_GLOBAL", 0x0);
+
+  // WriteReg(0x487,0xFFFF);
+  ChipWriteReg("TODO_MASK_PULSE", 0xFFFF);  
+  
+  // WriteReg(0x500,0x1);
+  ChipWriteReg("PIX_CONF_GLOBAL", 0x1);
+
+  // WriteReg(0x4,0x10);
+  ChipWriteReg("FROMU_CONF_1", 0X10);
+
+  // WriteReg(0x5,156);   //3900ns
+  ChipWriteReg("FROMU_CONF_2", 156); //3900ns 
+  
+  // WriteReg(0x1,0x3D);
+  ChipWriteReg("CHIP_MODE", 0x3D);
+
+  // Broadcast(0x63);
+  ChipSendBroadcast("PORST");
+
+  // Broadcast(0xe4);
+  ChipSendBroadcast("PRST");
+  
+  // SetFrameDuration(16);   //400ns
+  FirmwareWriteReg("TRIG_DELAY", 16);
+
+  // SetInTrigGap(20);
+  FirmwareWriteReg("GAP_INI_TRIG", 20);
+  
+  // SetFPGAMode(0x1);
+  FirmwareWriteReg("FIRMWARE_MODE", 0x1);
 }
 
-void AltelRegCtrl::StartWorking(uint8_t trigmode){
-  WriteReg(0x487,0xFFFF);
-  WriteReg(0x500,0x0);
-  WriteReg(0x487,0xFFFF);
-  WriteReg(0x500,0x1);
-  WriteReg(0x4,0x10);
-  WriteReg(0x5,156);   //3900ns    
-  WriteReg(0x1,0x3D);
-  Broadcast(0x63);
-  Broadcast(0xe4);
-  SetFrameDuration(16);   //400ns
-  SetInTrigGap(20);
-  SetFPGAMode(0x1);
-}
-
-void AltelRegCtrl::ResetDAQ(){
-  WriteByte(0, 0xff);
-}
 
 std::string AltelRegCtrl::SendCommand(const std::string &cmd, const std::string &para){
   if(cmd=="INIT"){
@@ -279,15 +384,17 @@ std::string AltelRegCtrl::SendCommand(const std::string &cmd, const std::string 
   }
 
   if(cmd=="START"){
-    StartWorking(1);//ext trigger
+    StartWorking();
   }
 
   if(cmd=="STOP"){
-    SetFPGAMode(0);
+    // SetFPGAMode(0);
+    FirmwareWriteReg("FIRMWARE_MODE", 0x0);
   }
 
   if(cmd=="RESET"){
-    ResetDAQ();
+    // ResetDAQ();
+    FirmwareSendCommand("RESET");
   }
 
   return "";
