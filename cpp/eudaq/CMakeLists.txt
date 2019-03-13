@@ -5,6 +5,7 @@ endif()
 
 include_directories(../jade/include)
 include_directories(include)
+
 aux_source_directory(src MODULE_SRC)
 
 if(NOT EUDAQ_LCIO_LIBRARY)
@@ -13,6 +14,8 @@ endif()
 
 find_package(eudaq CONFIG REQUIRED NO_DEFAULT_PATH)
 include_directories(${EUDAQ_INCLUDE_DIRS})
+
+add_subdirectory(exe)
 
 
 set(EUDAQ_MODULE eudaq_module_jade)
