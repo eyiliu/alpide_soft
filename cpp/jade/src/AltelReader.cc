@@ -236,6 +236,6 @@ JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout_idel)
     throw;
   }
   
-  std::cout<<JadeUtils::ToHexString(buf)<<std::endl;
+  // std::cout<<JadeUtils::ToHexString(buf)<<std::endl;
   return std::make_shared<JadeDataFrame>(std::move(buf));
 }

@@ -112,6 +112,7 @@ void JadeDataFrame::Decode(uint32_t level){
     throw;
   }
   p_raw++;
+  m_extension=*p_raw;
   uint32_t len_payload_data = BE32TOH(*reinterpret_cast<const uint32_t*>(p_raw)) & 0x000fffff;
   if (len_payload_data + 8 != m_data_raw.size()) {
     std::cerr << "JadeDataFrame: raw data length does not match\n";

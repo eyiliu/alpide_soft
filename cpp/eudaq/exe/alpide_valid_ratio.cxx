@@ -43,7 +43,6 @@ int main(int /*argc*/, const char **argv) {
       else if(plane->Type() == std::string("alpide") && plane->ID() == 50){
 	p_alpide = plane;
       }
-
     }
 
     if(p_alpide && p_fei4 && p_fei4->HitPixels()){

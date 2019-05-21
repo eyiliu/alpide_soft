@@ -5,15 +5,17 @@ endif()
 
 include_directories(../jade/include)
 include_directories(include)
-aux_source_directory(src MODULE_SRC)
 
-if(NOT EUDAQ_LCIO_LIBRARY)
-  list(REMOVE_ITEM MODULE_SRC src/JadeRawEvent2LCEventConverter.cc)
-endif()
+aux_source_directory(src MODULE_SRC)
 
 find_package(eudaq CONFIG REQUIRED NO_DEFAULT_PATH)
 include_directories(${EUDAQ_INCLUDE_DIRS})
+add_subdirectory(exe)
 
+list(FIND EUDAQ_LIBRARIES "eudaq_lcio" LCIO_FIND_POS)
+if(${LCIO_FIND_POS} EQUAL -1)
+  list(FILTER MODULE_SRC EXCLUDE REGEX "(.+)LCEventConverter(.+)")
+endif()
 
 set(EUDAQ_MODULE eudaq_module_jade)
 add_library(${EUDAQ_MODULE} SHARED ${MODULE_SRC})
@@ -25,4 +27,3 @@ install(TARGETS
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
-

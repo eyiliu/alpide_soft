@@ -236,7 +236,7 @@ void AltelRegCtrl::InitALPIDE(){
   WriteReg(0x60B,0x32);
   WriteReg(0x60C,0x40);
   WriteReg(0x60D,0x40);
-  WriteReg(0x60E,60); //empty 0x32; 0x12 data, not full. 
+  WriteReg(0x60E,50); //empty 0x32; 0x12 data, not full. 
   WriteReg(0x701,0x400);
   WriteReg(0x487,0xFFFF);
   WriteReg(0x500,0x0);
@@ -260,11 +260,13 @@ void AltelRegCtrl::StartWorking(uint8_t trigmode){
   WriteReg(0x487,0xFFFF);
   WriteReg(0x500,0x1);
   WriteReg(0x4,0x10);
-  WriteReg(0x5,156);   //3900ns    
+  //WriteReg(0x5,156);   //3900ns    
+  WriteReg(0x5,1);   //25ns    
   WriteReg(0x1,0x3D);
   Broadcast(0x63);
   Broadcast(0xe4);
-  SetFrameDuration(16);   //400ns
+  //SetFrameDuration(16);   //400ns
+  SetFrameDuration(100);   //400ns  //2500ns
   SetInTrigGap(20);
   SetFPGAMode(0x1);
 }
