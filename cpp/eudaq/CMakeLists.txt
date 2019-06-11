@@ -10,7 +10,6 @@ aux_source_directory(src MODULE_SRC)
 
 find_package(eudaq CONFIG REQUIRED NO_DEFAULT_PATH)
 include_directories(${EUDAQ_INCLUDE_DIRS})
-add_subdirectory(exe)
 
 list(FIND EUDAQ_LIBRARIES "eudaq_lcio" LCIO_FIND_POS)
 if(${LCIO_FIND_POS} EQUAL -1)
@@ -19,7 +18,7 @@ endif()
 
 set(EUDAQ_MODULE eudaq_module_jade)
 add_library(${EUDAQ_MODULE} SHARED ${MODULE_SRC})
-target_link_libraries(${EUDAQ_MODULE} ${EUDAQ_LIBRARIES} ${JADE_CORE_LIBRARY})
+target_link_libraries(${EUDAQ_MODULE} ${EUDAQ_LIBRARIES} ${JADE_CORE_LIBRARY}_static)
 set_property( TARGET ${EUDAQ_MODULE} APPEND PROPERTY INSTALL_RPATH ${EUDAQ_LIBRARIES_DIRS})
 
 install(TARGETS
