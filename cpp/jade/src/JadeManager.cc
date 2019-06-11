@@ -15,7 +15,7 @@ namespace{
   auto _loading_ = JadeFactory<_base_c_>::Register<_index_c_, const JadeOption&>(typeid(_index_c_));
 }
 
-using namespace std::chrono_literals;
+// using namespace std::chrono_literals;
 
 JadeManager::JadeManager(const JadeOption &opt)
   : m_is_running(false), m_opt(opt){
@@ -111,7 +111,7 @@ uint64_t JadeManager::AsyncReading(){
   uint64_t ndf_print_prev = 0;
   uint64_t n_df = 0;
   while (m_is_running){
-    auto df = m_rd? m_rd->Read(1000ms):nullptr;
+    auto df = m_rd? m_rd->Read(std::chrono::milliseconds(1000)):nullptr;
     if(!df){
       continue;
     }
@@ -146,7 +146,7 @@ uint64_t JadeManager::AsyncWriting(){
   while(m_is_running){
     std::unique_lock<std::mutex> lk_in(m_mx_ev_to_wrt);
     while(m_qu_ev_to_wrt.empty()){
-      while(m_cv_valid_ev_to_wrt.wait_for(lk_in, 10ms)
+      while(m_cv_valid_ev_to_wrt.wait_for(lk_in, std::chrono::milliseconds(10))
           ==std::cv_status::timeout){
         if(!m_is_running){
           return n_df;

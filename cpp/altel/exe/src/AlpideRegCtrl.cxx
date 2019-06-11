@@ -7,7 +7,7 @@
 #include <thread>
 #include <ctime>
 
-using namespace std::chrono_literals;
+//using namespace std::chrono_literals;
 
 int main(int argc, char **argv){
   JadeUtils::PrintTypeIndexMap();
@@ -19,7 +19,7 @@ int main(int argc, char **argv){
   ctrl->SendCommand("INIT");
   reader->Open();
   ctrl->SendCommand("START");
-  reader->Read(1s);
+  reader->Read(std::chrono::milliseconds(1));
   ctrl->SendCommand("STOP");
 
   // int n = 0;

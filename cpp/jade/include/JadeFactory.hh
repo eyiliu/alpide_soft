@@ -47,7 +47,8 @@ template <typename ...ARGS>
 typename JadeFactory<B>::UP
 JadeFactory<B>::MakeUnique(const std::type_index& id, ARGS&& ...args){
   auto &ins = Instance<ARGS&&...>();
-  std::remove_reference_t<decltype( ins.at(id) )> it;
+  // std::remove_reference_t<decltype( ins.at(id) )> it;
+  typename std::remove_reference<decltype( ins.at(id) )>::type it;
   try{
     it = ins.at(id);
   }

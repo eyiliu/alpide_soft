@@ -105,7 +105,7 @@ std::string JadeUtils::GetNowStr(){
     auto now = std::chrono::system_clock::now();
     auto now_c = std::chrono::system_clock::to_time_t(now);
     std::stringstream ss;
-    ss<<std::put_time(std::localtime(&now_c), "%c");
+    //ss<<std::put_time(std::localtime(&now_c), "%c");
     return ss.str();
 }
 
@@ -114,7 +114,7 @@ std::string JadeUtils::GetNowStr(const std::string &format){
   auto now = std::chrono::system_clock::now();
   auto now_c = std::chrono::system_clock::to_time_t(now);
   std::stringstream ss;
-  ss<<std::put_time(std::localtime(&now_c), format.c_str());
+  //ss<<std::put_time(std::localtime(&now_c), format.c_str());
   return ss.str();
 }
 
