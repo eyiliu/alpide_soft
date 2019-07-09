@@ -128,8 +128,8 @@ uint64_t JadeManager::AsyncReading(){
       dur = tp_now - tp_print_prev;
       dur_sec_c = dur.count() * decltype(dur)::period::num * 1.0/ decltype(dur)::period::den;
       double cr_hz = (n_df-ndf_print_prev) / dur_sec_c;
-      std::cout<<"JadeManager:: data "<<n_df <<"  average data rate (reading)<"<< av_hz<<"> current data rate<"<<cr_hz<<">"<<std::endl;
-      ndf_print_next += 10000;
+      std::cout<<"JadeManager:: data "<<n_df <<"  average data rate (reading)<"<< av_hz<<"> current data rate<"<<cr_hz<<">  ndf "<<n_df<<std::endl;
+      ndf_print_next += 1000;
       ndf_print_prev = n_df;
       tp_print_prev = tp_now;
     }
@@ -157,6 +157,9 @@ uint64_t JadeManager::AsyncWriting(){
     m_qu_ev_to_wrt.pop();
     lk_in.unlock();
     // df->Decode();
+    df->Decode(1); //level 1, header-only
+    uint16_t tg =  df->GetCounter();
+    std::cout<<">>>>>>>>>>>tg>"<< tg<<"   <<<<n_df>"<<n_df <<"\n";
     if(m_wrt) m_wrt->Write(df);
     n_df ++;
     if(n_df >= ndf_print_next){
