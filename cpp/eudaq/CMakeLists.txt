@@ -18,7 +18,7 @@ endif()
 
 set(EUDAQ_MODULE eudaq_module_jade)
 add_library(${EUDAQ_MODULE} SHARED ${MODULE_SRC})
-target_link_libraries(${EUDAQ_MODULE} ${EUDAQ_LIBRARIES} ${JADE_CORE_LIBRARY}_static)
+target_link_libraries(${EUDAQ_MODULE} ${EUDAQ_LIBRARIES} ${JADE_CORE_LIBRARY})
 set_property( TARGET ${EUDAQ_MODULE} APPEND PROPERTY INSTALL_RPATH ${EUDAQ_LIBRARIES_DIRS})
 
 install(TARGETS
