@@ -22,6 +22,13 @@ git checkout TB1908_CALICE
 ```
 mkdir build
 cd build
-cmake -Deudaq_DIR=MY_EUDAQ_PATH/cmake ../
-```
 
+cmake -Deudaq_DIR=MY_EUDAQ_PATH/cmake -DALPIDE_INSTALL_PREFIX=MY_EUDAQ_PATH ../
+make install  
+```
+the generated eudaq module is   
+**MY_EUDAQ_PATH/libeudaq\_module_jade.so**
+
+
+## run  
+see the conf ini and sh files in the folder **conf**
