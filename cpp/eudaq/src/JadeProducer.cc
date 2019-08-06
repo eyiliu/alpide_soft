@@ -156,15 +156,14 @@ namespace{
 
 void JadeProducer::DoInitialise(){
   auto ini = GetInitConfiguration();
-  std::string json_base64  = ini->Get("JSON_BASE64", "");
+  std::string ip_addr= ini->Get("IP_ADDR", "192.168.22.20");
   std::string json_str;
-  if(json_base64.empty()){
-    std::string json_path  = ini->Get("JSON_PATH", "");
-    json_str = JadeUtils::LoadFileToString(json_path);
-  }
-  else{
-    json_str = JadeUtils::Base64_atob(json_base64);
-  }
+  json_str +="{\"JadeManager\":{\"type\":\"JadeManager\",\"parameter\":{\"version\":3,\"JadeRegCtrl\":{\"type\":\"AltelRegCtrl\",\"parameter\":{\"IP_ADDRESS\": \"";
+  json_str +=ip_addr;
+  json_str +="\",\"IP_UDP_PORT\": 4660}},\"JadeReader\":{\"type\":\"AltelReader\",\"parameter\":{\"IS_DISK_FILE\":false,\"TERMINATE_AT_FILE_END\":true,\"FILE_PATH\":\"nothing\",\"IP_ADDRESS\": \"";
+  json_str +=ip_addr;
+  json_str +="\",\"IP_TCP_PORT\":24}},\"JadeWriter\":{\"type\":\"EudaqWriter\",	\"parameter\":{\"nothing\":\"nothing\"}}}}}";
+   
   JadeOption opt_conf(json_str);
   JadeOption opt_man = opt_conf.GetSubOption("JadeManager");
   std::cout<<opt_man.DumpString()<<std::endl;
