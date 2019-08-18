@@ -12,7 +12,7 @@ The CMAKE config file **eudaqConfig.cmake** is in folder   **MY_EUDAQ_PATH/cmake
 git clone https://github.com/eyiliu/alpide_soft.git
 ```
 
-#### checkout branch *TB1908_CALICE* 
+#### checkout branch *USTC1908* 
 ```
 cd alpide_soft
 git checkout TB1908_CALICE
