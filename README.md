@@ -15,7 +15,7 @@ git clone https://github.com/eyiliu/alpide_soft.git
 #### checkout branch *USTC1908* 
 ```
 cd alpide_soft
-git checkout TB1908_CALICE
+git checkout USTC1908
 ```
 
 #### build eudaq moudle  for alpide
