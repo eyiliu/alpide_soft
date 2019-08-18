@@ -55,5 +55,6 @@ nothing need to be added to EUDAQ **conf** file
 1. Start TLU Poroducr  
 1. Start the ALPIDE producer   
 ```bash
-euCliProducer -n JadeProducer -t alpide_test
+cd MY_EUDAQ_PATH/bin 
+./euCliProducer -n JadeProducer -t alpide_test
 ```
