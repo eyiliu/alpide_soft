@@ -30,5 +30,22 @@ the generated eudaq module is
 **MY_EUDAQ_PATH/libeudaq\_module_jade.so**
 
 
+
+### conf/ini 
+assumming the DAQ board has ip address 192.168.22.20
+please ping the ip to comfirm the connection 
+
+add a section to EUDAQ ini file 
+```
+[Producer.alpide_test]
+IP_ADDR=192.168.22.20
+```
+
+nothing need to be added to EUDAQ conf file
+
 ## run  
-see the conf ini and sh files in the folder **conf**
+
+start the ALPIDE producer
+```
+euCliProducer -n JadeProducer -t alpide_test
+```
