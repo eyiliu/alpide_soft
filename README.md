@@ -32,8 +32,8 @@ the generated eudaq module is
 
 
 ### conf/ini 
-assumming the DAQ board has ip address 192.168.22.20
-please ping the ip to comfirm the connection 
+assumming the DAQ board has ip address 192.168.22.20   
+please ping the ip to comfirm the connection   
 
 add a section to EUDAQ ini file 
 ```
