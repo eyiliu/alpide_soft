@@ -58,3 +58,8 @@ nothing need to be added to EUDAQ **conf** file
 cd MY_EUDAQ_PATH/bin 
 ./euCliProducer -n JadeProducer -t alpide_test
 ```
+
+
+## tlu
+
+./euCliProducer -n AidaTluProducer -t aida_tlu
