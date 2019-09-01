@@ -129,8 +129,9 @@ uint8_t AltelRegCtrl::ReadByte(uint64_t addr){
   sndHeader.length=1;
   sndHeader.address=htonl(addr);
   char rcvdBuf[1024];
-  if (rbcp_com(m_ip_address.c_str(), m_ip_udp_port, &sndHeader, NULL, rcvdBuf, RBCP_DISP_MODE_NO)!=1){
-    std::cout<< "here error"<<std::endl;
+  int re = rbcp_com(m_ip_address.c_str(), m_ip_udp_port, &sndHeader, NULL, rcvdBuf, RBCP_DISP_MODE_NO);
+  if (re!=1){
+    std::cout<< "here error: "<<re<<std::endl;
   }
   return rcvdBuf[0];
 }
@@ -260,8 +261,8 @@ void AltelRegCtrl::StartWorking(uint8_t trigmode){
   WriteReg(0x487,0xFFFF);
   WriteReg(0x500,0x1);
   WriteReg(0x4,0x10);
-  //WriteReg(0x5,156);   //3900ns    
-  WriteReg(0x5,1);   //25ns    
+  WriteReg(0x5,156);   //3900ns    
+  //WriteReg(0x5,1);   //25ns    
   WriteReg(0x1,0x3D);
   Broadcast(0x63);
   Broadcast(0xe4);
