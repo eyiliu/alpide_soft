@@ -6,16 +6,16 @@
 #include <set>
 
 namespace eudaq {
-  class TriggerIDSyncDataCollector:public DataCollector{
+  class AlpideDataCollector:public DataCollector{
     public:
-      TriggerIDSyncDataCollector(const std::string &name,
+      AlpideDataCollector(const std::string &name,
           const std::string &rc);
       void DoConnect(ConnectionSPC id) override;
       void DoDisconnect(ConnectionSPC id) override;
       void DoConfigure() override;
       void DoReset() override;
       void DoReceive(ConnectionSPC id, EventSP ev) override;
-      static const uint32_t m_id_factory = cstr2hash("TriggerIDSyncDataCollector_alpide");
+      static const uint32_t m_id_factory = cstr2hash("AlpideDataCollector");
 
     private:
       std::mutex m_mtx_map;
@@ -26,23 +26,23 @@ namespace eudaq {
 
   namespace{
     auto dummy0 = Factory<DataCollector>::
-      Register<TriggerIDSyncDataCollector, const std::string&, const std::string&>
-      (TriggerIDSyncDataCollector::m_id_factory);
+      Register<AlpideDataCollector, const std::string&, const std::string&>
+      (AlpideDataCollector::m_id_factory);
   }
 
-  TriggerIDSyncDataCollector::TriggerIDSyncDataCollector(const std::string &name,
+  AlpideDataCollector::AlpideDataCollector(const std::string &name,
       const std::string &rc):
     DataCollector(name, rc){
-    std::cout<< " >>>>>>>>>>>>>>>>>>>>>> It is TriggerIDSyncDataCollector_alpide"<<std::endl;
+    std::cout<< " >>>>>>>>>>>>>>>>>>>>>> It is AlpideDataCollector"<<std::endl;
   }
 
-  void TriggerIDSyncDataCollector::DoConnect(ConnectionSPC idx){
+  void AlpideDataCollector::DoConnect(ConnectionSPC idx){
     std::unique_lock<std::mutex> lk(m_mtx_map);
     m_conn_evque[idx].clear();
     m_conn_inactive.erase(idx);
   }
 
-  void TriggerIDSyncDataCollector::DoDisconnect(ConnectionSPC idx){
+  void AlpideDataCollector::DoDisconnect(ConnectionSPC idx){
     std::unique_lock<std::mutex> lk(m_mtx_map);
     m_conn_inactive.insert(idx);
     if(m_conn_inactive.size() == m_conn_evque.size()){
@@ -51,7 +51,7 @@ namespace eudaq {
     }
   }
 
-  void TriggerIDSyncDataCollector::DoConfigure(){
+  void AlpideDataCollector::DoConfigure(){
     m_noprint = 0;
     auto conf = GetConfiguration();
     if(conf){
@@ -60,18 +60,21 @@ namespace eudaq {
     }
   }
 
-  void TriggerIDSyncDataCollector::DoReset(){
+  void AlpideDataCollector::DoReset(){
     std::unique_lock<std::mutex> lk(m_mtx_map);
     m_noprint = 0;
     m_conn_evque.clear();
     m_conn_inactive.clear();
   }
 
-  void TriggerIDSyncDataCollector::DoReceive(ConnectionSPC idx, EventSP evsp){
+  void AlpideDataCollector::DoReceive(ConnectionSPC idx, EventSP evsp){
     std::unique_lock<std::mutex> lk(m_mtx_map);
     if(!evsp->IsFlagTrigger()){
       EUDAQ_THROW("!evsp->IsFlagTrigger()");
     }
+
+    //evsp->Print(std::cout);
+    std::cout<< evsp->GetDescription() << " : "<< evsp->GetTriggerN()<<std::endl;
     m_conn_evque[idx].push_back(evsp);
 
     uint32_t trigger_n = -1;
@@ -111,7 +114,9 @@ namespace eudaq {
     }
     if(!m_noprint)
       ev_sync->Print(std::cout);
-    if(ev_sync->GetNumSubEvent() != 7){
+    uint16_t n_subevent_req = 8;
+    if(ev_sync->GetNumSubEvent() != n_subevent_req){
+      std::cout<< "dropped assambed_event with subevent != "<< n_subevent_req<<std::endl;
       return;
     }
     WriteEvent(std::move(ev_sync));
