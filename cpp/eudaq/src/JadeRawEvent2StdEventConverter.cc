@@ -54,13 +54,15 @@ bool JadeRawEvent2StdEventConverter::Converting(eudaq::EventSPC d1, eudaq::StdEv
     std::cout<< ext<<std::endl;
     eudaq::StandardPlane* p = &(d2->AddPlane(eudaq::StandardPlane(PLANE_NUMBER_OFFSET+bn+i+ext, "alpide", "alpide")));
     p->SetSizeZS(x_n_pixel, y_n_pixel, 0); //TODO: check this function for its real meaning
+    //p->SetSizeZS(y_n_pixel, x_n_pixel, 0); //TODO: check this function for its real meaning
     v_planes.push_back(p);
   }
   auto it_x = data_x.begin();
   auto it_y = data_y.begin();
   auto it_z = data_z.begin();
   while(it_x!=data_x.end()){
-    v_planes[*it_z]->PushPixel(1023 - *it_x , *it_y , 1);
+    v_planes[*it_z]->PushPixel(1023 - *it_x ,*it_y,  1);
+    //v_planes[*it_z]->PushPixel(*it_y, 1023 - *it_x , 1);
     // std::cout<<"n:x:y "<<d1->GetEventN()<<":"<<*it_x<<":"<<*it_y<<std::endl;
     it_x ++;
     it_y ++;
