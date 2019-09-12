@@ -4,6 +4,7 @@
 
 #include "eudaq/Producer.hh"
 
+#include <list>
 #include <iostream>
 #include <chrono>
 #include <thread>
@@ -27,13 +28,15 @@ public:
   void SetProducerCallback(eudaq::Producer *producer);
 private:
   eudaq::Producer *m_producer;
-  JadeDataFrameSP m_broken_df;
+  std::list<JadeDataFrameSP> m_list_cached_df;
   uint32_t m_tg_expected;
-  uint32_t m_tg_last_send;
-  uint32_t m_tg_2nd_last_send;
-  uint32_t m_flag_wait_first_event;
-  uint32_t m_broken_continue_c;
   
+  uint32_t m_tg_last_send;
+  uint32_t m_flag_wait_first_event;
+
+  uint32_t m_broken_c{0};
+  bool m_stop_for_debug{false};
+
 };
 
 //+++++++++++++++++++++++++++++++++++++++++
@@ -57,9 +60,11 @@ EudaqWriter::~EudaqWriter(){
 void EudaqWriter::Open(){
   m_tg_last_send = 0;
   m_tg_expected = 0;
-  m_broken_continue_c = 0;
   m_flag_wait_first_event = true;
-  m_broken_df.reset();
+  m_list_cached_df.clear();
+
+  m_broken_c = 0;
+  m_stop_for_debug = 0;
 }
 
 void EudaqWriter::Close(){
@@ -67,75 +72,87 @@ void EudaqWriter::Close(){
 }
 
 void EudaqWriter::Write(JadeDataFrameSP df){
+  if(m_stop_for_debug){
+    return;
+  }
+
   if(!m_producer){
     std::cerr<<"EudaqWriter: ERROR, eudaq producer is not avalible";
     throw;
   }
   
   df->Decode(1); //level 1, header-only
+  std::cout<<"         >> "<< df->GetCounter()<< std::endl;
   
-  uint16_t tg_l16 = df->GetCounter();
+  m_list_cached_df.push_back(df);
+  if(m_list_cached_df.size()<6){
+    return;
+  }
+  else{
+    //TODO: filter wrong trigger id
+    for (std::list<JadeDataFrameSP>::iterator it= ++m_list_cached_df.begin(); it!= (--(--(--m_list_cached_df.end()))); ++it){
+      std::list<JadeDataFrameSP>::iterator it_ealier = it;
+      --it_ealier;
+      std::list<JadeDataFrameSP>::iterator it_later = it;
+      ++it_later;
+      std::list<JadeDataFrameSP>::iterator it_later_2 = it_later;
+      ++it_later_2;
+      
+      uint16_t tg_ealier = (*it_ealier)->GetCounter();
+      uint16_t tg_that = (*it)->GetCounter();
+      uint16_t tg_later = (*it_later)->GetCounter();
+      uint16_t tg_later_2 = (*it_later_2)->GetCounter();
+      
+      if( (uint16_t(tg_that-tg_ealier)<1000) + (tg_that!=tg_ealier)+
+	  (uint16_t(tg_later-tg_that)<1000) + (uint16_t(tg_later_2-tg_that)<1000) !=4){
+	it = m_list_cached_df.erase(it);
+	// std::cout<< "                                                                removed "<<tg_that<<std::endl;
+	return;
+      }
+    }
+    if(m_list_cached_df.size()<6)
+      return;
+
+    df = m_list_cached_df.front();
+    m_list_cached_df.pop_front();
+  }
+  
+  uint16_t tg_this = df->GetCounter();
   if(m_flag_wait_first_event){
     m_flag_wait_first_event = false;
-    m_tg_expected = tg_l16;
-    m_broken_df.reset();
+    m_tg_expected = tg_this;
   }
+  
+  if(tg_this != (m_tg_expected & 0xffff)){
+    // std::cout<< "expecting<"<<(m_tg_expected & 0xffff)<<">,  provided<"<< tg_this<<">"<<std::endl;
+    m_broken_c++;
 
-  if(tg_l16 != (m_tg_expected & 0xffff)){
-    if(tg_l16+1 == (m_tg_expected & 0xffff)){
-      return;
+    if(m_broken_c == 100)
+      m_stop_for_debug = true;
+      
+    uint32_t tg_guess_0 = (m_tg_expected & 0xffff0000) + tg_this;
+    uint32_t tg_guess_1 = (m_tg_expected & 0xffff0000) + 0x10000 + tg_this;
+    
+    if(tg_guess_0 > m_tg_expected && tg_guess_0 - m_tg_expected < 1000){
+      m_tg_expected =tg_guess_0;
     }
-
-    if(tg_l16 <= 8){
-      if(m_broken_df)
-	m_broken_continue_c++;
-      m_broken_df = df;
+    else if(tg_guess_1 > m_tg_expected && tg_guess_1 - m_tg_expected < 1000){
+      m_tg_expected =tg_guess_1;
+    }
+    else{
       m_tg_expected ++;
       return;
     }
     
-    uint32_t tg_guess_0 = (m_tg_expected & 0xffff0000) + tg_l16;
-    uint32_t tg_guess_1 = (m_tg_expected & 0xffff0000) + 0x10000 + tg_l16;
-    if(tg_guess_0 > m_tg_expected && tg_guess_0 - m_tg_expected < 10){
-      m_tg_expected =tg_guess_0;
-    }
-    else if (tg_guess_1 > m_tg_expected && tg_guess_1 - m_tg_expected < 10){
-      m_tg_expected =tg_guess_1;
-    }
-    else{
-      if(m_broken_df)
-	m_broken_continue_c++;
-      m_broken_df = df;
-      std::cout<< "expecting : provided "<< (m_tg_expected & 0xffff) << " : "<< tg_l16<<std::endl;
-      m_tg_expected ++;
-      return;
-    }
   }
+
+  // std::cout<< "                                                    <"<<(m_tg_expected & 0xffff)<<std::endl;
+  m_broken_c = 0;
   
-  if(m_broken_df ){
-    if(m_tg_last_send+2 == m_tg_expected){
-      auto evup_to_send = eudaq::Event::MakeUnique("JadeRaw");
-      evup_to_send->SetTriggerN(m_tg_last_send+1);
-      evup_to_send->AddBlock<char>( (uint32_t)0, m_broken_df->Raw().data(), (size_t)(m_broken_df->Raw().size()) );
-      m_producer->SendEvent(std::move(evup_to_send));
-      // std::cout<< "recover broken dataframe.  TLUID_l16 last:dropped:current <"
-      // 	       <<(0xffff&m_tg_last_send)<<":"<<(0xffff&(m_tg_last_send+1))<<":"<<(0xffff&m_tg_expected)
-      // 	       <<">" <<std::endl;
-    }
-    else{
-      std::cout<< "Unable to recover broken dataframe, dropped.  TLUID_l16 last:dropped:current <"
-	       <<(0xffff&m_tg_last_send)<<":"<<(0xffff&m_broken_df->GetCounter())<<":"<<(0xffff&m_tg_expected)
-	       <<">" <<std::endl;
-      if((0xffff&m_broken_df->GetCounter())-(0xffff&m_tg_last_send)==1){
-	std::cout<<m_tg_last_send <<" "<<m_tg_expected<<std::endl;
-      } 
-    }
-  }
   auto evup_to_send = eudaq::Event::MakeUnique("JadeRaw");
   evup_to_send->SetTriggerN(m_tg_expected);
   evup_to_send->AddBlock<char>( (uint32_t)0, df->Raw().data(), (size_t)(df->Raw().size()) );
   m_producer->SendEvent(std::move(evup_to_send));
-  m_broken_df.reset();
   m_tg_last_send = m_tg_expected;
   m_tg_expected++;
 }

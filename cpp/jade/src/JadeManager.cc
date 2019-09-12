@@ -159,7 +159,7 @@ uint64_t JadeManager::AsyncWriting(){
     // df->Decode();
     df->Decode(1); //level 1, header-only
     uint16_t tg =  df->GetCounter();
-    std::cout<<">>>>>>>>>>>tg>"<< tg<<"   <<<<n_df>"<<n_df <<"\n";
+    // std::cout<<">>>>>>>>>>>tg>"<< tg<<"   <<<<n_df>"<<n_df <<"\n";
     if(m_wrt) m_wrt->Write(df);
     n_df ++;
     if(n_df >= ndf_print_next){
