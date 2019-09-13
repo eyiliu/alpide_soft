@@ -55,6 +55,7 @@ bool JadeRawEvent2StdEventConverter::Converting(eudaq::EventSPC d1, eudaq::StdEv
     //  std::cout <<plane_id<<"\t"<<bn<<"\t"<< ext <<"\t"<<i<<"\t"<<(plane_id+bn+i+ext);//<<std::endl;
 
     eudaq::StandardPlane* p = &(d2->AddPlane(eudaq::StandardPlane(plane_id+bn+i+ext, "alpide", "alpide")));
+    d2->SetDetectorType("alpide");
     p->SetSizeZS(x_n_pixel, y_n_pixel, 0); //TODO: check this function for its real meaning
     v_planes.push_back(p);
     //std::cout << p->ID()<<std::endl;
