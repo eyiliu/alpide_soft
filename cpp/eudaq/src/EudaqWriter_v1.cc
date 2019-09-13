@@ -13,14 +13,14 @@
 
 class EudaqWriter_v1: public EudaqWriter {
 public:
-  EudaqWriter_v1(const JadeOption &opt);
-  ~EudaqWriter_v1() override;
+  using EudaqWriter::EudaqWriter;
+  ~EudaqWriter_v1() override {};
   void Write(JadeDataFrameSP df) override;
   void Open() override;
   void Close() override;
   void SetProducerCallback(eudaq::Producer *producer) override;
 private:
-  eudaq::Producer *m_producer;
+  eudaq::Producer *m_producer{nullptr};
   std::list<JadeDataFrameSP> m_list_cached_df;
   uint32_t m_tg_expected;
   
@@ -41,13 +41,6 @@ namespace{
 
 void EudaqWriter_v1::SetProducerCallback(eudaq::Producer *producer){
   m_producer = producer;
-}
-
-EudaqWriter_v1::EudaqWriter_v1(const JadeOption &opt)
-  :EudaqWriter(opt), m_producer(nullptr){
-}
-
-EudaqWriter_v1::~EudaqWriter_v1(){
 }
 
 void EudaqWriter_v1::Open(){

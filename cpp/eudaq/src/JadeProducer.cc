@@ -58,7 +58,7 @@ void JadeProducer::DoInitialise(){
     json_str +=ip_addr;
     json_str +="\",\"IP_UDP_PORT\": 4660}},\"JadeReader\":{\"type\":\"AltelReader\",\"parameter\":{\"IS_DISK_FILE\":false,\"TERMINATE_AT_FILE_END\":true,\"FILE_PATH\":\"nothing\",\"IP_ADDRESS\": \"";
     json_str +=ip_addr;
-    json_str +="\",\"IP_TCP_PORT\":24}},\"JadeWriter\":{\"type\":\"EudaqWriter_v1\",	\"parameter\":{\"nothing\":\"nothing\"}}}}}";
+    json_str +="\",\"IP_TCP_PORT\":24}},\"JadeWriter\":{\"type\":\"EudaqWriter_v2\",	\"parameter\":{\"nothing\":\"nothing\"}}}}}";
   }
   else{
     std::cerr<<"JadeProducer: no ini section for "<<GetFullName()<<std::endl;
