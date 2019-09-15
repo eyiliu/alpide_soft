@@ -1,4 +1,7 @@
-project(alpidedaq)
+project(alpide)
+
+SET(ALPIDE_LIB_VERSION 1)
+
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 include(CMakeDependentOption)
 find_package(Threads REQUIRED)
@@ -51,3 +54,26 @@ else()
 endif()
 
 add_subdirectory(cpp)
+
+
+#==============================================
+export(PACKAGE alpide)
+
+list(APPEND CONF_ALPIDE_LIBRARIES jade)
+
+configure_file("${PROJECT_SOURCE_DIR}/cmake/alpideConfig.cmake.in"
+  "${PROJECT_BINARY_DIR}/alpideConfig.cmake" @ONLY)
+
+configure_file("${PROJECT_SOURCE_DIR}/cmake/alpideConfigVersion.cmake.in"
+  "${PROJECT_BINARY_DIR}/alpideConfigVersion.cmake" @ONLY)
+
+install(FILES
+  "${PROJECT_BINARY_DIR}/alpideConfig.cmake"
+  "${PROJECT_BINARY_DIR}/alpideConfigVersion.cmake"
+  DESTINATION cmake
+  COMPONENT dev)
+
+# Install the export set for use with the install-tree
+install(EXPORT alpideTargets
+  DESTINATION cmake
+  COMPONENT dev)

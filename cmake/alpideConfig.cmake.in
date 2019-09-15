@@ -1,0 +1,16 @@
+# - Config file for the FooBar package
+# It defines the following variables
+#  ALPIDE_INCLUDE_DIRS - include directories for FooBar
+#  ALPIDE_LIBRARIES    - libraries to link against
+
+# Compute paths
+get_filename_component(ALPIDE_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+get_filename_component(ALPIDE_INSTALL_DIR "${ALPIDE_CMAKE_DIR}" PATH)
+
+set(ALPIDE_INCLUDE_DIRS ${ALPIDE_INSTALL_DIR}/include)
+set(ALPIDE_LIBRARIES_DIRS ${ALPIDE_INSTALL_DIR}/lib)
+
+# Our library dependencies (contains definitions for IMPORTED targets)
+include("${ALPIDE_CMAKE_DIR}/alpideTargets.cmake")
+
+set(ALPIDE_LIBRARIES "@CONF_ALPIDE_LIBRARIES@")
