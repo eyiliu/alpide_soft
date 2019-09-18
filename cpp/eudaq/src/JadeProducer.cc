@@ -46,7 +46,7 @@ void JadeProducer::DoInitialise(){
   std::string json_base64  = ini->Get("JSON_BASE64", "");
   std::string json_path  = ini->Get("JSON_PATH", "");
   std::string ip_addr= ini->Get("IP_ADDR", ""); 
-  
+  std::string writer_name = ini->Get("WRITER_NAME", "EudaqWriter_v3");
   if(!json_base64.empty()){
     json_str = JadeUtils::Base64_atob(json_base64);
   }
@@ -58,7 +58,9 @@ void JadeProducer::DoInitialise(){
     json_str +=ip_addr;
     json_str +="\",\"IP_UDP_PORT\": 4660}},\"JadeReader\":{\"type\":\"AltelReader\",\"parameter\":{\"IS_DISK_FILE\":false,\"TERMINATE_AT_FILE_END\":true,\"FILE_PATH\":\"nothing\",\"IP_ADDRESS\": \"";
     json_str +=ip_addr;
-    json_str +="\",\"IP_TCP_PORT\":24}},\"JadeWriter\":{\"type\":\"EudaqWriter_v2\",	\"parameter\":{\"nothing\":\"nothing\"}}}}}";
+    json_str +="\",\"IP_TCP_PORT\":24}},\"JadeWriter\":{\"type\":\"";
+    json_str +=writer_name;
+    json_str +="\",	\"parameter\":{\"nothing\":\"nothing\"}}}}}";
   }
   else{
     std::cerr<<"JadeProducer: no ini section for "<<GetFullName()<<std::endl;
