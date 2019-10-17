@@ -24,6 +24,7 @@ private:
   uint32_t m_tg_expected{0};
   uint32_t m_tg_last_send{0};
   uint32_t m_flag_wait_first_event{true};
+  bool m_flag_print{true};
 };
 
 //+++++++++++++++++++++++++++++++++++++++++
@@ -42,6 +43,7 @@ void EudaqWriter_v3::Open(){
   m_tg_last_send = 0;
   m_tg_expected = 0;
   m_flag_wait_first_event = true;
+  m_flag_print = true;
 }
 
 void EudaqWriter_v3::Close(){
@@ -56,26 +58,31 @@ void EudaqWriter_v3::Write(JadeDataFrameSP df){
   
   df->Decode(1); //level 1, header-only
   uint16_t tg_l15 = 0x7fff & df->GetCounter();
-  std::cout<<"id "<<tg_l15<<std::endl;
+  if(m_flag_print)
+    std::cout<<"id "<<tg_l15<<"\n";
   if(m_flag_wait_first_event){
     m_flag_wait_first_event = false;
     m_tg_expected = tg_l15;
   }
+
   if(tg_l15 != (m_tg_expected & 0x7fff)){
+    // std::cout<<(m_tg_expected & 0x7fff)<< " " << tg_l15<<"\n";
     uint32_t tg_guess_0 = (m_tg_expected & 0xffff8000) + tg_l15;
     uint32_t tg_guess_1 = (m_tg_expected & 0xffff8000) + 0x8000 + tg_l15;
-    if(tg_guess_0 > m_tg_expected && tg_guess_0 - m_tg_expected < 20){
+    if(tg_guess_0 > m_tg_expected && tg_guess_0 - m_tg_expected < 200){
+      std::cout<< "missing trigger, expecting : provided "<< (m_tg_expected & 0x7fff) << " : "<< tg_l15<<"\n";
+      m_flag_print = false;
       m_tg_expected =tg_guess_0;
     }
-    else if (tg_guess_1 > m_tg_expected && tg_guess_1 - m_tg_expected < 20){
+    else if (tg_guess_1 > m_tg_expected && tg_guess_1 - m_tg_expected < 200){
+      std::cout<< "missing trigger, expecting : provided "<< (m_tg_expected & 0x7fff) << " : "<< tg_l15<<"\n";
+      m_flag_print = false;
       m_tg_expected =tg_guess_1;
     }
     else{
-      std::cout<< "expecting : provided "<< (m_tg_expected & 0x7fff) << " : "<< tg_l15<<std::endl;
+      std::cout<< "broken trigger ID, expecting : provided "<< (m_tg_expected & 0x7fff) << " : "<< tg_l15<<"\n";
+      m_flag_print = false;
       m_tg_expected ++;
-      // std::cout<< "broken dataframe, dropped.  TLUID_l15 last:dropped:current <"
-      // 	       <<(0x7fff&m_tg_last_send)<<":"<<(0x7fff&df->GetCounter())<<":"<<(0x7fff&m_tg_expected)
-      // 	       <<">" <<std::endl;
       return;
     }
   }
