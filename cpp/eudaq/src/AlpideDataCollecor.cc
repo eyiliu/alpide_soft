@@ -22,6 +22,7 @@ namespace eudaq {
       std::map<ConnectionSPC, std::deque<EventSPC>> m_conn_evque;
       std::set<ConnectionSPC> m_conn_inactive;
       uint32_t m_noprint;
+      uint32_t m_minimun_sub_event;
   };
 
   namespace{
@@ -57,6 +58,7 @@ namespace eudaq {
     if(conf){
       conf->Print();
       m_noprint = conf->Get("DISABLE_PRINT", 0);
+      m_minimun_sub_event = conf->Get("MINIMUN_SUB_EVENT", 0);
     }
   }
 
@@ -114,9 +116,8 @@ namespace eudaq {
     }
     if(!m_noprint)
       ev_sync->Print(std::cout);
-    uint16_t n_subevent_req = 8;
-    if(ev_sync->GetNumSubEvent() != n_subevent_req){
-      std::cout<< "dropped assambed_event with subevent != "<< n_subevent_req<<std::endl;
+    if(ev_sync->GetNumSubEvent() < m_minimun_sub_event){
+      std::cout<< "dropped assambed_event with subevent < "<< m_minimun_sub_event <<std::endl;
       return;
     }
     WriteEvent(std::move(ev_sync));
