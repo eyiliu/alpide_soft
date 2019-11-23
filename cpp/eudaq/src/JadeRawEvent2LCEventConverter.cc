@@ -82,7 +82,7 @@ bool JadeRawEvent2LCEventConverter::Converting(eudaq::EventSPC d1, eudaq::LCEven
   auto it_z = data_z.begin();
   while(it_x!=data_x.end()){
     auto zsFrame = v_zsFrames[*it_z];
-    zsFrame->chargeValues().push_back(1023 - *it_x);// swap
+    zsFrame->chargeValues().push_back(*it_x);// swap
     zsFrame->chargeValues().push_back(*it_y);//y
     zsFrame->chargeValues().push_back(1);//signal
     zsFrame->chargeValues().push_back(0);//time
