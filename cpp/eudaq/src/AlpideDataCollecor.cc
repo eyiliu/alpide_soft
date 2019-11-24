@@ -76,7 +76,7 @@ namespace eudaq {
     }
 
     //evsp->Print(std::cout);
-    std::cout<< evsp->GetDescription() << " : "<< evsp->GetTriggerN()<<std::endl;
+    // std::cout<< evsp->GetDescription() << " : "<< evsp->GetTriggerN()<<std::endl;
     m_conn_evque[idx].push_back(evsp);
 
     uint32_t trigger_n = -1;
@@ -117,7 +117,13 @@ namespace eudaq {
     if(!m_noprint)
       ev_sync->Print(std::cout);
     if(ev_sync->GetNumSubEvent() < m_minimum_sub_event){
-      std::cout<< "dropped assambed_event with subevent < "<< m_minimum_sub_event <<std::endl;
+      std::cout<< "dropped assambed event with subevent less than requried "<< m_minimum_sub_event <<" sub events" <<std::endl;
+      std::string dev_numbers;
+      for(int i=0; i< ev_sync->GetNumSubEvent(); i++){
+	dev_numbers += std::to_string(ev_sync->GetSubEvent(i)->GetDeviceN());
+	dev_numbers +=" ";
+      }
+      std::cout<< "  tluID="<<trigger_n<<" subevent= "<< dev_numbers <<std::endl;
       return;
     }
     WriteEvent(std::move(ev_sync));
