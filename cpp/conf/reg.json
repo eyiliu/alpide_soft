@@ -3,6 +3,7 @@
 	{
 	    "name":"CHIP_CMD",
 	    "address":"0x0000",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -12,6 +13,7 @@
 	{
 	    "name":"CHIP_MODE",
 	    "address":"0x0001",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -21,9 +23,10 @@
 	{
 	    "name":"DISABLE_REGIONS",
 	    "address":[
-		    "DISABLE_REGIONS_H",
-		    "DISABLE_REGIONS_L"
+		"DISABLE_REGIONS_L",
+		"DISABLE_REGIONS_H"
 	    ],
+	    "bytes":"4",
 	    "words":"2",
 	    "endian":"LE",
 	    "read":true,
@@ -33,6 +36,7 @@
 	{
 	    "name":"DISABLE_REGIONS_L",
 	    "address":"0x0002",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -42,6 +46,7 @@
 	{
 	    "name":"DISABLE_REGIONS_H",
 	    "address":"0x0003",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -51,6 +56,7 @@
 	{
 	    "name":"FROMU_CONF_1",
 	    "address":"0x0004",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -60,6 +66,7 @@
 	{
 	    "name":"FROMU_CONF_2",
 	    "address":"0x0005",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -69,6 +76,7 @@
 	{
 	    "name":"FROMU_CONF_3",
 	    "address":"0x0006",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -78,6 +86,7 @@
 	{
 	    "name":"FROMU_PULSING_1",
 	    "address":"0x0007",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -87,6 +96,7 @@
 	{
 	    "name":"FROMU_PULSING_2",
 	    "address":"0x0008",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -96,6 +106,7 @@
 	{
 	    "name":"FROMU_STATUS_1",
 	    "address":"0x0009",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":false,
@@ -104,6 +115,7 @@
 	{
 	    "name":"FROMU_STATUS_2",
 	    "address":"0x000a",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":false,
@@ -112,6 +124,7 @@
 	{
 	    "name":"FROMU_STATUS_3",
 	    "address":"0x000b",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":false,
@@ -120,6 +133,7 @@
 	{
 	    "name":"FROMU_STATUS_4",
 	    "address":"0x000c",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":false,
@@ -128,6 +142,7 @@
 	{
 	    "name":"FROMU_STATUS_5",
 	    "address":"0x000d",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":false,
@@ -136,6 +151,7 @@
 	{
 	    "name":"ADC_FOR_DCLK_MCLK",
 	    "address":"0x000e",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -145,6 +161,7 @@
 	{
 	    "name":"ADC_FOR_CMU",
 	    "address":"0x000f",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -154,6 +171,7 @@
 	{
 	    "name":"CMU_DMU_CONF",
 	    "address":"0x0010",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -163,6 +181,7 @@
 	{
 	    "name":"CMU_DMU_STATUS",
 	    "address":"0x0011",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":false,
@@ -171,9 +190,10 @@
 	{
 	    "name":"DMU_FIFO",
 	    "address":[
-		"DMU_FIFO_H",
-		"DMU_FIFO_L"
+		"DMU_FIFO_L",
+		"DMU_FIFO_H"
 	    ],
+	    "bytes":"4",
 	    "words":"2",
 	    "endian":"LE",
 	    "read":true,
@@ -183,6 +203,7 @@
 	{
 	    "name":"DMU_FIFO_L",
 	    "address":"0x0012",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":false,
@@ -191,6 +212,7 @@
 	{
 	    "name":"DMU_FIFO_H",
 	    "address":"0x0013",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":false,
@@ -199,6 +221,7 @@
 	{
 	    "name":"DTU_CONF",
 	    "address":"0x0014",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -208,6 +231,7 @@
 	{
 	    "name":"DTU_DAC",
 	    "address":"0x0015",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -217,6 +241,7 @@
 	{
 	    "name":"DTU_PLL_LOCK_1",
 	    "address":"0x0016",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":false,
@@ -225,6 +250,7 @@
 	{
 	    "name":"DTU_PLL_LOCK_2",
 	    "address":"0x0017",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -234,6 +260,7 @@
 	{
 	    "name":"DUT_TEST_1",
 	    "address":"0x0018",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -243,6 +270,7 @@
 	{
 	    "name":"DUT_TEST_2",
 	    "address":"0x0019",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -252,6 +280,7 @@
 	{
 	    "name":"DUT_TEST_3",
 	    "address":"0x001a",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -261,6 +290,7 @@
 	{
 	    "name":"BUSY_MIN_WIDTH",
 	    "address":"0x001b",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -270,6 +300,7 @@
 	{
 	    "name":"PIX_CONF_GLOBAL",
 	    "address":"0x0500",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -279,6 +310,7 @@
 	{
 	    "name":"ANALOG_MON_OVERRIDE",
 	    "address":"0x0600",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -288,6 +320,7 @@
 	{
 	    "name":"VRESETP",
 	    "address":"0x0601",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -297,6 +330,7 @@
 	{
 	    "name":"VRESETD",
 	    "address":"0x0602",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -306,6 +340,7 @@
 	{
 	    "name":"VCASP",
 	    "address":"0x0603",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -315,6 +350,7 @@
 	{
 	    "name":"VCASN",
 	    "address":"0x0604",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -324,6 +360,7 @@
 	{
 	    "name":"VPULSEH",
 	    "address":"0x0605",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -333,6 +370,7 @@
 	{
 	    "name":"VPULSEL",
 	    "address":"0x0606",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -342,6 +380,7 @@
 	{
 	    "name":"VCASN2",
 	    "address":"0x0607",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -351,6 +390,7 @@
 	{
 	    "name":"VCLIP",
 	    "address":"0x0608",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -360,6 +400,7 @@
 	{
 	    "name":"VTEMP",
 	    "address":"0x0609",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -369,6 +410,7 @@
 	{
 	    "name":"IAUX2",
 	    "address":"0x060a",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -378,6 +420,7 @@
 	{
 	    "name":"IRESET",
 	    "address":"0x060b",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -387,6 +430,7 @@
 	{
 	    "name":"IDB",
 	    "address":"0x060c",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -396,6 +440,7 @@
 	{
 	    "name":"IBIAS",
 	    "address":"0x060d",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -405,6 +450,7 @@
 	{
 	    "name":"ITHR",
 	    "address":"0x060e",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -414,6 +460,7 @@
 	{
 	    "name":"BUFF_BYPASS",
 	    "address":"0x060f",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -423,6 +470,7 @@
 	{
 	    "name":"ADC_CTRL",
 	    "address":"0x0610",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -432,6 +480,7 @@
 	{
 	    "name":"ADC_DAC_INPUT",
 	    "address":"0x0611",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -441,6 +490,7 @@
 	{
 	    "name":"ADC_CALIB",
 	    "address":"0x0612",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":false,
@@ -449,6 +499,7 @@
 	{
 	    "name":"TEST_CTRL",
 	    "address":"0x0701",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -458,6 +509,7 @@
 	{
 	    "name":"TODO_MASK_PULSE",
 	    "address":"0x0487",
+	    "bytes":"2",
 	    "words":"1",
 	    "read":true,
 	    "write":true,
@@ -470,114 +522,136 @@
     "CHIP_CMD_LIST":[
 	{
 	    "name":"GRST",
-	    "value":"0x002d",
+	    "bytes":"2",
+	    "value":"0x00d2",
 	    "description":"Chip global reset"
 	},
 	{
 	    "name":"PRST",
+	    "bytes":"2",
 	    "value":"0x00e4",
 	    "description":"Pixel matrix RESET"
 	},
 	{
 	    "name":"PULSE",
+	    "bytes":"2",
 	    "value":"0x0078",
 	    "description":"Pixel matrix PULSE"
 	},
 	{
 	    "name":"BCRST",
+	    "bytes":"2",
 	    "value":"0x0036",
 	    "description":"Bunch Counter reset"
 	},
 	{
 	    "name":"RORST",
+	    "bytes":"2",
 	    "value":"0x0063",
 	    "description":"Readout (RRU/TRU/DMU) reset"
 	},
 	{
 	    "name":"DEBUG",
+	    "bytes":"2",
 	    "value":"0x00aa",
 	    "description":"Store snapshot into debug registers"
 	},
 	{
 	    "name":"TRIGGER_B1",
+	    "bytes":"2",
 	    "value":"0x00b1",
 	    "description":"Trigger command b1"
 	},
 	{
 	    "name":"TRIGGER_55",
+	    "bytes":"2",
 	    "value":"0x0055",
 	    "description":"Trigger command 55"
 	},
 	{
 	    "name":"TRIGGER_C9",
+	    "bytes":"2",
 	    "value":"0x00c9",
 	    "description":"Trigger command c9"
 	},
 	{
 	    "name":"TRIGGER_2D",
+	    "bytes":"2",
 	    "value":"0x002d",
 	    "description":"Trigger command 2d"
 	},
 	{
 	    "name":"WROP",
+	    "bytes":"2",
 	    "value":"0x009c",
 	    "description":"Start Unicast or Multicast Write"
 	},
 	{
 	    "name":"RDOP",
+	    "bytes":"2",
 	    "value":"0x004e",
 	    "description":"Start Unicast Read"
 	},
 	{
 	    "name":"CMU_CLEAR_ERR",
+	    "bytes":"2",
 	    "value":"0xff00",
 	    "description":"Clear CMU error flags"
 	},
 	{
 	    "name":"FIFOTEST",
+	    "bytes":"2",
 	    "value":"0xff01",
 	    "description":"Starts regions memory test"
 	},
 	{
 	    "name":"LOADOBDEFCFG",
+	    "bytes":"2",
 	    "value":"0xff02",
 	    "description":"Loads default configuration for the OB Module"
 	},
 	{
 	    "name":"XOFF",
+	    "bytes":"2",
 	    "value":"0xff10",
 	    "description":"Stops sending data off-chip"
 	},
 	{
 	    "name":"XON",
+	    "bytes":"2",
 	    "value":"0xff11",
 	    "description":"Resume data sending"
 	},
 	{
 	    "name":"ADCMEASURE",
+	    "bytes":"2",
 	    "value":"0xff20",
 	    "description":"Start ADC measure"
 	}
     ],
 
-    "FIREWARE_CMD_LIST_V2":[
+    "FIRMWARE_CMD_LIST_V2":[
 	{
 	    "name":"RESET",
+	    "bytes":"1",
 	    "value":"0xff",
 	    "description":"Reset the DAQ System including all the registers. The SiTCP would need 3-4 seconds to reconnect"
 	},
 	{
 	    "name":"BROADCAST",
+	    "bytes":"1",
 	    "value":"0x50",
 	    "description":"Reset the DAQ System including all the registers. The SiTCP would need 3-4 seconds to reconnect"
 	},
 	{
 	    "name":"WRITE",
+	    "bytes":"1",
 	    "value":"0x9c",
 	    "description":"Write data in Data Wrote to ALPIDE register at ALPIDE Register Address"
 	},
 	{
 	    "name":"READ",
+	    "bytes":"1",
 	    "value":"0x4e",
 	    "description":"Read data from ALPIDE register at ALPIDE Register Address and store in Data Read"
 	}	
@@ -587,6 +661,7 @@
 	{
 	    "name":"FIRMWARE_CMD",
 	    "address":"0x0",
+	    "bytes":"1",
 	    "read":false,
 	    "write":true,
 	    "reset":"0x00",
@@ -595,6 +670,7 @@
 	{
 	    "name":"ADDR_CHIP_ID",
 	    "address":"0x10000001",
+	    "bytes":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
@@ -603,22 +679,19 @@
 	{
 	    "name":"ADDR_CHIP_REG",
 	    "address":[
-		{
-		    "name":"ADDR_CHIP_REG_H",
-		    "offset":"8",
-		    "mask":"0xff"
-		},
-		{
-		    "name":"ADDR_CHIP_REG_L",
-		    "offset":"0",
-		    "mask":"0xff"
-		}
+		    "ADDR_CHIP_REG_H",
+		    "ADDR_CHIP_REG_L"
 	    ],
+	    "bytes":"2",
+	    "endian":"BE",
+	    "read":true,
+	    "write":true,
 	    "description":"ALPIDE Register Address to Read or Write"
 	},
 	{
 	    "name":"ADDR_CHIP_REG_H",
 	    "address":"0x10000002",
+	    "bytes":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
@@ -627,6 +700,7 @@
 	{
 	    "name":"ADDR_CHIP_REG_L",
 	    "address":"0x10000003",
+	    "bytes":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
@@ -635,22 +709,19 @@
 	{
 	    "name":"DATA_WRITE",
 	    "address":[
-		{
-		    "name":"DATA_WRITE_H",
-		    "offset":"8",
-		    "mask":"0xff"
-		},
-		{
-		    "name":"DATA_WRITE_L",
-		    "offset":0,
-		    "mask":"0xff"
-		}
+		    "DATA_WRITE_H",
+		    "DATA_WRITE_L"
 	    ],
+	    "bytes":"2",
+	    "endian":"BE",
+	    "read":true,
+	    "write":true,
 	    "description":"Data Wrote to ALPIDE Register"
 	},
 	{
 	    "name":"DATA_WRITE_H",
 	    "address":"0x10000004",
+	    "bytes":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
@@ -659,6 +730,7 @@
 	{
 	    "name":"DATA_WRITE_L",
 	    "address":"0x10000005",
+	    "bytes":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
@@ -667,6 +739,7 @@
 	{
 	    "name":"BROADCAST_OPCODE",
 	    "address":"0x10000006",
+	    "bytes":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
@@ -678,11 +751,16 @@
 		    "TRIG_DELAY_H",
 		    "TRIG_DELAY_L"
 	    ],
+	    "endian":"BE",
+	    "bytes":"2",
+	    "read":true,
+	    "write":true,
 	    "description":"Controls the delay from external trigger to DAQ sending trigger to ALPIDE. Value n gives a delay of n clock cycles (minimum 0 and maximum 65535 cycles i.e. from 0 to ~1638 us assuming a clock period of 25 ns)"
 	},
 	{
 	    "name":"TRIG_DELAY_H",
 	    "address":"0x10000007",
+	    "bytes":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
@@ -690,6 +768,7 @@
 	},
 	{
 	    "name":"TRIG_DELAY_L",
+	    "bytes":"1",
 	    "address":"0x10000008",
 	    "read":true,
 	    "write":true,
@@ -699,6 +778,7 @@
 	{
 	    "name":"RESERVED_9",
 	    "address":"0x10000009",
+	    "bytes":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
@@ -707,6 +787,7 @@
 	{
 	    "name":"RESERVED_A",
 	    "address":"0x1000000a",
+	    "bytes":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
@@ -718,11 +799,16 @@
 		    "GAP_INT_TRIG_H",
 		    "GAP_INT_TRIG_L"
 	    ],
+	    "endian":"BE",
+	    "bytes":"2",
+	    "read":true,
+	    "write":true,
 	    "description":"Controls the frequency of the internal trigger in step of 5μs. The cycle time has a minimum value of 1. A 0 would be reset to 1 if wrote to this register."
 	},
 	{
 	    "name":"GAP_INT_TRIG_H",
 	    "address":"0x1000000b",
+	    "bytes":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
@@ -731,6 +817,7 @@
 	{
 	    "name":"GAP_INT_TRIG_L",
 	    "address":"0x1000000c",
+	    "bytes":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x14",
@@ -739,6 +826,7 @@
 	{
 	    "name":"COUNT_READ",
 	    "address":"0x1000000d",
+	    "bytes":"1",
 	    "read":true,
 	    "write":false,
 	    "reset":"0x00",
@@ -750,11 +838,15 @@
 		    "DATA_READ_H",
 		    "DATA_READ_L"
 	    ],
+	    "bytes":"2",
+	    "read":true,
+	    "write":false,
 	    "description":"Data Read from ALPIDE Register"
 	},
 	{
 	    "name":"DATA_READ_H",
 	    "address":"0x1000000e",
+	    "bytes":"1",
 	    "read":true,
 	    "write":false,
 	    "reset":"0x00",
@@ -763,6 +855,7 @@
 	{
 	    "name":"DATA_READ_L",
 	    "address":"0x1000000f",
+	    "bytes":"1",
 	    "read":true,
 	    "write":false,
 	    "reset":"0x00",
@@ -771,6 +864,7 @@
 	{
 	    "name":"FIRMWARE_MODE",
 	    "address":"0x10000010",
+	    "bytes":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
