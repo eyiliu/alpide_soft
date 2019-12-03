@@ -522,110 +522,128 @@
     "CHIP_CMD_LIST":[
 	{
 	    "name":"GRST",
-	    "bytes":"2",
 	    "value":"0x00d2",
+	    "bytes":"2",
+	    "words":"1",
 	    "description":"Chip global reset"
 	},
 	{
 	    "name":"PRST",
 	    "bytes":"2",
+	    "words":"1",
 	    "value":"0x00e4",
 	    "description":"Pixel matrix RESET"
 	},
 	{
 	    "name":"PULSE",
-	    "bytes":"2",
 	    "value":"0x0078",
+	    "bytes":"2",
+	    "words":"1",
 	    "description":"Pixel matrix PULSE"
 	},
 	{
 	    "name":"BCRST",
-	    "bytes":"2",
 	    "value":"0x0036",
+	    "bytes":"2",
+	    "words":"1",
 	    "description":"Bunch Counter reset"
 	},
 	{
 	    "name":"RORST",
-	    "bytes":"2",
 	    "value":"0x0063",
+	    "bytes":"2",
+	    "words":"1",
 	    "description":"Readout (RRU/TRU/DMU) reset"
 	},
 	{
 	    "name":"DEBUG",
-	    "bytes":"2",
 	    "value":"0x00aa",
+	    "bytes":"2",
+	    "words":"1",
 	    "description":"Store snapshot into debug registers"
 	},
 	{
 	    "name":"TRIGGER_B1",
-	    "bytes":"2",
 	    "value":"0x00b1",
+	    "bytes":"2",
+	    "words":"1",
 	    "description":"Trigger command b1"
 	},
 	{
 	    "name":"TRIGGER_55",
-	    "bytes":"2",
 	    "value":"0x0055",
+	    "bytes":"2",
+	    "words":"1",
 	    "description":"Trigger command 55"
 	},
 	{
 	    "name":"TRIGGER_C9",
-	    "bytes":"2",
 	    "value":"0x00c9",
+	    "bytes":"2",
+	    "words":"1",
 	    "description":"Trigger command c9"
 	},
 	{
 	    "name":"TRIGGER_2D",
-	    "bytes":"2",
 	    "value":"0x002d",
+	    "bytes":"2",
+	    "words":"1",
 	    "description":"Trigger command 2d"
 	},
 	{
 	    "name":"WROP",
-	    "bytes":"2",
 	    "value":"0x009c",
+	    "bytes":"2",
+	    "words":"1",
 	    "description":"Start Unicast or Multicast Write"
 	},
 	{
 	    "name":"RDOP",
-	    "bytes":"2",
 	    "value":"0x004e",
+	    "bytes":"2",
+	    "words":"1",
 	    "description":"Start Unicast Read"
 	},
 	{
 	    "name":"CMU_CLEAR_ERR",
-	    "bytes":"2",
 	    "value":"0xff00",
+	    "bytes":"2",
+	    "words":"1",
 	    "description":"Clear CMU error flags"
 	},
 	{
 	    "name":"FIFOTEST",
-	    "bytes":"2",
 	    "value":"0xff01",
+	    "bytes":"2",
+	    "words":"1",
 	    "description":"Starts regions memory test"
 	},
 	{
 	    "name":"LOADOBDEFCFG",
-	    "bytes":"2",
 	    "value":"0xff02",
+	    "bytes":"2",
+	    "words":"1",
 	    "description":"Loads default configuration for the OB Module"
 	},
 	{
 	    "name":"XOFF",
-	    "bytes":"2",
 	    "value":"0xff10",
+	    "bytes":"2",
+	    "words":"1",
 	    "description":"Stops sending data off-chip"
 	},
 	{
 	    "name":"XON",
-	    "bytes":"2",
 	    "value":"0xff11",
+	    "bytes":"2",
+	    "words":"1",
 	    "description":"Resume data sending"
 	},
 	{
 	    "name":"ADCMEASURE",
-	    "bytes":"2",
 	    "value":"0xff20",
+	    "bytes":"2",
+	    "words":"1",
 	    "description":"Start ADC measure"
 	}
     ],
@@ -633,26 +651,30 @@
     "FIRMWARE_CMD_LIST_V2":[
 	{
 	    "name":"RESET",
-	    "bytes":"1",
 	    "value":"0xff",
+	    "bytes":"1",
+	    "words":"1",
 	    "description":"Reset the DAQ System including all the registers. The SiTCP would need 3-4 seconds to reconnect"
 	},
 	{
 	    "name":"BROADCAST",
-	    "bytes":"1",
 	    "value":"0x50",
+	    "bytes":"1",
+	    "words":"1",
 	    "description":"Reset the DAQ System including all the registers. The SiTCP would need 3-4 seconds to reconnect"
 	},
 	{
 	    "name":"WRITE",
-	    "bytes":"1",
 	    "value":"0x9c",
+	    "bytes":"1",
+	    "words":"1",
 	    "description":"Write data in Data Wrote to ALPIDE register at ALPIDE Register Address"
 	},
 	{
 	    "name":"READ",
-	    "bytes":"1",
 	    "value":"0x4e",
+	    "bytes":"1",
+	    "words":"1",
 	    "description":"Read data from ALPIDE register at ALPIDE Register Address and store in Data Read"
 	}	
     ],
@@ -662,6 +684,7 @@
 	    "name":"FIRMWARE_CMD",
 	    "address":"0x0",
 	    "bytes":"1",
+	    "words":"1",
 	    "read":false,
 	    "write":true,
 	    "reset":"0x00",
@@ -671,6 +694,7 @@
 	    "name":"ADDR_CHIP_ID",
 	    "address":"0x10000001",
 	    "bytes":"1",
+	    "words":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
@@ -683,6 +707,7 @@
 		    "ADDR_CHIP_REG_L"
 	    ],
 	    "bytes":"2",
+	    "words":"2",
 	    "endian":"BE",
 	    "read":true,
 	    "write":true,
@@ -692,6 +717,7 @@
 	    "name":"ADDR_CHIP_REG_H",
 	    "address":"0x10000002",
 	    "bytes":"1",
+	    "words":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
@@ -701,6 +727,7 @@
 	    "name":"ADDR_CHIP_REG_L",
 	    "address":"0x10000003",
 	    "bytes":"1",
+	    "words":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
@@ -713,6 +740,7 @@
 		    "DATA_WRITE_L"
 	    ],
 	    "bytes":"2",
+	    "words":"2",
 	    "endian":"BE",
 	    "read":true,
 	    "write":true,
@@ -722,6 +750,7 @@
 	    "name":"DATA_WRITE_H",
 	    "address":"0x10000004",
 	    "bytes":"1",
+	    "words":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
@@ -731,6 +760,7 @@
 	    "name":"DATA_WRITE_L",
 	    "address":"0x10000005",
 	    "bytes":"1",
+	    "words":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
@@ -740,6 +770,7 @@
 	    "name":"BROADCAST_OPCODE",
 	    "address":"0x10000006",
 	    "bytes":"1",
+	    "words":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
@@ -751,8 +782,9 @@
 		    "TRIG_DELAY_H",
 		    "TRIG_DELAY_L"
 	    ],
-	    "endian":"BE",
 	    "bytes":"2",
+	    "words":"2",
+	    "endian":"BE",
 	    "read":true,
 	    "write":true,
 	    "description":"Controls the delay from external trigger to DAQ sending trigger to ALPIDE. Value n gives a delay of n clock cycles (minimum 0 and maximum 65535 cycles i.e. from 0 to ~1638 us assuming a clock period of 25 ns)"
@@ -761,6 +793,7 @@
 	    "name":"TRIG_DELAY_H",
 	    "address":"0x10000007",
 	    "bytes":"1",
+	    "words":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
@@ -768,8 +801,9 @@
 	},
 	{
 	    "name":"TRIG_DELAY_L",
-	    "bytes":"1",
 	    "address":"0x10000008",
+	    "bytes":"1",
+	    "words":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
@@ -779,6 +813,7 @@
 	    "name":"RESERVED_9",
 	    "address":"0x10000009",
 	    "bytes":"1",
+	    "words":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
@@ -788,6 +823,7 @@
 	    "name":"RESERVED_A",
 	    "address":"0x1000000a",
 	    "bytes":"1",
+	    "words":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
@@ -799,8 +835,9 @@
 		    "GAP_INT_TRIG_H",
 		    "GAP_INT_TRIG_L"
 	    ],
-	    "endian":"BE",
 	    "bytes":"2",
+	    "words":"2",
+	    "endian":"BE",
 	    "read":true,
 	    "write":true,
 	    "description":"Controls the frequency of the internal trigger in step of 5μs. The cycle time has a minimum value of 1. A 0 would be reset to 1 if wrote to this register."
@@ -809,6 +846,7 @@
 	    "name":"GAP_INT_TRIG_H",
 	    "address":"0x1000000b",
 	    "bytes":"1",
+	    "words":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
@@ -818,6 +856,7 @@
 	    "name":"GAP_INT_TRIG_L",
 	    "address":"0x1000000c",
 	    "bytes":"1",
+	    "words":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x14",
@@ -827,6 +866,7 @@
 	    "name":"COUNT_READ",
 	    "address":"0x1000000d",
 	    "bytes":"1",
+	    "words":"1",
 	    "read":true,
 	    "write":false,
 	    "reset":"0x00",
@@ -839,6 +879,8 @@
 		    "DATA_READ_L"
 	    ],
 	    "bytes":"2",
+	    "words":"2",
+	    "endian":"BE",
 	    "read":true,
 	    "write":false,
 	    "description":"Data Read from ALPIDE Register"
@@ -847,6 +889,7 @@
 	    "name":"DATA_READ_H",
 	    "address":"0x1000000e",
 	    "bytes":"1",
+	    "words":"1",
 	    "read":true,
 	    "write":false,
 	    "reset":"0x00",
@@ -856,6 +899,7 @@
 	    "name":"DATA_READ_L",
 	    "address":"0x1000000f",
 	    "bytes":"1",
+	    "words":"1",
 	    "read":true,
 	    "write":false,
 	    "reset":"0x00",
@@ -865,6 +909,7 @@
 	    "name":"FIRMWARE_MODE",
 	    "address":"0x10000010",
 	    "bytes":"1",
+	    "words":"1",
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00",
