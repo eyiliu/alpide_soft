@@ -48,7 +48,7 @@ std::string LoadFileToString(const std::string& path){
 
 
 void  WriteByte(uint64_t address, uint64_t value){ FormatPrint(std::cout, "WriteByte( address=%#016x ,  value=%#016x )\n", address, value); };
-uint64_t ReadByte(uint64_t address){FormatPrint(std::cout, "ReadByte( address=%#016x)\n", address); return address&0xff;};
+uint64_t ReadByte(uint64_t address){uint64_t value = address&0xff; FormatPrint(std::cout, "ReadByte( address=%#016x) return value=%#016x\n", address, value); return value;};
 
 
 void SetFirmwareRegister(const std::string& name, uint64_t value);
@@ -87,12 +87,16 @@ int main(int argc, char **argv){
   //   std::cout<< e.first<<" "<< e.second.dump()<<std::endl;
   // }
 
+  // FormatPrint(std::cout, "function name is<%s>\n", __func__ );
+  // return 0;
+  
   SetFirmwareRegister("GAP_INT_TRIG", 0x00001312);
   std::cout<<std::endl;
   GetFirmwareRegister("GAP_INT_TRIG");
   std::cout<<std::endl;
   SendFirmwareCommand("RESET");
   std::cout<<std::endl;
+
   SetAlpideRegister("DISABLE_REGIONS", 0x11121314);
   std::cout<<std::endl;
   GetAlpideRegister("DISABLE_REGIONS");
@@ -104,12 +108,15 @@ int main(int argc, char **argv){
 }
 
 
+
+
+
 void SetFirmwareRegister(const std::string& name, uint64_t value){
-  FormatPrint(std::cout, "SetFirmwareRegister( name=%s ,  value=%#016x )\n", name.c_str(), value);
+  FormatPrint(std::cout, "INFO<%s>: %s( name=%s ,  value=%#016x )\n", __func__, __func__, name.c_str(), value);
   static const std::string array_name("FIRMWARE_REG_LIST_V2");
   auto& json_array = s_json[array_name].array_items();
   if(json_array.empty()){
-    std::cerr<<"ERROR  SetFirmwareRegister:  unable to find array<"<<array_name<<">\n";
+    FormatPrint(std::cerr, "ERROR<%s>:   unable to find array<%s>\n", __func__, array_name.c_str());
     throw;
   }
   bool flag_found_reg = false;
@@ -124,21 +131,21 @@ void SetFirmwareRegister(const std::string& name, uint64_t value){
     else if(json_addr.is_array()){
       auto& json_bytes = json_reg["bytes"];
       if(!json_bytes.is_string()){
-	std::cerr<<"ERROR  SetFirmwareRegister: bytes<"<< json_bytes.dump()<<"> is not a string\n";
+	FormatPrint(std::cerr, "ERROR<%s>:   bytes<%s> is not a string\n", __func__, json_bytes.dump().c_str());
 	throw;
       }
       auto& json_words = json_reg["words"];
       if(!json_words.is_string()){
-	std::cerr<<"ERROR  SetFirmwareRegister: words<"<< json_words.dump()<<"> is not a string\n";
+	FormatPrint(std::cerr, "ERROR<%s>:   words<%s> is not a string\n", __func__, json_words.dump().c_str());
 	throw;
       }
       uint64_t n_bytes = std::stoull(json_bytes.string_value());
       uint64_t n_words = std::stoull(json_words.string_value());
       if((!n_bytes)||(!n_words)||(n_bytes%n_words)){
-	std::cerr<<"ERROR  SetFirmwareRegister: incorrect bytes<"<<json_bytes.dump()<<"> or words<"<< json_words.dump()<<">\n";
+	FormatPrint(std::cerr, "ERROR<%s>: incorrect bytes<%s> or words<%s>\n" , __func__, json_bytes.dump().c_str(), json_words.dump().c_str());
 	throw;
       }
-      uint64_t n_bits_per_word = 8*n_words/n_bytes;
+      uint64_t n_bits_per_word = 8*n_bytes/n_words;
       
       auto& json_endian = json_reg["endian"];
       bool flag_is_little_endian;
@@ -149,52 +156,58 @@ void SetFirmwareRegister(const std::string& name, uint64_t value){
 	flag_is_little_endian = false;
       }
       else{
-	std::cerr<<"ERROR  SetFirmwareRegister: unknown endian<"<< json_endian.dump()<<">\n";
+	FormatPrint(std::cerr, "ERROR<%s>: unknown endian<%s>\n", __func__, json_endian.dump().c_str());
 	throw;
       }
 
       auto& addr_array = json_addr.array_items();
       if(n_words != addr_array.size()){
-	std::cerr<<"ERROR  SetFirmwareRegister: address<"<< json_addr.dump()<<"> array's size does not match the word number which is "<<n_words<<"\n";
+	FormatPrint(std::cerr, "ERROR<%s>: address<%s> array's size does not match the word number which is %u\n", __func__ , json_addr.dump().c_str(), n_words);
 	throw;
       }
       uint64_t i=0;
       for(auto& name_in_array: addr_array ){
 	if(!name_in_array.is_string()){
-	  std::cerr<<"ERROR  SetFirmwareRegister: name<"<< name_in_array.dump()<<"> is not a string value\n";
+	  FormatPrint(std::cerr, "ERROR<%s>: name<%s> is not a string value\n", __func__, name_in_array.dump().c_str());
 	  throw;
 	}
 	std::string name_in_array_str = name_in_array.string_value();
 	uint64_t sub_value;
 	if(flag_is_little_endian){
-	  sub_value = (value <<(8*sizeof(value)-n_bits_per_word*(i+1)) ) >>(8*sizeof(value)-n_bits_per_word);//TODO: check by real run
+	  uint64_t f = 8*sizeof(value)-n_bits_per_word*(i+1);
+	  uint64_t b = 8*sizeof(value)-n_bits_per_word;
+	  sub_value = (value<<f)>>b;
+	  FormatPrint(std::cout, "INFO<%s>: %s value=%#016x << %u  >>%u sub_value=%#016x \n", __func__, "LE", value, f, b, sub_value);
 	}
 	else{
-	  sub_value = (value <<(8*sizeof(value)-n_bits_per_word*(n_words-i)) ) >>(8*sizeof(value)-n_bits_per_word);
+	  uint64_t f = 8*sizeof(value)-n_bits_per_word*(n_words-i);
+	  uint64_t b = 8*sizeof(value)-n_bits_per_word;
+	  sub_value = (value<<f)>>b;
+	  FormatPrint(std::cout, "INFO<%s>: %s value=%#016x << %u  >>%u sub_value=%#016x \n", __func__, "BE", value, f, b, sub_value);
 	}
 	SetFirmwareRegister(name_in_array_str, sub_value);
-	i++;  
+	i++;
       }
     }
     else{
-      std::cerr<<"ERROR  SetFirmwareRegister: unknown address format<" << json_addr.dump() <<">\n";
+      FormatPrint(std::cerr, "ERROR<%s>: unknown address format<%s>\n", __func__, json_addr.dump().c_str());
       throw;
     }
     flag_found_reg = true;
     break;
   }
   if(!flag_found_reg){
-    std::cerr<<"ERROR  SetFirmwareRegister:  unable to find register<"<<name <<"> in array<"<<array_name<<">\n";
+    FormatPrint(std::cerr, "ERROR<%s>: unable to find register<%s> in array<%s>\n", __func__, name.c_str(), array_name.c_str());
     throw;
   }
 }
 
 void SetAlpideRegister(const std::string& name, uint64_t value){
-  FormatPrint(std::cout, "SetAlpideRegister( name=%s ,  value=%#016x )\n", name.c_str(), value);
+  FormatPrint(std::cout, "INFO<%s>: %s( name=%s ,  value=%#016x )\n", __func__, __func__, name.c_str(), value);
   static const std::string array_name("CHIP_REG_LIST");
   auto& json_array = s_json[array_name].array_items();
   if(json_array.empty()){
-    std::cerr<<"ERROR  SetAlpideRegister:  unable to find array<"<<array_name<<">\n";
+    FormatPrint(std::cerr, "ERROR<%s>:   unable to find array<%s>\n", __func__, array_name.c_str());
     throw;
   }   
   
@@ -212,21 +225,21 @@ void SetAlpideRegister(const std::string& name, uint64_t value){
     else if(json_addr.is_array()){
       auto& json_bytes = json_reg["bytes"];
       if(!json_bytes.is_string()){
-	std::cerr<<"ERROR  SetAlpideRegister: bytes<"<< json_bytes.dump()<<"> is not a string\n";
+	FormatPrint(std::cerr, "ERROR<%s>:   bytes<%s> is not a string\n", __func__, json_bytes.dump().c_str());
 	throw;
       }
       auto& json_words = json_reg["words"];
       if(!json_words.is_string()){
-	std::cerr<<"ERROR  SetAlpideRegister: words<"<< json_words.dump()<<"> is not a string\n";
+	FormatPrint(std::cerr, "ERROR<%s>:   words<%s> is not a string\n", __func__, json_words.dump().c_str());
 	throw;
       }
       uint64_t n_bytes = std::stoull(json_bytes.string_value());
       uint64_t n_words = std::stoull(json_words.string_value());
       if((!n_bytes)||(!n_words)||(n_bytes%n_words)){
-	std::cerr<<"ERROR  SetAlpideRegister: incorrect bytes<"<<json_bytes.dump()<<"> or words<"<< json_words.dump()<<">\n";
+	FormatPrint(std::cerr, "ERROR<%s>: incorrect bytes<%s> or words<%s>\n" , __func__, json_bytes.dump().c_str(), json_words.dump().c_str());
 	throw;
       }
-      uint64_t n_bits_per_word = 8*n_words/n_bytes;
+      uint64_t n_bits_per_word = 8*n_bytes/n_words;
 
       auto& json_endian = json_reg["endian"];
       bool flag_is_little_endian;
@@ -237,52 +250,58 @@ void SetAlpideRegister(const std::string& name, uint64_t value){
 	flag_is_little_endian = false;
       }
       else{
-	std::cerr<<"ERROR  SetAlpideRegister: unknown endian<"<< json_endian.dump()<<">\n";
+	FormatPrint(std::cerr, "ERROR<%s>: unknown endian<%s>\n", __func__, json_endian.dump().c_str());
 	throw;
       }
       
       auto& addr_array = json_addr.array_items();
       if(n_words != addr_array.size()){
-	std::cerr<<"ERROR  SetAlpideRegister: address<"<< json_addr.dump()<<"> array's size does not match the word number which is "<<n_words<<"\n";
+	FormatPrint(std::cerr, "ERROR<%s>: address<%s> array's size does not match the word number which is %u\n", __func__ , json_addr.dump().c_str(), n_words);
 	throw;
       }
       uint64_t i=0;
       for(auto& name_in_array: addr_array ){
 	if(!name_in_array.is_string()){
-	  std::cerr<<"ERROR  SetAlpideRegister: name<"<< name_in_array.dump()<<"> is not a string value\n";
+	  FormatPrint(std::cerr, "ERROR<%s>: name<%s> is not a string value\n", __func__, name_in_array.dump().c_str());
 	  throw;
 	}
 	std::string name_in_array_str = name_in_array.string_value();
 	uint64_t sub_value;
 	if(flag_is_little_endian){
-	  sub_value = (value <<(8*sizeof(value)-n_bits_per_word*(i+1)) ) >>(8*sizeof(value)-n_bits_per_word);//TODO: check by real run
+	  uint64_t f = (8*sizeof(value)-n_bits_per_word*(i+1));
+	  uint64_t b = (8*sizeof(value)-n_bits_per_word);
+	  sub_value = (value<<f)>>b;
+	  FormatPrint(std::cout, "INFO<%s>:  %s value=%#016x << %u  >>%u sub_value=%#016x \n", __func__, "LE", value, f, b, sub_value);
 	}
 	else{
-	  sub_value = (value <<(8*sizeof(value)-n_bits_per_word*(n_words-i)) ) >>(8*sizeof(value)-n_bits_per_word);
+	  uint64_t f = (8*sizeof(value)-n_bits_per_word*(n_words-i));
+	  uint64_t b = (8*sizeof(value)-n_bits_per_word);
+	  sub_value = (value<<f)>>b;
+	  FormatPrint(std::cout, "INFO<%s>:  %s value=%#016x << %u  >>%u sub_value=%#016x \n", __func__, "BE", value, f, b, sub_value);
 	}
 	SetAlpideRegister(name_in_array_str, sub_value);
 	i++;  
       }
     }
     else{
-      std::cerr<<"ERROR  SetAlpideRegister: unknown address format<" << json_addr.dump() <<">\n";
+      FormatPrint(std::cerr, "ERROR<%s>: unknown address format<%s>\n", __func__, json_addr.dump().c_str());
       throw;
     }
     flag_found_reg = true;
     break;
   }
   if(!flag_found_reg){
-    std::cerr<<"ERROR  SetAlpideRegister:  unable to find register<"<<name <<"> in array<"<<array_name<<">\n";
+    FormatPrint(std::cerr, "ERROR<%s>: unable to find register<%s> in array<%s>\n", __func__, name.c_str(), array_name.c_str());
     throw;
   }
 }
 
 void SendFirmwareCommand(const std::string& name){
-  FormatPrint(std::cout, "SendFirmwareCommand( name=%s )\n", name.c_str());
+  FormatPrint(std::cout, "INFO<%s>:  %s( name=%s )\n", __func__, __func__, name.c_str());
   static const std::string array_name("FIRMWARE_CMD_LIST_V2");
   auto& json_array = s_json[array_name].array_items();
   if(json_array.empty()){
-    std::cerr<<"ERROR  SendFirmwareCommand:  unable to find array<"<<array_name<<">\n";
+    FormatPrint(std::cerr, "ERROR<%s>:   unable to find array<%s>\n", __func__, array_name.c_str());
     throw;
   }
   bool flag_found_cmd = false;
@@ -291,7 +310,7 @@ void SendFirmwareCommand(const std::string& name){
       continue;
     auto& json_value = json_cmd["value"];
     if(!json_value.is_string()){
-      std::cerr<<"ERROR  SendFirmwareCommand:  commmand value<"<<json_value.dump()<<"> is not a string\n";
+      FormatPrint(std::cerr, "ERROR<%s>:   command value<%s> is not a string\n", __func__, json_value.dump().c_str());
       throw;
     }
     uint64_t cmd_value = std::stoull(json_value.string_value(),0,16);
@@ -299,17 +318,17 @@ void SendFirmwareCommand(const std::string& name){
     flag_found_cmd = true;
   }
   if(!flag_found_cmd){
-    std::cerr<<"ERROR  SetFirmwareCommand:  unable to find command<"<<name <<"> in array<"<<array_name<<">\n";
+    FormatPrint(std::cerr, "ERROR<%s>: unable to find command<%s> in array<%s>\n", __func__, name.c_str(), array_name.c_str());
     throw;
   }  
 }
 
 void SendAlpideCommand(const std::string& name){
-  FormatPrint(std::cout, "SendAlpideCommand( name=%s )\n", name.c_str());
+  FormatPrint(std::cout, "INFO<%s>:  %s( name=%s )\n", __func__, __func__, name.c_str());
   static const std::string array_name("CHIP_CMD_LIST");
   auto& json_array = s_json[array_name].array_items();
   if(json_array.empty()){
-    std::cerr<<"ERROR  SendAlpideCommand:  unable to find array<"<<array_name<<">\n";
+    FormatPrint(std::cerr, "ERROR<%s>:   unable to find array<%s>\n", __func__, array_name.c_str());
     throw;
   }
   bool flag_found_cmd = false;
@@ -318,7 +337,7 @@ void SendAlpideCommand(const std::string& name){
       continue;
     auto& json_value = json_cmd["value"];
     if(!json_value.is_string()){
-      std::cerr<<"ERROR  SendAlpideCommand:  commmand value<"<<json_value.dump()<<"> is not a string\n";
+      FormatPrint(std::cerr, "ERROR<%s>:   command value<%s> is not a string\n", __func__, json_value.dump().c_str());
       throw;
     }
     uint64_t cmd_value = std::stoull(json_value.string_value(),0,16);
@@ -326,17 +345,17 @@ void SendAlpideCommand(const std::string& name){
     flag_found_cmd = true;
   }
   if(!flag_found_cmd){
-    std::cerr<<"ERROR  SetAlpideCommand:  unable to find command<"<<name <<"> in array<"<<array_name<<">\n";
+    FormatPrint(std::cerr, "ERROR<%s>: unable to find command<%s> in array<%s>\n", __func__, name.c_str(), array_name.c_str());
     throw;
   } 
 }
 
 void SendAlpideBroadcast(const std::string& name){
-  FormatPrint(std::cout, "SendAlpideBroadcast( name=%s )\n", name.c_str());
+  FormatPrint(std::cout, "INFO<%s>:  %s( name=%s )\n", __func__, __func__, name.c_str());
   static const std::string array_name("CHIP_CMD_LIST");
   auto& json_array = s_json[array_name].array_items();
   if(json_array.empty()){
-    std::cerr<<"ERROR  SendAlpideBroadcast:  unable to find array<"<<array_name<<">\n";
+    FormatPrint(std::cerr, "ERROR<%s>:   unable to find array<%s>\n", __func__, array_name.c_str());
     throw;
   }
   bool flag_found_cmd = false;
@@ -345,7 +364,7 @@ void SendAlpideBroadcast(const std::string& name){
       continue;
     auto& json_value = json_cmd["value"];
     if(!json_value.is_string()){
-      std::cerr<<"ERROR  SendAlpideBroadcast:  commmand value<"<<json_value.dump()<<"> is not a string\n";
+      FormatPrint(std::cerr, "ERROR<%s>:   command value<%s> is not a string\n", __func__, json_value.dump().c_str());
       throw;
     }
     uint64_t cmd_value = std::stoull(json_value.string_value(),0,16);
@@ -354,18 +373,18 @@ void SendAlpideBroadcast(const std::string& name){
     flag_found_cmd = true;
   }
   if(!flag_found_cmd){
-    std::cerr<<"ERROR  SendAlpideBroadcast:  unable to find command<"<<name <<"> in array<"<<array_name<<">\n";
+    FormatPrint(std::cerr, "ERROR<%s>: unable to find command<%s> in array<%s>\n", __func__, name.c_str(), array_name.c_str());
     throw;
   }
 }
 
 
 uint64_t GetFirmwareRegister(const std::string& name){
-  FormatPrint(std::cout, "GetFirmwareRegister( name=%s )\n", name.c_str());
+  FormatPrint(std::cout, "INFO<%s>:  %s( name=%s )\n", __func__, __func__, name.c_str());
   static const std::string array_name("FIRMWARE_REG_LIST_V2");
   auto& json_array = s_json[array_name].array_items();
   if(json_array.empty()){
-    std::cerr<<"ERROR  GetFirmwareRegister:  unable to find array<"<<array_name<<">\n";
+    FormatPrint(std::cerr, "ERROR<%s>:   unable to find array<%s>\n", __func__, array_name.c_str());
     throw;
   }
   uint64_t value;
@@ -381,21 +400,21 @@ uint64_t GetFirmwareRegister(const std::string& name){
     else if(json_addr.is_array()){
       auto& json_bytes = json_reg["bytes"];
       if(!json_bytes.is_string()){
-	std::cerr<<"ERROR  GetFirmwareRegister: bytes<"<< json_bytes.dump()<<"> is not a string\n";
+	FormatPrint(std::cerr, "ERROR<%s>:   bytes<%s> is not a string\n", __func__, json_bytes.dump().c_str());
 	throw;
       }
       auto& json_words = json_reg["words"];
       if(!json_words.is_string()){
-	std::cerr<<"ERROR  GetFiremwareRegister: words<"<< json_words.dump()<<"> is not a string\n";
+	FormatPrint(std::cerr, "ERROR<%s>:   words<%s> is not a string\n", __func__, json_words.dump().c_str());
 	throw;
       }
       uint64_t n_bytes = std::stoull(json_bytes.string_value());
       uint64_t n_words = std::stoull(json_words.string_value());
       if((!n_bytes)||(!n_words)||(n_bytes%n_words)){
-	std::cerr<<"ERROR  GetFirmwareRegister: incorrect bytes<"<<json_bytes.dump()<<"> or words<"<< json_words.dump()<<">\n";
+	FormatPrint(std::cerr, "ERROR<%s>: incorrect bytes<%s> or words<%s>\n" , __func__, json_bytes.dump().c_str(), json_words.dump().c_str());
 	throw;
       }
-      uint64_t n_bits_per_word = 8*n_words/n_bytes;
+      uint64_t n_bits_per_word = 8*n_bytes/n_words;
       
       auto& json_endian = json_reg["endian"];
       bool flag_is_little_endian;
@@ -406,55 +425,63 @@ uint64_t GetFirmwareRegister(const std::string& name){
 	flag_is_little_endian = false;
       }
       else{
-	std::cerr<<"ERROR  GetFirmwareRegister: unknown endian<"<< json_endian.dump()<<">\n";
+	FormatPrint(std::cerr, "ERROR<%s>: unknown endian<%s>\n", __func__, json_endian.dump().c_str());
 	throw;
       }
 
       auto& addr_array = json_addr.array_items();
       if(n_words != addr_array.size()){
-	std::cerr<<"ERROR  GetFirmwareRegister: address<"<< json_addr.dump()<<"> array's size does not match the word number which is "<<n_words<<"\n";
+	FormatPrint(std::cerr, "ERROR<%s>: address<%s> array's size does not match the word number which is %u\n", __func__ , json_addr.dump().c_str(), n_words);
 	throw;
       }
       uint64_t i=0;
+      value = 0;
       for(auto& name_in_array: addr_array ){
 	if(!name_in_array.is_string()){
-	  std::cerr<<"ERROR  GetFirmwareRegister: name<"<< name_in_array.dump()<<"> is not a string value\n";
+	  FormatPrint(std::cerr, "ERROR<%s>: name<%s> is not a string value\n", __func__, name_in_array.dump().c_str());
 	  throw;
 	}
 	std::string name_in_array_str = name_in_array.string_value();
 	uint64_t sub_value = GetFirmwareRegister(name_in_array_str);
+	uint64_t add_value;
 	if(flag_is_little_endian){
-	  sub_value = (sub_value <<(n_bits_per_word*i) );
+	  uint64_t f = n_bits_per_word*i;
+	  uint64_t b = 0;
+	  add_value = (sub_value<<f)>>b;
+	  FormatPrint(std::cout, "INFO<%s>:  %s sub_value=%#016x << %u  >>%u add_value=%#016x \n", __func__, "LE", sub_value, f, b, add_value);
 	}
 	else{
-	  sub_value = (sub_value <<(n_bits_per_word*(n_words-1-i)) );
+	  uint64_t f = n_bits_per_word*(n_words-1-i);
+	  uint64_t b = 0;
+	  add_value = (sub_value<<f)>>b;
+	  FormatPrint(std::cout, "INFO<%s>:  %s sub_value=%#016x << %u  >>%u add_value=%#016x \n", __func__, "BE", sub_value, f, b, add_value);
 	}
-	value += sub_value;
+	value += add_value;
 	i++;
       }
     }
     else{
-      std::cerr<<"ERROR  GetFirmwareRegister: unknown address format<" << json_addr.dump() <<">\n";
+      FormatPrint(std::cerr, "ERROR<%s>: unknown address format<%s>\n", __func__, json_addr.dump().c_str());
       throw;
     }
     flag_found_reg = true;
     break;
   }
   if(!flag_found_reg){
-    std::cerr<<"ERROR  GetFirmwareRegister:  unable to find register<"<<name <<"> in array<"<<array_name<<">\n";
+    FormatPrint(std::cerr, "ERROR<%s>: unable to find register<%s> in array<%s>\n", __func__, name.c_str(), array_name.c_str());
     throw;
   }
-  FormatPrint(std::cout, "GetFirmwareRegister( name=%s ) return value=%#016x \n", name.c_str(), value);
+  FormatPrint(std::cout, "INFO<%s>: %s( name=%s ) return value=%#016x \n", __func__, __func__, name.c_str(), value);
   return value;
 }
 
 
 uint64_t GetAlpideRegister(const std::string& name){  
-  FormatPrint(std::cout, "GetAlpideRegister( name=%s )\n", name.c_str());
+  FormatPrint(std::cout, "INFO<%s>:  %s( name=%s )\n",__func__, __func__, name.c_str());
   static const std::string array_name("CHIP_REG_LIST");
   auto& json_array = s_json[array_name].array_items();
   if(json_array.empty()){
-    std::cerr<<"ERROR  GetAlpideRegister:  unable to find array<"<<array_name<<">\n";
+    FormatPrint(std::cerr, "ERROR<%s>:   unable to find array<%s>\n", __func__, array_name.c_str());
     throw;
   }
   uint64_t value;
@@ -466,28 +493,45 @@ uint64_t GetAlpideRegister(const std::string& name){
     if(json_addr.is_string()){
       uint64_t address = std::stoull(json_reg["address"].string_value(), 0, 16);
       SetFirmwareRegister("ADDR_CHIP_REG", address);
+      uint64_t nr_old = GetFirmwareRegister("COUNT_READ");
       SendFirmwareCommand("READ");
-      //TODO: sleep
+      std::chrono::system_clock::time_point  tp_timeout = std::chrono::system_clock::now() +  std::chrono::milliseconds(100);
+      bool flag_enable_counter_check = false; //TODO: enable it for a real hardware;
+      if(!flag_enable_counter_check){
+	std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	FormatPrint(std::cout, "WARN<%s>: checking of the read count is disabled\n", __func__);
+      }
+      while(flag_enable_counter_check){
+	uint64_t nr_new = GetFirmwareRegister("COUNT_READ");
+	if(nr_new != nr_old){
+	  break;
+	}
+	std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	if(std::chrono::system_clock::now() > tp_timeout){
+	  FormatPrint(std::cerr, "ERROR<%s>:  timeout to read back Alpide register<>\n", __func__, name.c_str());
+	  throw;
+	}
+      }
       value = GetFirmwareRegister("DATA_READ");
     }
     else if(json_addr.is_array()){
       auto& json_bytes = json_reg["bytes"];
       if(!json_bytes.is_string()){
-	std::cerr<<"ERROR  GetAlpideRegister: bytes<"<< json_bytes.dump()<<"> is not a string\n";
+	FormatPrint(std::cerr, "ERROR<%s>:   bytes<%s> is not a string\n", __func__, json_bytes.dump().c_str());
 	throw;
       }
       auto& json_words = json_reg["words"];
       if(!json_words.is_string()){
-	std::cerr<<"ERROR  GetAlpideRegister: words<"<< json_words.dump()<<"> is not a string\n";
+	FormatPrint(std::cerr, "ERROR<%s>:   words<%s> is not a string\n", __func__, json_words.dump().c_str());
 	throw;
       }
       uint64_t n_bytes = std::stoull(json_bytes.string_value());
       uint64_t n_words = std::stoull(json_words.string_value());
       if((!n_bytes)||(!n_words)||(n_bytes%n_words)){
-	std::cerr<<"ERROR  GetAlpideRegister: incorrect bytes<"<<json_bytes.dump()<<"> or words<"<< json_words.dump()<<">\n";
+	FormatPrint(std::cerr, "ERROR<%s>: incorrect bytes<%s> or words<%s>\n" , __func__, json_bytes.dump().c_str(), json_words.dump().c_str());
 	throw;
       }
-      uint64_t n_bits_per_word = 8*n_words/n_bytes;
+      uint64_t n_bits_per_word = 8*n_bytes/n_words;
       
       auto& json_endian = json_reg["endian"];
       bool flag_is_little_endian;
@@ -498,44 +542,52 @@ uint64_t GetAlpideRegister(const std::string& name){
 	flag_is_little_endian = false;
       }
       else{
-	std::cerr<<"ERROR  GetAlpideRegister: unknown endian<"<< json_endian.dump()<<">\n";
+	FormatPrint(std::cerr, "ERROR<%s>: unknown endian<%s>\n", __func__, json_endian.dump().c_str());
 	throw;
       }
 
       auto& addr_array = json_addr.array_items();
       if(n_words != addr_array.size()){
-	std::cerr<<"ERROR  GetAlpideRegister: address<"<< json_addr.dump()<<"> array's size does not match the word number which is "<<n_words<<"\n";
+	FormatPrint(std::cerr, "ERROR<%s>: address<%s> array's size does not match the word number which is %u\n", __func__ , json_addr.dump().c_str(), n_words);
 	throw;
       }
       uint64_t i=0;
+      value = 0;
       for(auto& name_in_array: addr_array ){
 	if(!name_in_array.is_string()){
-	  std::cerr<<"ERROR  GetAlpideRegister: name<"<< name_in_array.dump()<<"> is not a string value\n";
+	  FormatPrint(std::cerr, "ERROR<%s>: name<%s> is not a string value\n", __func__, name_in_array.dump().c_str());
 	  throw;
 	}
 	std::string name_in_array_str = name_in_array.string_value();
 	uint64_t sub_value = GetAlpideRegister(name_in_array_str);
+	uint64_t add_value;
 	if(flag_is_little_endian){
-	  sub_value = (sub_value <<(n_bits_per_word*i) );
+	  uint64_t f = n_bits_per_word*i;
+	  uint64_t b = 0;
+	  add_value = (sub_value<<f)>>b;
+	  FormatPrint(std::cout, "INFO<%s>:  %s sub_value=%#016x << %u  >>%u add_value=%#016x \n", __func__, "LE", sub_value, f, b, add_value);
 	}
 	else{
-	  sub_value = (sub_value <<(n_bits_per_word*(n_words-1-i)) );
+	  uint64_t f = n_bits_per_word*(n_words-1-i);
+	  uint64_t b = 0;
+	  add_value = (sub_value<<f)>>b;
+	  FormatPrint(std::cout, "INFO<%s>:  %s sub_value=%#016x << %u  >>%u add_value=%#016x \n", __func__, "BE", sub_value, f, b, add_value);
 	}
-	value += sub_value;
+	value += add_value;
 	i++;
       }
     }
     else{
-      std::cerr<<"ERROR  GetAlpideRegister: unknown address format<" << json_addr.dump() <<">\n";
+      FormatPrint(std::cerr, "ERROR<%s>: unknown address format<%s>\n", __func__, json_addr.dump().c_str());
       throw;
     }
     flag_found_reg = true;
     break;
   }
   if(!flag_found_reg){
-    std::cerr<<"ERROR  GetAlpideRegister:  unable to find register<"<<name <<"> in array<"<<array_name<<">\n";
+    FormatPrint(std::cerr, "ERROR<%s>: unable to find register<%s> in array<%s>\n", __func__, name.c_str(), array_name.c_str());
     throw;
   }  
-  FormatPrint(std::cout, "GetAlpideRegister( name=%s ) return value=%#016x \n", name.c_str(), value);
+  FormatPrint(std::cout, "INFO<%s>: %s( name=%s ) return value=%#016x \n", __func__, __func__, name.c_str(), value);
   return value;  
 }
