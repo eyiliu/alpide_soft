@@ -627,10 +627,17 @@ Usage:\n\
     fprintf(stderr, "JSON parse error: %s (at string positon %u)", rapidjson::GetParseError_En(s_json.GetParseError()), s_json.GetErrorOffset());
     return 1;
   }
+
+  uint32_t ip0 = GetFirmwareRegister("IP0");
+  uint32_t ip1 = GetFirmwareRegister("IP1");
+  uint32_t ip2 = GetFirmwareRegister("IP2");
+  uint32_t ip3 = GetFirmwareRegister("IP3");
+
+  std::cout<<"\n\ncurrent ip  " <<ip0<<":"<<ip1<<":"<<ip2<<":"<<ip3<<"\n\n"<<std::endl;
   
-  SetFirmwareRegister("GAP_INT_TRIG", 0x00001312);
-  std::cout<<std::endl;
-  GetFirmwareRegister("GAP_INT_TRIG");
+  // SetFirmwareRegister("GAP_INT_TRIG", 0x00001312);
+  // std::cout<<std::endl;
+  // GetFirmwareRegister("GAP_INT_TRIG");
   // std::cout<<std::endl;
   // SendFirmwareCommand("RESET");
   // std::cout<<std::endl;

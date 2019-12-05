@@ -17,7 +17,7 @@ rbcp::rbcp(int c, char **v){
   argc = c;
   argv = v;
   sitcpPort = 4660;
-  sitcpIpAddr= "131.169.133.173";
+  sitcpIpAddr= "192.168.0.16";
   if(argc == 2)
     sitcpIpAddr = argv[1];
 
