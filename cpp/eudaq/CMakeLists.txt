@@ -8,7 +8,7 @@ include_directories(include)
 
 aux_source_directory(src MODULE_SRC)
 
-find_package(eudaq CONFIG 2.4 REQUIRED)
+find_package(eudaq CONFIG 2.4 REQUIRED NO_DEFAULT_PATH)
 include_directories(${EUDAQ_INCLUDE_DIRS})
 add_subdirectory(exe)
 
