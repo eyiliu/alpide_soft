@@ -1,6 +1,6 @@
 macro(add_my_eudaq_exe EXE_TARGET SRC_FILE)
   add_executable(${EXE_TARGET} ${SRC_FILE})
-  target_link_libraries(${EXE_TARGET} ${EUDAQ_LIBRARIES})
+  target_link_libraries(${EXE_TARGET} ${EUDAQ2_LIBRARY} eudaq::core)
   list(APPEND INSTALL_TARGETS ${EXE_TARGET})
 endmacro()
 
