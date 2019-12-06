@@ -4,7 +4,7 @@
 #include "eudaq/StdEventConverter.hh"
 #include "eudaq/RawEvent.hh"
 
-#define PLANE_NUMBER_OFFSET 50
+//#define PLANE_NUMBER_OFFSET 50
 
 class JadeRawEvent2StdEventConverter: public eudaq::StdEventConverter{
 public:
@@ -39,7 +39,7 @@ bool JadeRawEvent2StdEventConverter::Converting(eudaq::EventSPC d1, eudaq::StdEv
   const std::vector<uint16_t> &data_x = df.Data_X();
   const std::vector<uint16_t> &data_y = df.Data_Y();
   const std::vector<uint16_t> &data_z = df.Data_D();
-
+  int plane_id = ev->GetStreamN();
   size_t n_hit = data_x.size();
   // std::cout<<"x_n_pixel:y_n_pixel:z_n_pixel:n_pixel:n_hit "<<x_n_pixel<<":"<<y_n_pixel<<":"<<z_n_pixel<<":"<<n_pixel<<":"<<n_hit<<std::endl;
 
@@ -50,10 +50,15 @@ bool JadeRawEvent2StdEventConverter::Converting(eudaq::EventSPC d1, eudaq::StdEv
   
   uint16_t bn = 0;//TODO, multiple-planes/producer
   std::vector<eudaq::StandardPlane*> v_planes;
+  //std::cout <<bn<<"\t"<< ext <<"\t"<<i<<std::endl;
   for(size_t i=0; i<z_n_pixel; i++){
-    eudaq::StandardPlane* p = &(d2->AddPlane(eudaq::StandardPlane(PLANE_NUMBER_OFFSET+bn+i+ext, "alpide", "alpide")));
+    //  std::cout <<plane_id<<"\t"<<bn<<"\t"<< ext <<"\t"<<i<<"\t"<<(plane_id+bn+i+ext);//<<std::endl;
+
+    eudaq::StandardPlane* p = &(d2->AddPlane(eudaq::StandardPlane(plane_id+bn+i+ext, "alpide", "alpide")));
+    d2->SetDetectorType("alpide");
     p->SetSizeZS(x_n_pixel, y_n_pixel, 0); //TODO: check this function for its real meaning
     v_planes.push_back(p);
+    //std::cout << p->ID()<<std::endl;
   }
   auto it_x = data_x.begin();
   auto it_y = data_y.begin();
