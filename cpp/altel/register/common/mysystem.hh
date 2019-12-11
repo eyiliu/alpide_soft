@@ -154,5 +154,7 @@ using socket_t = decltype(socket(0, 0, 0));
 #  include "rapidjson/error/en.h"
 #endif
 
+#include "getopt/getopt.h"
+#include "linenoiseng/linenoise.h"
 
 #endif
