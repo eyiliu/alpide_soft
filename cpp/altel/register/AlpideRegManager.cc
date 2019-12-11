@@ -15,6 +15,9 @@
 #include "mysystem.hh"
 #include "rbcp.h"
 
+static rapidjson::Document s_json;
+static std::string g_alpide_ip_addr;
+
 template<typename ... Args>
 static std::string FormatString( const std::string& format, Args ... args ){
   std::size_t size = snprintf( nullptr, 0, format.c_str(), args ... ) + 1;
@@ -62,26 +65,24 @@ void PrintJson(const T& o){
   std::fwrite(sb.GetString(), 1, sb.GetSize(), stdout);
 }
 
-static rapidjson::Document s_json;
-
 int rbcp_write(const std::string& ip, uint16_t udp_port, uint32_t reg_addr, uint8_t reg_value);
 int rbcp_read(const std::string& ip, uint16_t udp_port, uint32_t reg_addr, uint8_t& reg_value);
 
 void  WriteByte(uint64_t address, uint64_t value){
   FormatPrint(std::cout, "WriteByte( address=%#016x ,  value=%#016x )\n", address, value);
   // rbcp_write("131.169.133.173", 4660, static_cast<uint32_t>(address), static_cast<uint8_t>(value));
-  rbcp r("131.169.133.173",4660);
+  rbcp r(g_alpide_ip_addr,4660);
   std::string recvStr(100, 0);
-  r.DispatchCommand("wrb",  address, value, NULL, 2);
+  r.DispatchCommand("wrb",  address, value, NULL, 0);
 };
 
 uint64_t ReadByte(uint64_t address){
   FormatPrint(std::cout, "ReadByte( address=%#016x)\n", address);
   uint8_t reg_value;
   // rbcp_read("131.169.133.173", 4660, static_cast<uint32_t>(address), reg_value);
-  rbcp r("131.169.133.173",4660);
+  rbcp r(g_alpide_ip_addr,4660);
   std::string recvStr(100, 0);
-  r.DispatchCommand("rd", address, 1, &recvStr, 2); 
+  r.DispatchCommand("rd", address, 1, &recvStr, 0); 
   reg_value=recvStr[0];
   FormatPrint(std::cout, "ReadByte( address=%#016x) return value=%#016x\n", address, reg_value);
   return reg_value;
@@ -116,8 +117,6 @@ void SetFirmwareRegister(const std::string& name, uint64_t value){
     else if(json_addr.IsArray()){
       auto& json_bytes = json_reg["bytes"];
       auto& json_words = json_reg["words"];
-      std::cout<< ">>>"<<Stringify(json_bytes)<<std::endl;
-      PrintJson(json_bytes);
       if(!json_bytes.IsUint64()){
 	FormatPrint(std::cerr, "ERROR<%s>:   bytes<%s> is not an int\n", __func__, Stringify(json_bytes).c_str());
 	throw;
@@ -163,13 +162,13 @@ void SetFirmwareRegister(const std::string& name, uint64_t value){
 	  uint64_t f = 8*sizeof(value)-n_bits_per_word*(i+1);
 	  uint64_t b = 8*sizeof(value)-n_bits_per_word;
 	  sub_value = (value<<f)>>b;
-	  FormatPrint(std::cout, "INFO<%s>: %s value=%#016x << %u  >>%u sub_value=%#016x \n", __func__, "LE", value, f, b, sub_value);
+	  FormatPrint(std::cout, "INFO<%s>: %s value=%#016x (<<%u)  (>>%u) sub_value=%#016x \n", __func__, "LE", value, f, b, sub_value);
 	}
 	else{
 	  uint64_t f = 8*sizeof(value)-n_bits_per_word*(n_words-i);
 	  uint64_t b = 8*sizeof(value)-n_bits_per_word;
 	  sub_value = (value<<f)>>b;
-	  FormatPrint(std::cout, "INFO<%s>: %s value=%#016x << %u  >>%u sub_value=%#016x \n", __func__, "BE", value, f, b, sub_value);
+	  FormatPrint(std::cout, "INFO<%s>: %s value=%#016x (<<%u)  (>>%u) sub_value=%#016x \n", __func__, "BE", value, f, b, sub_value);
 	}
 	SetFirmwareRegister(name_in_array_str, sub_value);
 	i++;
@@ -305,7 +304,8 @@ void SendFirmwareCommand(const std::string& name){
   if(!flag_found_cmd){
     FormatPrint(std::cerr, "ERROR<%s>: unable to find command<%s> in array<%s>\n", __func__, name.c_str(), array_name.c_str());
     throw;
-  }  
+  }
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 
 void SendAlpideCommand(const std::string& name){
@@ -480,9 +480,9 @@ uint64_t GetAlpideRegister(const std::string& name){
       uint64_t nr_old = GetFirmwareRegister("COUNT_READ");
       SendFirmwareCommand("READ");
       std::chrono::system_clock::time_point  tp_timeout = std::chrono::system_clock::now() +  std::chrono::milliseconds(100);
-      bool flag_enable_counter_check = false; //TODO: enable it for a real hardware;
+      bool flag_enable_counter_check = true; //TODO: enable it for a real hardware;
       if(!flag_enable_counter_check){
-	std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	FormatPrint(std::cout, "WARN<%s>: checking of the read count is disabled\n", __func__);
       }
       while(flag_enable_counter_check){
@@ -575,23 +575,26 @@ uint64_t GetAlpideRegister(const std::string& name){
   return value;  
 }
 
-
-
 #include "getopt.h"
 
 int main(int argc, char **argv){
   const std::string help_usage("\n\
 Usage:\n\
 -c json_file: path to json file\n\
+-i ip_address: eg. 131.169.133.170 for alpide_0 \n\
 -h : Print usage information to standard error and stop\n\
 ");
   
   int c;
   std::string c_opt;
-  while ( (c = getopt(argc, argv, "c:h")) != -1) {
+  std::string i_opt;
+  while ( (c = getopt(argc, argv, "c:i:h")) != -1) {
     switch (c) {
     case 'c':
       c_opt = optarg;
+      break;
+    case 'i':
+      i_opt = optarg;
       break;
     case 'h':
       std::cout<<help_usage;
@@ -603,7 +606,7 @@ Usage:\n\
     }
   }
   if (optind < argc) {
-    std::cerr<<"non-option ARGV-elements: ";
+    std::cerr<<"\ninvalid options: ";
     while (optind < argc)
       std::cerr<<argv[optind++]<<" \n";
     std::cerr<<"\n";
@@ -612,42 +615,34 @@ Usage:\n\
 
   ////////////////////////
   //test if all opts
-  if(c_opt.empty()){
-    std::cerr<<"json file file [-c] is not specified\n";
+  if(c_opt.empty() || i_opt.empty()){
+    std::cerr<<"\ninsufficient options.\n";
     std::cerr<<help_usage;
+    std::cerr<<"\n\n\n";
     return 1;
   }
   ///////////////////////
 
   std::string json_file_path = c_opt;
-
+  g_alpide_ip_addr = i_opt;
+  
   std::string file_context = LoadFileToString(json_file_path);
   s_json.Parse(file_context.c_str());
   if(s_json.HasParseError()){
     fprintf(stderr, "JSON parse error: %s (at string positon %u)", rapidjson::GetParseError_En(s_json.GetParseError()), s_json.GetErrorOffset());
     return 1;
-  }
-
+  }  
+  
   uint32_t ip0 = GetFirmwareRegister("IP0");
   uint32_t ip1 = GetFirmwareRegister("IP1");
   uint32_t ip2 = GetFirmwareRegister("IP2");
   uint32_t ip3 = GetFirmwareRegister("IP3");
 
-  std::cout<<"\n\ncurrent ip  " <<ip0<<":"<<ip1<<":"<<ip2<<":"<<ip3<<"\n\n"<<std::endl;
+  SetAlpideRegister("DISABLE_REGIONS", 2);
+  uint64_t disabled_regions = GetAlpideRegister("DISABLE_REGIONS");
   
-  // SetFirmwareRegister("GAP_INT_TRIG", 0x00001312);
-  // std::cout<<std::endl;
-  // GetFirmwareRegister("GAP_INT_TRIG");
-  // std::cout<<std::endl;
-  // SendFirmwareCommand("RESET");
-  // std::cout<<std::endl;
-  // SetAlpideRegister("DISABLE_REGIONS", 0x11121314);
-  // std::cout<<std::endl;
-  // GetAlpideRegister("DISABLE_REGIONS");
-  // std::cout<<std::endl;
-  // SendAlpideCommand("GRST");
-  // std::cout<<std::endl;
-  // SendAlpideBroadcast("TRIGGER_B1");  
+  std::cout<<"\n\ncurrent ip  " <<ip0<<":"<<ip1<<":"<<ip2<<":"<<ip3<<"\n\n"<<std::endl;
+  std::cout<< "DISABLE_REGIONS = "<< disabled_regions<<std::endl;
   return 0;
 }
 
