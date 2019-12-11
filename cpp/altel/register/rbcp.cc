@@ -1,38 +1,47 @@
+#include <cctype>
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
+
+#ifdef _WIN32
+#  include <crtdefs.h>
+#  include <winsock2.h>
+#  include <io.h>
+#else
+#  include <arpa/inet.h>
+#  include <unistd.h>
+#endif
+
+#include <sys/socket.h>
+#include <sys/select.h>
+
 #include "rbcp.h"
 
-#define MAX_LINE_LENGTH 1024
+#define RBCP_DEBUG 0
 #define RBCP_VER 0xFF
 #define RBCP_CMD_WR 0x80
 #define RBCP_CMD_RD 0xC0
-#define UDP_BUF_SIZE 2048
-#define RBCP_DISP_MODE_NO 0
-#define RBCP_DISP_MODE_INTERACTIVE 1
-#define RBCP_DISP_MODE_DEBUG 2
+#define RBCP_UDP_BUF_SIZE 2048
 
-struct rbcp_header{
-  unsigned char type;
-  unsigned char command;
-  unsigned char id;
-  unsigned char length;
-  unsigned int address;
-};
 
-rbcp::rbcp(std::string ip, int udp)
-{
-  m_sitcpPort = udp;
-  m_sitcpIpAddr= ip;
-  m_id = 0;
+rbcp::rbcp(const std::string &ip, unsigned int udp, unsigned char id){
+  m_ip = ip;
+  m_udp = udp;
+  m_id = id;
 }
 
+rbcp::rbcp(const std::string &ip){
+  m_ip = ip;
+  m_udp = 4660;
+  m_id = 0;
+}
 
 int rbcp::DispatchCommand(const std::string& pszVerb,
 			  unsigned int addrReg,
 			  unsigned int dataReg,
-			  std::string *recvStr,
-			  char dispMode
-			  ){
-  char sendData[UDP_BUF_SIZE];
-  char recvData[UDP_BUF_SIZE];
+			  std::string *recvStr){
+  char sendData[RBCP_UDP_BUF_SIZE];
+  char recvData[RBCP_UDP_BUF_SIZE];
   unsigned int tempInt;
   struct rbcp_header sndHeader;
   m_id ++;
@@ -47,7 +56,7 @@ int rbcp::DispatchCommand(const std::string& pszVerb,
     sndHeader.length=1;
     sndHeader.address=htonl(addrReg);
     
-    return rbcp_com(m_sitcpIpAddr.c_str(), m_sitcpPort, &sndHeader, sendData,recvData,dispMode);
+    return rbcp_com(m_ip.c_str(), m_udp, &sndHeader, sendData,recvData);
   }
   else if(pszVerb == "wrs"){
     tempInt = dataReg;    
@@ -58,7 +67,7 @@ int rbcp::DispatchCommand(const std::string& pszVerb,
     sndHeader.length=2;
     sndHeader.address=htonl(addrReg);
 
-    return rbcp_com(m_sitcpIpAddr.c_str(), m_sitcpPort, &sndHeader, sendData,recvData,dispMode);
+    return rbcp_com(m_ip.c_str(), m_udp, &sndHeader, sendData,recvData);
   }
   else if(pszVerb == "wrw"){
     tempInt = dataReg;
@@ -72,14 +81,14 @@ int rbcp::DispatchCommand(const std::string& pszVerb,
     sndHeader.length=4;
     sndHeader.address=htonl(addrReg);
 
-    return rbcp_com(m_sitcpIpAddr.c_str(), m_sitcpPort, &sndHeader, sendData,recvData,dispMode);
+    return rbcp_com(m_ip.c_str(), m_udp, &sndHeader, sendData,recvData);
   }
   else if(pszVerb == "rd"){
     sndHeader.command= RBCP_CMD_RD;
     sndHeader.length=(char)dataReg;
     sndHeader.address=htonl(addrReg);
     
-    int re = rbcp_com(m_sitcpIpAddr.c_str(), m_sitcpPort, &sndHeader, sendData,recvData,dispMode);
+    int re = rbcp_com(m_ip.c_str(), m_udp, &sndHeader, sendData,recvData);
     if(recvStr!=NULL){
       recvStr->clear();
       recvStr->append(recvData,dataReg);
@@ -91,11 +100,11 @@ int rbcp::DispatchCommand(const std::string& pszVerb,
 }
 
 
-int rbcp::rbcp_com(const char* ipAddr, unsigned int port, struct rbcp_header* sendHeader, char* sendData, char* recvData, char dispMode){
+int rbcp::rbcp_com(const char* ipAddr, unsigned int port, struct rbcp_header* sendHeader, char* sendData, char* recvData){
 
   struct sockaddr_in sitcpAddr;
-  int sock;
-
+  decltype(socket(0, 0, 0)) sock;
+  
   struct timeval timeout;
   fd_set setSelect;
   
@@ -108,9 +117,8 @@ int rbcp::rbcp_com(const char* ipAddr, unsigned int port, struct rbcp_header* se
   char rcvdBuf[1024];
   int numReTrans =0;
 
+  if(RBCP_DEBUG) puts("\nCreate socket...\n");
   /* Create a Socket */
-  if(dispMode==RBCP_DISP_MODE_DEBUG) puts("\nCreate socket...\n");
-
   sock = socket(AF_INET, SOCK_DGRAM, 0);
 
   sitcpAddr.sin_family      = AF_INET;
@@ -119,7 +127,7 @@ int rbcp::rbcp_com(const char* ipAddr, unsigned int port, struct rbcp_header* se
 
   sndDataLen = (int)sendHeader->length;
 
-  if(dispMode==RBCP_DISP_MODE_DEBUG) printf(" Length = %i\n",sndDataLen);
+  if(RBCP_DEBUG) printf(" Length = %i\n",sndDataLen);
 
   /* Copy header data */
   memcpy(sndBuf,sendHeader, sizeof(struct rbcp_header));
@@ -131,8 +139,7 @@ int rbcp::rbcp_com(const char* ipAddr, unsigned int port, struct rbcp_header* se
     cmdPckLen=sizeof(struct rbcp_header);
   }
 
-
-  if(dispMode==RBCP_DISP_MODE_DEBUG){
+  if(RBCP_DEBUG){
     for(i=0; i< cmdPckLen;i++){
       if(j==0) {
 	printf("\t[%.3x]:%.2x ",i,(unsigned char)sndBuf[i]);
@@ -149,15 +156,11 @@ int rbcp::rbcp_com(const char* ipAddr, unsigned int port, struct rbcp_header* se
   }
 
   /* send a packet*/
-
   sendto(sock, sndBuf, cmdPckLen, 0, (struct sockaddr *)&sitcpAddr, sizeof(sitcpAddr));
-  if(dispMode==RBCP_DISP_MODE_DEBUG) puts("The packet have been sent!\n");
+  if(RBCP_DEBUG) puts("The packet have been sent!\n");
 
   /* Receive packets*/
-  
-  if(dispMode==RBCP_DISP_MODE_DEBUG) puts("\nWait to receive the ACK packet...");
-
-
+  if(RBCP_DEBUG) puts("\nWait to receive the ACK packet...");
   while(numReTrans<3){
 
     FD_ZERO(&setSelect);
@@ -199,12 +202,10 @@ int rbcp::rbcp_com(const char* ipAddr, unsigned int port, struct rbcp_header* se
 	  memcpy(recvData,rcvdBuf+sizeof(struct rbcp_header),rcvdBytes-sizeof(struct rbcp_header));
 	}
 
-	if(dispMode==RBCP_DISP_MODE_DEBUG){
+	if(RBCP_DEBUG){
 	  puts("\n***** A pacekt is received ! *****.");
 	  puts("Received data:");
-
 	  j=0;
-
 	  for(i=0; i<rcvdBytes; i++){
 	    if(j==0) {
 	      printf("\t[%.3x]:%.2x ",i,(unsigned char)rcvdBuf[i]);
@@ -220,32 +221,6 @@ int rbcp::rbcp_com(const char* ipAddr, unsigned int port, struct rbcp_header* se
 	  }
 
 	  if(j!=3) puts(" ");
-	}else if(dispMode==RBCP_DISP_MODE_INTERACTIVE){
-	  if(sendHeader->command==RBCP_CMD_RD){
-	    j=0;
-	    puts(" ");
-
-	    for(i=8; i<rcvdBytes; i++){
-	      if(j==0) {
-		printf(" [0x%.8x] %.2x ",ntohl(sendHeader->address)+i-8,
-		       (unsigned char)rcvdBuf[i]);
-		j++;
-	      }else if(j==7){
-		printf("%.2x\n",(unsigned char)rcvdBuf[i]);
-		j=0;
-	      }else if(j==4){
-		printf("- %.2x ",(unsigned char)rcvdBuf[i]);
-		j++;
-	      }else{
-		printf("%.2x ",(unsigned char)rcvdBuf[i]);
-		j++;
-	      }
-	    }
-	    
-	    if(j!=15) puts(" ");
-	  }else{
-	    printf(" 0x%x: OK\n",ntohl(sendHeader->address));
-	  }
 	}
 	numReTrans = 4;
 	close(sock);

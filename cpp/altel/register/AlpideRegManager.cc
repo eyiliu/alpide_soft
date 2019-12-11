@@ -71,18 +71,18 @@ int rbcp_read(const std::string& ip, uint16_t udp_port, uint32_t reg_addr, uint8
 void  WriteByte(uint64_t address, uint64_t value){
   FormatPrint(std::cout, "WriteByte( address=%#016x ,  value=%#016x )\n", address, value);
   // rbcp_write("131.169.133.173", 4660, static_cast<uint32_t>(address), static_cast<uint8_t>(value));
-  rbcp r(g_alpide_ip_addr,4660);
+  rbcp r(g_alpide_ip_addr);
   std::string recvStr(100, 0);
-  r.DispatchCommand("wrb",  address, value, NULL, 0);
+  r.DispatchCommand("wrb",  address, value, NULL);
 };
 
 uint64_t ReadByte(uint64_t address){
   FormatPrint(std::cout, "ReadByte( address=%#016x)\n", address);
   uint8_t reg_value;
   // rbcp_read("131.169.133.173", 4660, static_cast<uint32_t>(address), reg_value);
-  rbcp r(g_alpide_ip_addr,4660);
+  rbcp r(g_alpide_ip_addr);
   std::string recvStr(100, 0);
-  r.DispatchCommand("rd", address, 1, &recvStr, 0); 
+  r.DispatchCommand("rd", address, 1, &recvStr); 
   reg_value=recvStr[0];
   FormatPrint(std::cout, "ReadByte( address=%#016x) return value=%#016x\n", address, reg_value);
   return reg_value;
@@ -638,7 +638,7 @@ Usage:\n\
   uint32_t ip2 = GetFirmwareRegister("IP2");
   uint32_t ip3 = GetFirmwareRegister("IP3");
 
-  SetAlpideRegister("DISABLE_REGIONS", 2);
+  SetAlpideRegister("DISABLE_REGIONS", 3);
   uint64_t disabled_regions = GetAlpideRegister("DISABLE_REGIONS");
   
   std::cout<<"\n\ncurrent ip  " <<ip0<<":"<<ip1<<":"<<ip2<<":"<<ip3<<"\n\n"<<std::endl;
