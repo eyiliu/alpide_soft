@@ -810,6 +810,19 @@
 	    "description":"Trigger Delay in Step of 25 ns[7:0]"
 	},
 	{
+	    "name":"RESERVED",
+	    "address":[
+		    "RESERVED_H",
+		    "RESERVED_L"
+	    ],
+	    "bytes":2,
+	    "words":2,
+	    "endian":"BE",
+	    "read":true,
+	    "write":true,
+	    "description":"it was/is SetFramePhase"
+	},
+	{
 	    "name":"RESERVED_9",
 	    "address":"0x10000009",
 	    "bytes":1,

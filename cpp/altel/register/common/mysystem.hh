@@ -113,48 +113,4 @@ using socket_t = decltype(socket(0, 0, 0));
 #  error Unable to set endian coverting functions. Need little-endian Windows, little-endian MacOS, GLIBC
 #endif
 
-
-#define MYSYSTEM_INCLUDE_RAPIDJSON
-#ifdef MYSYSTEM_INCLUDE_RAPIDJSON
-// SIMD optimization
-// #define RAPIDJSON_SSE2
-// or
-// #define RAPIDJSON_SSE42
-// or
-// #define RAPIDJSON_NEON 
-// or
-// not enable
-
-#  include <string>
-#  define RAPIDJSON_HAS_STDSTRING 1
-#  define RAPIDJSON_NO_INT64DEFINE
-   namespace rapidjson { typedef ::std::uint64_t uint64_t; typedef ::std::int64_t int64_t;}
-#  define RAPIDJSON_NO_SIZETYPEDEFINE
-   namespace rapidjson { typedef ::std::size_t SizeType;}
-#  include "rapidjson/rapidjson.h"
-#  include "rapidjson/allocators.h"
-#  include "rapidjson/encodedstream.h"
-#  include "rapidjson/filereadstream.h"
-#  include "rapidjson/memorystream.h"
-#  include "rapidjson/pointer.h"
-#  include "rapidjson/reader.h"
-#  include "rapidjson/stringbuffer.h"
-#  include "rapidjson/cursorstreamwrapper.h"
-#  include "rapidjson/encodings.h"
-#  include "rapidjson/filewritestream.h"
-#  include "rapidjson/istreamwrapper.h"
-#  include "rapidjson/prettywriter.h"
-#  include "rapidjson/schema.h"
-#  include "rapidjson/writer.h"
-#  include "rapidjson/document.h"
-#  include "rapidjson/fwd.h"
-#  include "rapidjson/memorybuffer.h"
-#  include "rapidjson/ostreamwrapper.h"
-#  include "rapidjson/stream.h"
-#  include "rapidjson/error/en.h"
-#endif
-
-#include "getopt/getopt.h"
-#include "linenoiseng/linenoise.h"
-
 #endif

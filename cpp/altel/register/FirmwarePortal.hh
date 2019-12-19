@@ -16,11 +16,12 @@
 #include <algorithm>
 
 #include "mysystem.hh"
+#include "common/rapidjson/myrapidjson.h"
+
 #include "rbcp.h"
 
 class FirmwarePortal{
-public:  
-
+public:
   FirmwarePortal(const std::string &json_str, const std::string &ipaddr);
   void SetFirmwareRegister(const std::string& name, uint64_t value);
   void SetAlpideRegister(const std::string& name, uint64_t value);
