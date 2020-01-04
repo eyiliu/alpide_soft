@@ -11,8 +11,14 @@ add_executable(mytest FirmwarePortal.cc FirmwarePortal_main.cc)
 target_include_directories(mytest BEFORE PRIVATE common rbcp)
 target_link_libraries(mytest PRIVATE mycommon rbcp)
 
+
+add_executable(myws FirmwarePortal.cc minimal-ws-server-threadpool.cc)
+target_include_directories(myws BEFORE PRIVATE common rbcp)
+target_link_libraries(myws PRIVATE mycommon rbcp websockets)
+
 install(TARGETS
   mytest
+  myws
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
