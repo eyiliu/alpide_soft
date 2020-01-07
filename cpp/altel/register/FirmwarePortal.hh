@@ -15,10 +15,8 @@
 #include <utility>
 #include <algorithm>
 
-#include "mysystem.hh"
+#include "common/mysystem.hh"
 #include "common/rapidjson/myrapidjson.h"
-
-#include "rbcp.h"
 
 class FirmwarePortal{
 public:
@@ -79,6 +77,5 @@ public:
 
 
 #endif
-
 
   

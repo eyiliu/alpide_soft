@@ -1,5 +1,6 @@
 
 #include "FirmwarePortal.hh"
+#include "rbcp.h"
 
 FirmwarePortal::FirmwarePortal(const std::string &json_str, const std::string &ipaddr){
   m_alpide_ip_addr = ipaddr;
