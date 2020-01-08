@@ -20,6 +20,11 @@
 #define HEADER_BYTE  (0x5a)
 #define FOOTER_BYTE  (0xa5)
 
+AltelReader::~AltelReader(){
+  Close();
+}
+
+
 AltelReader::AltelReader(const std::string& json_str)
 {
   rapidjson::Document js_doc;
@@ -83,19 +88,20 @@ void AltelReader::Open(){
 }
 
 void AltelReader::Close(){
+  if(!m_fd)
+    return;
+  
   if(m_flag_file){
-    if(m_fd){
 #ifdef _WIN32
-      _close(m_fd);
+    _close(m_fd);
 #else
-      close(m_fd);
+    close(m_fd);
 #endif
-      m_fd = 0;
-    }
   }
   else{
     close(m_fd);
   }
+  m_fd = 0;
 }
 
 

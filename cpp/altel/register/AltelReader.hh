@@ -10,6 +10,7 @@
 
 class AltelReader{
 public:
+  ~AltelReader();
   AltelReader(const std::string &json_string);
   JadeDataFrameSP Read(const std::chrono::milliseconds &timeout);
   std::vector<JadeDataFrameSP> Read(size_t size_max_pkg,

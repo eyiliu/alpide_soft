@@ -1,13 +1,35 @@
-#include <libwebsockets.h>
-#include <string.h>
-#include <signal.h>
-#include <pthread.h>
+#include <cstring>
 
-#include "FirmwarePortal.hh"
+#include <iostream>
+#include <deque>
+#include <queue>
+#include <mutex>
+#include <future>
+#include <condition_variable>
+
+#include <signal.h>
+
+#include <libwebsockets.h>
+
 #include "common/getopt/getopt.h"
 #include "common/linenoiseng/linenoise.h"
 
-#include <iostream>
+#include "FirmwarePortal.hh"
+#include "AltelReader.hh"
+
+using namespace std::chrono_literals;
+
+
+template<typename ... Args>
+static std::size_t FormatPrint(std::ostream &os, const std::string& format, Args ... args ){
+  std::size_t size = snprintf( nullptr, 0, format.c_str(), args ... ) + 1;
+  std::unique_ptr<char[]> buf( new char[ size ] ); 
+  std::snprintf( buf.get(), size, format.c_str(), args ... );
+  std::string formated_string( buf.get(), buf.get() + size - 1 );
+  os<<formated_string<<std::flush;
+  return formated_string.size();
+}
+
 
 class Task_data;
 class Task_data { // c++ style
@@ -16,27 +38,126 @@ public:
   //this buffer MUST have LWS_PRE bytes valid BEFORE the pointer. This is so the protocol header data can be added in-situ.
   char m_send_buf[32768]; // must follow header LWS_PRE
   FirmwarePortal* m_fw{nullptr};
-  uint64_t m_count{0};
-    
+  
+  std::mutex m_mx_recv;
+  std::deque<std::string> m_qu_recv;  
+
+  bool m_flag_call_back_closed{false};
+  bool m_is_running_reading{false};
+  std::unique_ptr<AltelReader> m_rd;
+  std::future<uint64_t> m_fut_async_rd;
+
+  std::mutex m_mx_ev_to_wrt;
+  std::deque<JadeDataFrameSP> m_qu_ev_to_wrt;
+  std::condition_variable m_cv_valid_ev_to_wrt;
+  
+  void callback_add_recv(char* in,  size_t len){
+    std::string str_recv(in, len); //TODO: split combined recv.
+    std::cout<< "recv: "<<str_recv<<std::endl;
+    std::unique_lock<std::mutex> lk_recv(m_mx_recv);
+    m_qu_recv.push_back(std::move(str_recv));
+  } 
+  
   lws_threadpool_task_return
   task_exe(lws_threadpool_task_status s){
-    m_count ++;        
-    if(m_count > 100000000){
-      return LWS_TP_RETURN_FINISHED;
-    } else if(m_count % 10000000 == 0){
-      lws_snprintf(m_send_buf, sizeof(m_send_buf), "pos++ %llu", (unsigned long long)m_count);
-      return LWS_TP_RETURN_SYNC; // LWS_CALLBACK_SERVER_WRITEABLE TP_STATUS_SYNC
+    std::cout<< "."<<s <<std::endl;
+    if ( (s != LWS_TP_STATUS_RUNNING) || m_flag_call_back_closed){
+      std::cout<< "my stopping "<<std::endl;
+      m_is_running_reading = false;
+      if(m_fut_async_rd.valid())
+        m_fut_async_rd.get();
+      m_rd.reset();
+      return LWS_TP_RETURN_STOPPED;
     }
-    else{
-      return LWS_TP_RETURN_CHECKING_IN; // "check in" to see if it has been asked to stop.
+    //============== cmd execute  =================
+    std::string str_recv;
+    {
+      std::unique_lock<std::mutex> lk_recv(m_mx_recv);
+      if(!m_qu_recv.empty()){
+        std::swap(str_recv, m_qu_recv.front());
+        m_qu_recv.pop_front();
+      }
     }
-        
-  };
+    if(!str_recv.empty()){
+      std::cout<< "run recv: <"<<str_recv<<">"<<std::endl;
+      if(str_recv=="start"){
+        std::string file_context = FirmwarePortal::LoadFileToString("jsonfile/reader.json");
+        if(m_rd){
+          m_rd->Close();
+        }
+        m_rd.reset();//delete old object
+        m_rd.reset(new AltelReader(file_context) );
+        m_rd->Open();
+        m_is_running_reading = true;
+        m_fut_async_rd = std::async(std::launch::async, &Task_data::async_reading, this);        
+      };
 
+      if(str_recv=="stop"){
+        m_is_running_reading = false;
+        if(m_fut_async_rd.valid())
+          m_fut_async_rd.get();
+        m_rd.reset();
+      };
+
+      if(str_recv=="teminate"){
+        m_is_running_reading = false;
+        if(m_fut_async_rd.valid())
+          m_fut_async_rd.get();
+        m_rd.reset();        
+        return LWS_TP_RETURN_FINISHED;        
+      };      
+      return LWS_TP_RETURN_CHECKING_IN;
+      // return LWS_TP_RETURN_SYNC;
+    }
+
+    //============ data send ====================
+
+    std::unique_lock<std::mutex> lk_in(m_mx_ev_to_wrt);
+    while(m_qu_ev_to_wrt.empty()){
+      while(m_cv_valid_ev_to_wrt.wait_for(lk_in, 200ms) ==std::cv_status::timeout){
+        return LWS_TP_RETURN_CHECKING_IN;
+      }
+    }
+
+    auto df = m_qu_ev_to_wrt.front();
+    m_qu_ev_to_wrt.pop_front();
+    m_qu_ev_to_wrt.clear(); // only for test now, remove all events in queue
+    lk_in.unlock();
+    df->Decode(1); //level 1, header-only
+    uint16_t tg =  df->GetCounter();
+    std::snprintf(m_send_buf, sizeof(m_send_buf), "Trigger ID: %u", tg);
+    // df goes to send out buffer
+    return LWS_TP_RETURN_SYNC; // LWS_CALLBACK_SERVER_WRITEABLE TP_STATUS_SYNC
+    //return LWS_TP_RETURN_CHECKING_IN; // "check in" to see if it has been asked to stop.
+  };
+  
+  uint64_t async_reading(){
+    std::cout<< "aysnc enter"<<std::endl;
+    auto tp_start = std::chrono::system_clock::now();
+    auto tp_print_prev = std::chrono::system_clock::now();
+    uint64_t ndf_print_next = 10000;
+    uint64_t ndf_print_prev = 0;
+    uint64_t n_df = 0;
+    m_is_running_reading = true;
+    while (m_is_running_reading){
+      auto df = m_rd? m_rd->Read(1000ms):nullptr;
+      if(!df){
+        continue;
+      }
+      std::unique_lock<std::mutex> lk_out(m_mx_ev_to_wrt);
+      m_qu_ev_to_wrt.push_back(df);
+      n_df ++;
+      lk_out.unlock();
+      m_cv_valid_ev_to_wrt.notify_all();
+    }
+    std::cout<< "aysnc exit"<<std::endl;
+    return n_df;
+  }
+  
   Task_data(const std::string& json_path, const std::string& ip_addr){
     std::string file_context = FirmwarePortal::LoadFileToString(json_path);
     m_fw = new FirmwarePortal(file_context, ip_addr);
-    m_count  = 0;
+    
   };
     
   ~Task_data(){
@@ -44,10 +165,13 @@ public:
       delete m_fw;
       m_fw = nullptr;
     }
+    std::cout<< "Task_data instance is distructed"<< std::endl;
   };
-    
+
+  
   static void
   cleanup_data(struct lws *wsi, void *user){
+    std::cout<< "static clean up function"<<std::endl;
     Task_data *data = static_cast<Task_data*>(user);
     delete data;
   };
@@ -159,7 +283,13 @@ callback_minimal(struct lws *wsi, enum lws_callback_reasons reason,
     break;
   }
   case LWS_CALLBACK_CLOSED:{ // when the websocket session ends 
-    std::cout<< "CLOSED++"<<std::endl;
+    std::cout<< "=====================CLOSED++\n\n"<<std::endl;
+    struct lws_threadpool_task *task;
+    Task_data *priv_task;
+    int tp_status = lws_threadpool_task_status_wsi(wsi, &task, (void**)&priv_task);
+    priv_task->m_flag_call_back_closed = true;
+    std::this_thread::sleep_for(2s);
+    lws_threadpool_task_status_wsi(wsi, &task, (void**)&priv_task);
     break;
   }
   case LWS_CALLBACK_WS_SERVER_DROP_PROTOCOL:{
@@ -173,13 +303,10 @@ callback_minimal(struct lws *wsi, enum lws_callback_reasons reason,
     struct lws_threadpool_task *task;
     Task_data *priv_task;
     int tp_status = lws_threadpool_task_status_wsi(wsi, &task, (void**)&priv_task);
-        
-    std::string recv_str((char*)in, len);
-    std::cout<< recv_str<<std::endl;
+    priv_task->callback_add_recv((char*)in, len);
     break;
   }
-  case LWS_CALLBACK_SERVER_WRITEABLE:{
-                
+  case LWS_CALLBACK_SERVER_WRITEABLE:{                
     struct lws_threadpool_task *task;
     Task_data *task_data;
     // cleanup)function will be called in lws_threadpool_task_status_wsi in case task is completed/stop/finished
@@ -195,14 +322,9 @@ callback_minimal(struct lws *wsi, enum lws_callback_reasons reason,
       std::cout<< "LWS_TP_STATUS_STOPPED"<<std::endl;
       return 0;
     }
-    case LWS_TP_STATUS_QUEUED:{
-      std::cout<< "LWS_TP_STATUS_QUEUED"<<std::endl;
+    case LWS_TP_STATUS_QUEUED:
+    case LWS_TP_STATUS_RUNNING:
       return 0;
-    }
-    case LWS_TP_STATUS_RUNNING:{
-      std::cout<< "LWS_TP_STATUS_RUNNING"<<std::endl;
-      return 0;
-    }
     case LWS_TP_STATUS_STOPPING:{
       std::cout<< "LWS_TP_STATUS_STOPPING"<<std::endl;
       return 0;
@@ -217,7 +339,7 @@ callback_minimal(struct lws *wsi, enum lws_callback_reasons reason,
         lws_threadpool_task_sync(task, 1); // task to be stopped
         return -1;
       }
-            
+      
       /*
        * service thread has done whatever it wanted to do with the
        * data the task produced: if it's waiting to do more it can
@@ -298,7 +420,8 @@ int main(int argc, const char **argv){
   info.protocols = protocols;
   info.pvo = &pvo;               /* per-vhost options */
   info.options = LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE;
-
+  info.ws_ping_pong_interval = 5; // idle ping-pong sec
+  
   struct lws_context *context =  lws_create_context(&info);
   if (!context) {
     lwsl_err("lws init failed\n");
@@ -314,3 +437,4 @@ int main(int argc, const char **argv){
   lws_context_destroy(context);
   return 0;
 }
+

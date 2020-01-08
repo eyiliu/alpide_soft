@@ -39,7 +39,7 @@ function DOMContentLoadedListener() {
 
     var n, wsa = new Array, alive = 0;
     
-    for (n = 0; n < 4; n++) {
+    for (n = 0; n < 1; n++) {
 	
 	ws = new_ws(get_appropriate_ws_url(""), "lws-minimal");
 	wsa.push(ws);
@@ -77,7 +77,7 @@ function DOMContentLoadedListener() {
             function sendmsg()
 	    {
 		ws.send(document.getElementById("m").value);
-		// document.getElementById("m").value = "";
+		document.getElementById("m").value = "";
 	    }
 	    
 	    document.getElementById("b").addEventListener("click", sendmsg);
