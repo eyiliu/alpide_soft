@@ -1,0 +1,22 @@
+{    
+    "protocol":"tcp",
+    "version": 1,
+    "description":"ALPIDE plane TCP raw reader",
+    "options":{
+        "ip":"131.169.133.174",
+        "port":24
+    }
+    
+    ,
+    "backup":[
+        {
+            "protocol":"file",
+            "version": 1,
+            "description":"ALPIDE plane raw file reader",
+            "options":{
+                "path":"/tmp/file.raw",
+                "terminate_eof":true
+            }
+        }
+    ]
+}

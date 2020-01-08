@@ -8,8 +8,7 @@ FirmwarePortal::FirmwarePortal(const std::string &json_str, const std::string &i
   if(m_json.HasParseError()){
     fprintf(stderr, "JSON parse error: %s (at string positon %u)", rapidjson::GetParseError_En(m_json.GetParseError()), m_json.GetErrorOffset());
     throw;
-  }  
-    
+  }    
 }
 
 void  FirmwarePortal::WriteByte(uint64_t address, uint64_t value){
@@ -19,6 +18,7 @@ void  FirmwarePortal::WriteByte(uint64_t address, uint64_t value){
   std::string recvStr(100, 0);
   r.DispatchCommand("wrb",  address, value, NULL);
 };
+
 
 uint64_t FirmwarePortal::ReadByte(uint64_t address){
   FormatPrint(std::cout, "ReadByte( address=%#016x)\n", address);
