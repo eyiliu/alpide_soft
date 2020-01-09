@@ -12,7 +12,6 @@ using ::std::uint8_t;
 using ::std::uint16_t;
 using ::std::uint32_t;
 using ::std::uint64_t;
-using ::std::uint64_t;
 
 //unix only?
 using ::std::size_t;
@@ -21,6 +20,8 @@ using ::std::size_t;
 #ifdef _WIN32
 #  include <crtdefs.h>
 #  include <winsock2.h>
+// add this line if you are using winsocks2 in your you code:
+// #pragma comment(lib, "Ws2_32.lib")
 // wincock2 is also for endian converter
 // https://stackoverflow.com/questions/5971332/redefinition-errors-in-winsock2-h
 #  include <io.h>
@@ -29,7 +30,6 @@ using ::std::size_t;
 #  include <unistd.h>
 #endif
 using socket_t = decltype(socket(0, 0, 0));
-
 
 // dynamic lib
 #ifdef _WIN32

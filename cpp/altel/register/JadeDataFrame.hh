@@ -1,18 +1,18 @@
 #ifndef JADEPIX_JADEDATAFRAME_WS
 #define JADEPIX_JADEDATAFRAME_WS
 
-#include "common/mysystem.hh"
-
 #include <string>
 #include <vector>
-#include <iostream>
 #include <memory>
+
+#include "common/mysystem.hh"
 
 class JadeDataFrame;
 using JadeDataFrameSP = std::shared_ptr<JadeDataFrame>;
-
+  
 class JadeDataFrame {
 public:
+
   JadeDataFrame(std::string& data);
   JadeDataFrame(std::string&& data);
   JadeDataFrame() = delete;
@@ -41,6 +41,54 @@ public:
   
   void Print(std::ostream& os, size_t ws = 0) const;
 
+  template <typename W>
+  void Serialize(W& w) const {
+    w.StartObject();
+    {
+      w.String("level");
+      w.Uint(m_level_decode);
+      w.String("trig");
+      w.Uint(m_counter);
+      w.String("ext");
+      w.Uint(m_extension);
+      w.String("nx");
+      w.Uint(m_n_x);
+      w.String("ny");
+      w.Uint(m_n_y);
+      w.String("nz");
+      w.Uint(m_n_d);
+    
+      w.String("hits");
+      w.StartObject();
+      {
+        w.String("type");
+        w.String("array");
+        w.String("encode");
+        w.String("null");
+        w.String("data");
+        w.StartArray();
+        {
+          auto it_x = m_data_x.begin();
+          auto it_y = m_data_y.begin();
+          auto it_z = m_data_d.begin();
+          while(it_x!=m_data_x.end()){
+            w.StartObject();
+            w.String("x");
+            w.Uint(*it_x);
+            w.String("y");
+            w.Uint(*it_y);
+            w.String("z");
+            w.Uint(*it_z);
+          }
+        }
+        w.EndArray();
+      }
+      w.EndObject();
+    }
+    w.EndObject();
+  }
+
+  
 private:
   std::string m_data_raw;
   std::string m_meta;
@@ -60,5 +108,9 @@ private:
   std::vector<uint16_t> m_data_d;
   std::vector<uint32_t> m_data_t;
   std::vector<uint32_t> m_data_v;
+
+
+  
 };
+
 #endif

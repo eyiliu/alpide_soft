@@ -1,4 +1,18 @@
 #include "JadeDataFrame.hh"
+#include "common/mysystem.hh"
+#include <iostream>
+
+#include "common/rapidjson/myrapidjson.h"
+
+
+// template void
+// JadeDataFrame::Serialize<rapidjson::PrettyWriter<rapidjson::StringBuffer>>
+// (rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer);
+
+// template void
+// JadeDataFrame::Serialize<rapidjson::Writer<rapidjson::StringBuffer>>
+// (rapidjson::Writer<rapidjson::StringBuffer>& writer);
+
 
 JadeDataFrame::JadeDataFrame(std::string&& data)
   : m_data_raw(std::move(data))
