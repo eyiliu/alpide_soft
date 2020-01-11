@@ -36,27 +36,27 @@
                     "description":"Matrix Readout Speed; 0: Readout of one pixel hit in each region every four clock(10 MHz) 1:two clock(20 MHz)"
                 },
                 {
-                    "address":[5,4]
+                    "address":[5,4],
                     "init":3,
                     "description":"IB Serial Link Speed; 0:400Mb/s, 1:600Mb/s, 2,3:1200Mb/s"
                 },
                 {
-                    "address":6
+                    "address":6,
                     "init":1,
                     "description":"Enable Skewing of Global Signals; 0:disable, 1:enable"
                 },
                 {
-                    "address":7
+                    "address":7,
                     "init":1,
                     "description":"Enable Skewing of Start of Readout; 0:disable, 1:enable"
                 },
                 {
-                    "address":8
+                    "address":8,
                     "init":1,
                     "description":"Enable Readout Clock Gating; 0:disable, 1:enable"
                 },
                 {
-                    "address":9
+                    "address":9,
                     "init":0,
                     "description":"Enable Readout From CMU; 0:disable, 1:enable"
                 }                
@@ -105,14 +105,14 @@
 	    "reset":"0x0010",
 	    "description":"FROMU Configuration Register 1,  ",
             "bits":[
-                "2:0":"Pixel MEB Mask 0",
-                "3":"Internal STROBE generation 0",
-                "4":"Enable BUSY Monitoring 1, exteral busy as internal busy",
-                "5":"Test Pulse Mode 0, 0:digital;1:analogy",
-                "6":"Enable Test STROBE 0",
-                "7":"Enable Rotate Pulse Lines 0",
-                "10:8":"Trigger Delay 0",
-                "15:11":"not used"
+                {"2:0":"Pixel MEB Mask 0"},
+                {"3":"Internal STROBE generation 0"},
+                {"4":"Enable BUSY Monitoring 1, exteral busy as internal busy"},
+                {"5":"Test Pulse Mode 0, 0:digital;1:analogy"},
+                {"6":"Enable Test STROBE 0"},
+                {"7":"Enable Rotate Pulse Lines 0"},
+                {"10:8":"Trigger Delay 0"},
+                {"15:11":"not used"}
             ]
 	},
 	{
@@ -200,9 +200,9 @@
 	    "write":false,
 	    "description":"FROMU Status Register 5",
             "bits":[
-                "11:0":"Bunch Counter",
-                "14:12":"Events in in-pixel Multi-Event Buffers",
-                "15":"STROBE/Frame window extended"
+                {"11:0":"Bunch Counter"},
+                {"14:12":"Events in in-pixel Multi-Event Buffers"},
+                {"15":"STROBE/Frame window extended"}
             ]
 	},
 	{
@@ -420,7 +420,7 @@
 	    "description":"Row Selection Slice, 16bits x 32regions = 512 row selection lines for global matrix"
         },
         {
-	    "name":"REGION_PLUSE_SELECT_DOUBLE_COLUMN",
+	    "name":"REGION_PULSE_SELECT_DOUBLE_COLUMN",
 	    "address":"0x0408",
 	    "bytes":2,
 	    "words":1,
