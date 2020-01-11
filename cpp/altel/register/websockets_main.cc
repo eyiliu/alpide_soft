@@ -60,7 +60,7 @@ public:
   
   lws_threadpool_task_return
   task_exe(lws_threadpool_task_status s){
-    std::cout<< "."<<s <<std::endl;
+    std::cout<< "."<<s;
     if ( (s != LWS_TP_STATUS_RUNNING) || m_flag_call_back_closed){
       std::cout<< "my stopping "<<std::endl;
       m_is_running_reading = false;
@@ -93,48 +93,63 @@ public:
 
         //=========== init part ========================
         m_fw->SetFirmwareRegister("FIRMWARE_MODE", 0);
-        m_fw->SetFirmwareRegister("ADDR_CHIP_ID", 0x10);
-        m_fw->SendAlpideBroadcast("GRST");
-        m_fw->SetAlpideRegister("CMU_DMU_CONF", 0x70);
-        m_fw->SetAlpideRegister("FROMU_CONF_1", 0x10);
-        m_fw->SetAlpideRegister("FROMU_CONF_2", 0x28);
-        m_fw->SetAlpideRegister("VRESETP", 0x75);
-        m_fw->SetAlpideRegister("VRESETD", 0x93);
-        m_fw->SetAlpideRegister("VCASP", 0x56);
-        m_fw->SetAlpideRegister("VCASN", 0x32);
-        m_fw->SetAlpideRegister("VPULSEH", 0xff);
-        m_fw->SetAlpideRegister("VPULSEL", 0x0);
-        m_fw->SetAlpideRegister("VCASN2", 0x39); // TODO: reset value is 0x40
-        m_fw->SetAlpideRegister("VCLIP", 0x0);
+        m_fw->SetFirmwareRegister("ADDR_CHIP_ID", 0x10); //OB
+        m_fw->SendAlpideBroadcast("GRST"); // chip global reset
+        m_fw->SetAlpideRegister("CMU_DMU_CONF", 0x70); //disable MCH encoding, enable DDR, no previous OB
+        m_fw->SetAlpideRegister("FROMU_CONF_1", 0x10); //reset init status
+        m_fw->SetAlpideRegister("VRESETP", 0x75); //117
+        m_fw->SetAlpideRegister("VRESETD", 0x93); //147
+        m_fw->SetAlpideRegister("VCASP", 0x56);   //86
+        m_fw->SetAlpideRegister("VCASN", 0x32);   //57 Y50
+        m_fw->SetAlpideRegister("VPULSEH", 0xff); //255 
+        m_fw->SetAlpideRegister("VPULSEL", 0x0);  //0
+        m_fw->SetAlpideRegister("VCASN2", 0x39);  //62 Y63
+        m_fw->SetAlpideRegister("VCLIP", 0x0);    //0
         m_fw->SetAlpideRegister("VTEMP", 0x0);
         m_fw->SetAlpideRegister("IAUX2", 0x0);
-        m_fw->SetAlpideRegister("IRESET", 0x32);
-        m_fw->SetAlpideRegister("IDB", 0x40);
-        m_fw->SetAlpideRegister("IBIAS", 0x40);
-        m_fw->SetAlpideRegister("ITHR", 0x32); //empty 0x32; 0x12 data, not full.
-        m_fw->SetAlpideRegister("TEST_CTRL", 0x400); // ?
+        m_fw->SetAlpideRegister("IRESET", 0x32);  //50
+        m_fw->SetAlpideRegister("IDB", 0x40);     //64
+        m_fw->SetAlpideRegister("IBIAS", 0x40);   //64
+        m_fw->SetAlpideRegister("ITHR", 0x32);    //51  empty 0x32; 0x12 data, not full.  0x33 default, threshold
+
+        // 3.8 Chip initialization
+        // GRST
+        // 3.8.1 Configuration of in-pixel logic
+        m_fw->SetAlpideRegister("TEST_CTRL", 0x400); // Force Disable Busy Line
         m_fw->SetAlpideRegister("TODO_MASK_PULSE", 0xffff);
         m_fw->SetAlpideRegister("PIX_CONF_GLOBAL", 0x0);
         m_fw->SetAlpideRegister("PIX_CONF_GLOBAL", 0x1);
-        m_fw->SetAlpideRegister("CHIP_MODE", 0x3c);
-        m_fw->SendAlpideBroadcast("RORST");
-        //PLL part
+        m_fw->SetAlpideRegister("CHIP_MODE", 0x3c); // configure mode
+        m_fw->SendAlpideBroadcast("RORST"); // need?
+        
+        // 3.8.2 Configuration and start-up of the Data Transmission Unit, PLL
         m_fw->SetAlpideRegister("DTU_CONF", 0x008d);
         m_fw->SetAlpideRegister("DTU_DAC",  0x0088);
         m_fw->SetAlpideRegister("DTU_CONF", 0x0085);
         m_fw->SetAlpideRegister("DTU_CONF", 0x0185);
         m_fw->SetAlpideRegister("DTU_CONF", 0x0085);
+
+        // 3.8.3 Setting up of readout
+        // 3.8.3.1a (OB) Setting CMU and DMU Configuration Register
+        // Previous Chip
+        // Initial Token 1
+        // 3.8.3.2 Setting FROMU Configuration Registers and enabling readout mode
+        // FROMU Configuration Register 1,2
+        // FROMU Pulsing Register 1,2
+        // Periphery Control Register (CHIP MODE)
+        // RORST 
         //===========end of init part ======================
         
         m_fw->SetAlpideRegister("TODO_MASK_PULSE", 0xffff);
         m_fw->SetAlpideRegister("PIX_CONF_GLOBAL", 0x0);
         m_fw->SetAlpideRegister("TODO_MASK_PULSE", 0xffff);
         m_fw->SetAlpideRegister("PIX_CONF_GLOBAL", 0x1);
-        m_fw->SetAlpideRegister("FROMU_CONF_1", 0x10);
-        m_fw->SetAlpideRegister("FROMU_CONF_2", 156); //25ns per dig
-        m_fw->SetAlpideRegister("CHIP_MODE", 0x3d);
-        m_fw->SendAlpideBroadcast("RORST");
-        m_fw->SendAlpideBroadcast("PRST");
+        //m_fw->SetAlpideRegister("FROMU_CONF_1", 0x10); // 
+        m_fw->SetAlpideRegister("FROMU_CONF_2", 156); //STROBE duration
+        m_fw->SetAlpideRegister("CHIP_MODE", 0x3d); //trigger MODE
+        //m_fw->SendAlpideBroadcast("BCRST"); //bunch counter reset
+        m_fw->SendAlpideBroadcast("RORST"); //Readout (RRU/TRU/DMU) reset
+        //m_fw->SendAlpideBroadcast("PRST");  //pixel matrix reset
         m_fw->SetFirmwareRegister("TRIG_DELAY", 100); //25ns per dig (FrameDuration?)
         m_fw->SetFirmwareRegister("GAP_INT_TRIG", 20);
         m_fw->SetFirmwareRegister("FIRMWARE_MODE", 1); //run ext trigger        
@@ -181,9 +196,14 @@ public:
     m_qu_ev_to_wrt.pop_front();
     m_qu_ev_to_wrt.clear(); // only for test now, remove all events in queue
     lk_in.unlock();
-    df->Decode(1); //level 1, header-only
-    uint16_t tg =  df->GetCounter();
-    std::snprintf(m_send_buf, sizeof(m_send_buf), "Trigger ID: %u", tg);
+    df->Decode(2); //level 1, header-only
+    rapidjson::StringBuffer sb;
+    rapidjson::PrettyWriter<rapidjson::StringBuffer> w(sb);
+    df->Serialize(w);
+    // std::cout<< sb.GetString();
+    std::strcpy(m_send_buf, static_cast<const char*>(sb.GetString()));
+    // uint16_t tg =  df->GetCounter();
+    // std::snprintf(m_send_buf, sizeof(m_send_buf), "Trigger ID: %u", tg);
     // df goes to send out buffer
     return LWS_TP_RETURN_SYNC; // LWS_CALLBACK_SERVER_WRITEABLE TP_STATUS_SYNC
     //return LWS_TP_RETURN_CHECKING_IN; // "check in" to see if it has been asked to stop.

@@ -5,13 +5,15 @@
 #include "common/rapidjson/myrapidjson.h"
 
 
-// template void
-// JadeDataFrame::Serialize<rapidjson::PrettyWriter<rapidjson::StringBuffer>>
-// (rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer);
 
-// template void
-// JadeDataFrame::Serialize<rapidjson::Writer<rapidjson::StringBuffer>>
-// (rapidjson::Writer<rapidjson::StringBuffer>& writer);
+
+template void
+JadeDataFrame::Serialize<rapidjson::PrettyWriter<rapidjson::StringBuffer>>
+(rapidjson::PrettyWriter<rapidjson::StringBuffer>& ) const;
+
+template void
+JadeDataFrame::Serialize<rapidjson::Writer<rapidjson::StringBuffer>>
+(rapidjson::Writer<rapidjson::StringBuffer>& ) const;
 
 
 JadeDataFrame::JadeDataFrame(std::string&& data)

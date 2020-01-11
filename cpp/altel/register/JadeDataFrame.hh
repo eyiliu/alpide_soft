@@ -47,25 +47,30 @@ public:
     {
       w.String("level");
       w.Uint(m_level_decode);
-      w.String("trig");
+      w.String("trigger");
       w.Uint(m_counter);
       w.String("ext");
       w.Uint(m_extension);
-      w.String("nx");
-      w.Uint(m_n_x);
-      w.String("ny");
-      w.Uint(m_n_y);
-      w.String("nz");
-      w.Uint(m_n_d);
-    
-      w.String("hits");
+
+      w.String("geometry");
+      w.StartObject();
+      {
+        w.String("nx");
+        w.Uint(m_n_x);
+        w.String("ny");
+        w.Uint(m_n_y);
+        w.String("nz");
+        w.Uint(m_n_d);
+      }
+      w.EndObject();
+      
+      w.String("data");
       w.StartObject();
       {
         w.String("type");
-        w.String("array");
-        w.String("encode");
-        w.String("null");
-        w.String("data");
+        w.String("fired_pixels");
+        
+        w.String("fired_pixels");
         w.StartArray();
         {
           auto it_x = m_data_x.begin();
@@ -87,7 +92,6 @@ public:
     }
     w.EndObject();
   }
-
   
 private:
   std::string m_data_raw;
@@ -108,8 +112,6 @@ private:
   std::vector<uint16_t> m_data_d;
   std::vector<uint32_t> m_data_t;
   std::vector<uint32_t> m_data_v;
-
-
   
 };
 
