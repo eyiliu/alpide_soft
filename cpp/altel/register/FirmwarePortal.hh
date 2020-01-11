@@ -23,6 +23,17 @@ public:
   FirmwarePortal(const std::string &json_str, const std::string &ipaddr);
   void SetFirmwareRegister(const std::string& name, uint64_t value);
   void SetAlpideRegister(const std::string& name, uint64_t value);
+  void SetRegionRegister(uint64_t region, const std::string& name, uint64_t value);  
+  void SetPixelRegister(uint64_t x, uint64_t y, const std::string& name, uint64_t value); //page 70 manual 
+
+  void BroadcastRegionRegister(const std::string& name, uint64_t value);
+  void BroadcastPixelRegister(const std::string& name, uint64_t value);
+
+  
+  // uint64_t GetRegionRegister(uint64_t r, const std::string& name, uint64_t);
+  void InjectPulse();// test only, to be removed
+
+  
   void SendFirmwareCommand(const std::string& name);
   void SendAlpideCommand(const std::string& name);
   void SendAlpideBroadcast(const std::string& name);

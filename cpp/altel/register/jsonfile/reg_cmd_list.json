@@ -18,7 +18,49 @@
 	    "read":true,
 	    "write":true,
 	    "reset":"0x01FC",
-	    "description":"Mode Control register"
+	    "description":"Mode Control register",
+            "bits":[
+                {
+                    "address":[1,0],
+                    "init":0,
+                    "description":"Chip Mode selector; 0:Configuration Mode, 1:Triggered Mode, 2:Continuous Mode"
+                },
+                {
+                    "address":2,
+                    "init":1,
+                    "description":"Clustering enable; 0:Disable clustering of nearby hits, 1:Enable"
+                },
+                {
+                    "address":3,
+                    "init":1,
+                    "description":"Matrix Readout Speed; 0: Readout of one pixel hit in each region every four clock(10 MHz) 1:two clock(20 MHz)"
+                },
+                {
+                    "address":[5,4]
+                    "init":3,
+                    "description":"IB Serial Link Speed; 0:400Mb/s, 1:600Mb/s, 2,3:1200Mb/s"
+                },
+                {
+                    "address":6
+                    "init":1,
+                    "description":"Enable Skewing of Global Signals; 0:disable, 1:enable"
+                },
+                {
+                    "address":7
+                    "init":1,
+                    "description":"Enable Skewing of Start of Readout; 0:disable, 1:enable"
+                },
+                {
+                    "address":8
+                    "init":1,
+                    "description":"Enable Readout Clock Gating; 0:disable, 1:enable"
+                },
+                {
+                    "address":9
+                    "init":0,
+                    "description":"Enable Readout From CMU; 0:disable, 1:enable"
+                }                
+            ]
 	},
 	{
 	    "name":"DISABLE_REGIONS",
@@ -61,7 +103,17 @@
 	    "read":true,
 	    "write":true,
 	    "reset":"0x0010",
-	    "description":"FROMU Configuration Register 1"
+	    "description":"FROMU Configuration Register 1,  ",
+            "bits":[
+                "2:0":"Pixel MEB Mask 0",
+                "3":"Internal STROBE generation 0",
+                "4":"Enable BUSY Monitoring 1, exteral busy as internal busy",
+                "5":"Test Pulse Mode 0, 0:digital;1:analogy",
+                "6":"Enable Test STROBE 0",
+                "7":"Enable Rotate Pulse Lines 0",
+                "10:8":"Trigger Delay 0",
+                "15:11":"not used"
+            ]
 	},
 	{
 	    "name":"FROMU_CONF_2",
@@ -71,7 +123,7 @@
 	    "read":true,
 	    "write":true,
 	    "reset":"0x0014",
-	    "description":"FROMU Configuration Register 2"
+	    "description":"Duration of the STROBE pulses, n+1 clk. 0->25ns, max 1638.4us "
 	},
 	{
 	    "name":"FROMU_CONF_3",
@@ -81,7 +133,7 @@
 	    "read":true,
 	    "write":true,
 	    "reset":"0x0000",
-	    "description":"FROMU Configuration Register 3"
+	    "description":"Duration of the gap between subsequent STROBE pulses when the internal sequencer is activated. n+1 clk"
 	},
 	{
 	    "name":"FROMU_PULSING_1",
@@ -91,7 +143,7 @@
 	    "read":true,
 	    "write":true,
 	    "reset":"0x0000",
-	    "description":"FROMU Pulsing Register 1"
+	    "description":"Delay from the PULSE signal to the STROBE signal when the automatic generation of STROBE following PULSE is enabled. n+1 clk"
 	},
 	{
 	    "name":"FROMU_PULSING_2",
@@ -101,7 +153,7 @@
 	    "read":true,
 	    "write":true,
 	    "reset":"0x0000",
-	    "description":"FROMU Pulsing Register 2"
+	    "description":"Duration of the PULSE signal. n clk, 0=disabled"
 	},
 	{
 	    "name":"FROMU_STATUS_1",
@@ -110,7 +162,7 @@
 	    "words":1,
 	    "read":true,
 	    "write":false,
-	    "description":"FROMU Status Register 1"
+	    "description":"trigger counter"
 	},
 	{
 	    "name":"FROMU_STATUS_2",
@@ -119,7 +171,7 @@
 	    "words":1,
 	    "read":true,
 	    "write":false,
-	    "description":"FROMU Status Register 2"
+	    "description":"STROBE counter"
 	},
 	{
 	    "name":"FROMU_STATUS_3",
@@ -128,7 +180,7 @@
 	    "words":1,
 	    "read":true,
 	    "write":false,
-	    "description":"FROMU Status Register 3"
+	    "description":"Matrix Readout counter (finsh talk to downstream Region Readout Units)"
 	},
 	{
 	    "name":"FROMU_STATUS_4",
@@ -137,7 +189,7 @@
 	    "words":1,
 	    "read":true,
 	    "write":false,
-	    "description":"FROMU Status Register 4"
+	    "description":"Frame counter (start talk to upstream Top Readout Unit)"
 	},
 	{
 	    "name":"FROMU_STATUS_5",
@@ -146,7 +198,12 @@
 	    "words":1,
 	    "read":true,
 	    "write":false,
-	    "description":"FROMU Status Register 5"
+	    "description":"FROMU Status Register 5",
+            "bits":[
+                "11:0":"Bunch Counter",
+                "14:12":"Events in in-pixel Multi-Event Buffers",
+                "15":"STROBE/Frame window extended"
+            ]
 	},
 	{
 	    "name":"ADC_FOR_DCLK_MCLK",
@@ -297,6 +354,141 @@
 	    "reset":"0x0008",
 	    "description":"BUSY min width"
 	},
+        
+        {
+	    "name":"REGION_DISABLE_DOUBLE_COLUMN",
+	    "address":"0x0300",
+	    "bytes":2,
+	    "words":1,
+	    "read":true,
+	    "write":true,
+	    "reset":"0x0000",
+	    "description":"Double Column Disable Register. Disable double column Priority Encoder"
+
+        },
+        {
+	    "name":"REGION_STATUS",
+	    "address":"0x0301",
+	    "bytes":2,
+	    "words":1,
+	    "read":true,
+	    "write":true,
+	    "reset":"0x0000",
+	    "description":"Region Status Register, [0]: pixel status; [1]: memory status; [2]:All Column Disabled; [3:15] not used "
+        },
+	{
+	    "name":"REGION_COLUMN_SELECT",
+	    "address":[
+		"REGION_COLUMN_SELECT_L",
+		"REGION_COLUMN_SELECT_H"
+	    ],
+	    "bytes":4,
+	    "words":2,
+	    "endian":"LE",
+	    "read":true,
+	    "write":true,
+	    "description":"Column Selection"
+	},
+        {
+	    "name":"REGION_COLUMN_SELECT_L",
+	    "address":"0x0401",
+	    "bytes":2,
+	    "words":1,
+	    "read":true,
+	    "write":true,
+	    "reset":"0xffff",
+	    "description":"Column Selection Slice 1 (LOW)"
+        },
+        {
+	    "name":"REGION_COLUMN_SELECT_H",
+	    "address":"0x0402",
+	    "bytes":2,
+	    "words":1,
+	    "read":true,
+	    "write":true,
+	    "reset":"0xffff",
+	    "description":"Column Selection Slice 2 (HIGH)"
+        },
+        {
+	    "name":"REGION_ROW_SELECT",
+	    "address":"0x0404",
+	    "bytes":2,
+	    "words":1,
+	    "read":true,
+	    "write":true,
+	    "reset":"0xffff",
+	    "description":"Row Selection Slice, 16bits x 32regions = 512 row selection lines for global matrix"
+        },
+        {
+	    "name":"REGION_PLUSE_SELECT_DOUBLE_COLUMN",
+	    "address":"0x0408",
+	    "bytes":2,
+	    "words":1,
+	    "read":true,
+	    "write":true,
+	    "reset":"0xffff",
+	    "description":"Pulse Selection Slice,  double column selection for test pulse"
+        },
+        {
+            "name":"REGION_TOGGLE_COLUMN_L",
+            "address":"0x0411",
+	    "bytes":2,
+	    "words":1,
+	    "read":false,
+	    "write":true,
+	    "reset":"0x0000",
+	    "description":"Regional, toggle column selection, low. Payload data is ignored"
+        },
+        {
+            "name":"REGION_TOGGLE_COLUMN_H",
+            "address":"0x0412",
+	    "bytes":2,
+	    "words":1,
+	    "read":false,
+	    "write":true,
+	    "reset":"0x0000",
+	    "description":"Regional, toggle column selection, high. Payload data is ignored"
+        },
+        {
+            "name":"REGION_TOGGLE_COLUMN",
+            "address":"0x0413",
+	    "bytes":2,
+	    "words":1,
+	    "read":false,
+	    "write":true,
+	    "reset":"0x0000",
+	    "description":"Regional, toggle column selection. Payload data is ignored"
+        },
+        {
+            "name":"REGION_TOGGLE_ROW",
+            "address":"0x0414",
+	    "bytes":2,
+	    "words":1,
+	    "read":false,
+	    "write":true,
+	    "reset":"0x0000",
+	    "description":"Regional, toggle row selection. Payload data is ignored"
+        },
+        {
+            "name":"REGION_TOGGLE_COLUMN_ROW",
+            "address":"0x0417",
+	    "bytes":2,
+	    "words":1,
+	    "read":false,
+	    "write":true,
+	    "reset":"0x0000",
+	    "description":"Regional, toggle comumn and row selection. Payload data is ignored"
+        },
+        {
+	    "name":"TODO_MASK_PULSE",
+	    "address":"0x0487",
+	    "bytes":2,
+	    "words":1,
+	    "read":false,
+	    "write":true,
+	    "reset":"0x0000",
+	    "description":"All columns and rows are selected, need to toggle"
+	},
 	{
 	    "name":"PIX_CONF_GLOBAL",
 	    "address":"0x0500",
@@ -305,8 +497,8 @@
 	    "read":true,
 	    "write":true,
 	    "reset":"0x0000",
-	    "description":"Pixel Configuration Register (global)"
-	},
+	    "description":"Pixel Configuration Register, [0]: ROWREGM_SEL (Value 0: MASK_EN, 1: PULSE_EN); [1]: PIXCNFG_DATA"
+	},      
 	{
 	    "name":"ANALOG_MON_OVERRIDE",
 	    "address":"0x0600",
@@ -325,6 +517,7 @@
 	    "read":true,
 	    "write":true,
 	    "reset":"0x0075",
+            "nominal":117,
 	    "description":"VRESETP"
 	},
 	{
@@ -335,6 +528,7 @@
 	    "read":true,
 	    "write":true,
 	    "reset":"0x0000",
+            "nominal":147,
 	    "description":"VRESETD"
 	},
 	{
@@ -345,6 +539,7 @@
 	    "read":true,
 	    "write":true,
 	    "reset":"0x0056",
+            "nominal":86,
 	    "description":"VCASP"
 	},
 	{
@@ -355,7 +550,8 @@
 	    "read":true,
 	    "write":true,
 	    "reset":"0x0039",
-	    "description":"VCASN"
+            "nominal":57,
+	    "description":"VCASN Chenfei50"
 	},
 	{
 	    "name":"VPULSEH",
@@ -365,7 +561,8 @@
 	    "read":true,
 	    "write":true,
 	    "reset":"0x00ff",
-	    "description":""
+            "nominal":255,
+	    "description":"VPULSE high"
 	},
 	{
 	    "name":"VPULSEL",
@@ -375,7 +572,8 @@
 	    "read":true,
 	    "write":true,
 	    "reset":"0x0000",
-	    "description":"VPULSEL"
+            "nominal":0,
+	    "description":"VPULSE low"
 	},
 	{
 	    "name":"VCASN2",
@@ -385,7 +583,8 @@
 	    "read":true,
 	    "write":true,
 	    "reset":"0x0040",
-	    "description":"VCASN2"
+            "nominal":62,
+	    "description":"VCASN2 Chenfei63"
 	},
 	{
 	    "name":"VCLIP",
@@ -395,6 +594,7 @@
 	    "read":true,
 	    "write":true,
 	    "reset":"0x0000",
+            "nominal":0,
 	    "description":"VCLIP"
 	},
 	{
@@ -425,6 +625,7 @@
 	    "read":true,
 	    "write":true,
 	    "reset":"0x0032",
+            "nominal":50,
 	    "description":"IRESET"
 	},
 	{
@@ -435,6 +636,7 @@
 	    "read":true,
 	    "write":true,
 	    "reset":"0x0040",
+            "nominal":64,
 	    "description":"IDB"
 	},
 	{
@@ -445,6 +647,7 @@
 	    "read":true,
 	    "write":true,
 	    "reset":"0x0040",
+            "nominal":64,
 	    "description":"IBIAS"
 	},
 	{
@@ -455,7 +658,8 @@
 	    "read":true,
 	    "write":true,
 	    "reset":"0x0033",
-	    "description":"ITHR"
+            "nominal":51,
+	    "description":"ITHR, threshold"
 	},
 	{
 	    "name":"BUFF_BYPASS",
@@ -505,16 +709,6 @@
 	    "write":true,
 	    "reset":"0x0000",
 	    "description":"Test Control Register"
-	},
-	{
-	    "name":"TODO_MASK_PULSE",
-	    "address":"0x0487",
-	    "bytes":2,
-	    "words":1,
-	    "read":true,
-	    "write":true,
-	    "reset":"0x0000",
-	    "description":"TODO..................."
 	}
     ],
 
@@ -532,7 +726,7 @@
 	    "bytes":2,
 	    "words":1,
 	    "value":"0x00e4",
-	    "description":"Pixel matrix RESET"
+	    "description":"Pixel matrix RESET, The PULSE_EN and MASK_EN latches are not affected by PRST"
 	},
 	{
 	    "name":"PULSE",
@@ -553,7 +747,7 @@
 	    "value":"0x0063",
 	    "bytes":2,
 	    "words":1,
-	    "description":"Readout (RRU/TRU/DMU) reset"
+	    "description":"Readout (RRU/TRU/DMU) reset. This command is mandatory to commit the Initial Token bit and activates the driving of the local bus by the chip with the token."
 	},
 	{
 	    "name":"DEBUG",
