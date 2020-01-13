@@ -91,7 +91,7 @@ public:
         m_is_running_reading = true;
         m_fut_async_rd = std::async(std::launch::async, &Task_data::async_reading, this);
 
-
+        /*
         //=========== init part ========================
         m_fw->SetFirmwareRegister("FIRMWARE_MODE", 0);
         m_fw->SetFirmwareRegister("ADDR_CHIP_ID", 0x10);
@@ -138,10 +138,9 @@ public:
         m_fw->SendAlpideBroadcast("PRST");
         m_fw->SetFirmwareRegister("TRIG_DELAY", 100); //25ns per dig (FrameDuration?)
         m_fw->SetFirmwareRegister("GAP_INT_TRIG", 20);
-        m_fw->SetFirmwareRegister("FIRMWARE_MODE", 1); //run ext trigger        
-      
-
-        /*
+        m_fw->SetFirmwareRegister("FIRMWARE_MODE", 1); //run ext trigger       
+        */
+        
         //=========== init part ========================
         m_fw->SetFirmwareRegister("FIRMWARE_MODE", 0);
         m_fw->SetFirmwareRegister("ADDR_CHIP_ID", 0x10); //OB
@@ -206,7 +205,7 @@ public:
         m_fw->SetFirmwareRegister("GAP_INT_TRIG", 20);
         m_fw->SetFirmwareRegister("FIRMWARE_MODE", 1); //run ext trigger
 
-        */
+        
       };
 
       if(str_recv=="stop"){
