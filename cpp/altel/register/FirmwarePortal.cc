@@ -716,13 +716,13 @@ void FirmwarePortal::BroadcastRegionRegister(const std::string& name, uint64_t v
 
 
 void FirmwarePortal::SetPixelRegister(uint64_t x, uint64_t y, const std::string& name, uint64_t value){
-  if(name!="MASK_EN" && name=="PULSE_EN"){
+  if(name!="MASK_EN" && name!="PULSE_EN"){
     FormatPrint(std::cerr, "ERROR<%s>: unable to find register<%s>. There are MASK_EN and PULSE_EN in pixel.\n", __func__, name.c_str());
     throw;
   }
   
   uint64_t bit_ROWREGM_DATA = value? 0x0002:0x0000;
-  uint64_t bit_ROWREGM_SEL = (name=="PULSE_EN")?0x0001:0x0000;
+  uint64_t bit_ROWREGM_SEL = (name=="MASK_EN")?0x0001:0x0000; // mismatch between pALPIDE-3 and ALPIDE manual, using p3
   uint64_t conf_value = bit_ROWREGM_DATA | bit_ROWREGM_SEL;
 
   uint64_t column_line_region_number = x/32;
@@ -740,17 +740,17 @@ void FirmwarePortal::SetPixelRegister(uint64_t x, uint64_t y, const std::string&
   SetAlpideRegister("PIX_CONF_GLOBAL", conf_value);
   SetRegionRegister(column_line_region_number, "REGION_COLUMN_SELECT", column_line_number_local_pattern);
   SetRegionRegister(row_line_region_number, "REGION_ROW_SELECT", row_line_number_local_pattern);
-  BroadcastRegionRegister("REGION_TOGGLE_COLUMN_ROW", 0); //toggle all regional change 
+  BroadcastRegionRegister("REGION_TOGGLE_COLUMN_ROW", 0); //toggle all regional change (only selected)
 }
 
 void FirmwarePortal::BroadcastPixelRegister(const std::string& name, uint64_t value){
-  if(name!="MASK_EN" && name=="PULSE_EN"){
+  if(name!="MASK_EN" && name!="PULSE_EN"){
     FormatPrint(std::cerr, "ERROR<%s>: unable to find register<%s>. There are MASK_EN and PULSE_EN in pixel.\n", __func__, name.c_str());
     throw;
   }
   
   uint64_t bit_ROWREGM_DATA = value? 0x0002:0x0000;
-  uint64_t bit_ROWREGM_SEL = (name=="PULSE_EN")?0x0001:0x0000;
+  uint64_t bit_ROWREGM_SEL = (name=="MASK_EN")?0x0001:0x0000;
   uint64_t conf_value = bit_ROWREGM_DATA | bit_ROWREGM_SEL;
 
   BroadcastRegionRegister("REGION_COLUMN_SELECT", 0);

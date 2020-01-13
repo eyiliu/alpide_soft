@@ -497,8 +497,8 @@
 	    "read":true,
 	    "write":true,
 	    "reset":"0x0000",
-	    "description":"Pixel Configuration Register, [0]: ROWREGM_SEL (Value 0: MASK_EN, 1: PULSE_EN); [1]: PIXCNFG_DATA"
-	},      
+	    "description":"Pixel Configuration Register, [0]: ROWREGM_SEL (NOTE mismath between manuals: true:MASK_EN at p3 manual, true:PULSE_EN at alpide manual, using p3); [1]: PIXCNFG_DATA"
+	}, 
 	{
 	    "name":"ANALOG_MON_OVERRIDE",
 	    "address":"0x0600",
