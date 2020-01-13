@@ -84,6 +84,9 @@ public:
             w.Uint(*it_y);
             w.String("z");
             w.Uint(*it_z);
+            it_x++;
+            it_y++;
+            it_z++;
           }
         }
         w.EndArray();

@@ -41,6 +41,7 @@ public:
   
   std::mutex m_mx_recv;
   std::deque<std::string> m_qu_recv;  
+  uint64_t ev_printed{0};
 
   bool m_flag_call_back_closed{false};
   bool m_is_running_reading{false};
@@ -60,7 +61,7 @@ public:
   
   lws_threadpool_task_return
   task_exe(lws_threadpool_task_status s){
-    std::cout<< "."<<s;
+    std::cout<< " .";
     if ( (s != LWS_TP_STATUS_RUNNING) || m_flag_call_back_closed){
       std::cout<< "my stopping "<<std::endl;
       m_is_running_reading = false;
@@ -91,62 +92,14 @@ public:
         m_is_running_reading = true;
         m_fut_async_rd = std::async(std::launch::async, &Task_data::async_reading, this);
 
-        /*
         //=========== init part ========================
-        m_fw->SetFirmwareRegister("FIRMWARE_MODE", 0);
-        m_fw->SetFirmwareRegister("ADDR_CHIP_ID", 0x10);
-        m_fw->SendAlpideBroadcast("GRST");
-        m_fw->SetAlpideRegister("CMU_DMU_CONF", 0x70);
-        m_fw->SetAlpideRegister("FROMU_CONF_1", 0x10);
-        m_fw->SetAlpideRegister("FROMU_CONF_2", 0x28);
-        m_fw->SetAlpideRegister("VRESETP", 0x75);
-        m_fw->SetAlpideRegister("VRESETD", 0x93);
-        m_fw->SetAlpideRegister("VCASP", 0x56);
-        m_fw->SetAlpideRegister("VCASN", 0x32);
-        m_fw->SetAlpideRegister("VPULSEH", 0xff);
-        m_fw->SetAlpideRegister("VPULSEL", 0x0);
-        m_fw->SetAlpideRegister("VCASN2", 0x39); // TODO: reset value is 0x40
-        m_fw->SetAlpideRegister("VCLIP", 0x0);
-        m_fw->SetAlpideRegister("VTEMP", 0x0);
-        m_fw->SetAlpideRegister("IAUX2", 0x0);
-        m_fw->SetAlpideRegister("IRESET", 0x32);
-        m_fw->SetAlpideRegister("IDB", 0x40);
-        m_fw->SetAlpideRegister("IBIAS", 0x40);
-        m_fw->SetAlpideRegister("ITHR", 0x32); //empty 0x32; 0x12 data, not full.
-        m_fw->SetAlpideRegister("TEST_CTRL", 0x400); // ?
-        m_fw->SetAlpideRegister("TODO_MASK_PULSE", 0xffff);
-        m_fw->SetAlpideRegister("PIX_CONF_GLOBAL", 0x0);
-        m_fw->SetAlpideRegister("PIX_CONF_GLOBAL", 0x1);
-        m_fw->SetAlpideRegister("CHIP_MODE", 0x3c);
-        m_fw->SendAlpideBroadcast("RORST");
-        //PLL part
-        m_fw->SetAlpideRegister("DTU_CONF", 0x008d);
-        m_fw->SetAlpideRegister("DTU_DAC",  0x0088);
-        m_fw->SetAlpideRegister("DTU_CONF", 0x0085);
-        m_fw->SetAlpideRegister("DTU_CONF", 0x0185);
-        m_fw->SetAlpideRegister("DTU_CONF", 0x0085);
-        //===========end of init part ======================
-
-        m_fw->SetAlpideRegister("TODO_MASK_PULSE", 0xffff);
-        m_fw->SetAlpideRegister("PIX_CONF_GLOBAL", 0x0);
-        m_fw->SetAlpideRegister("TODO_MASK_PULSE", 0xffff);
-        m_fw->SetAlpideRegister("PIX_CONF_GLOBAL", 0x1);
-        m_fw->SetAlpideRegister("FROMU_CONF_1", 0x10);
-        m_fw->SetAlpideRegister("FROMU_CONF_2", 156); //25ns per dig
-        m_fw->SetAlpideRegister("CHIP_MODE", 0x3d);
-        m_fw->SendAlpideBroadcast("RORST");
-        m_fw->SendAlpideBroadcast("PRST");
-        m_fw->SetFirmwareRegister("TRIG_DELAY", 100); //25ns per dig (FrameDuration?)
-        m_fw->SetFirmwareRegister("GAP_INT_TRIG", 20);
-        m_fw->SetFirmwareRegister("FIRMWARE_MODE", 1); //run ext trigger       
-        */
-        
-        //=========== init part ========================
+        // 3.8 Chip initialization
+        // GRST
         m_fw->SetFirmwareRegister("FIRMWARE_MODE", 0);
         m_fw->SetFirmwareRegister("ADDR_CHIP_ID", 0x10); //OB
         m_fw->SendAlpideBroadcast("GRST"); // chip global reset
-        m_fw->SetAlpideRegister("CMU_DMU_CONF", 0x70); //disable MCH encoding, enable DDR, no previous OB
-        m_fw->SetAlpideRegister("FROMU_CONF_1", 0x10); //reset init status
+        m_fw->SetAlpideRegister("CHIP_MODE", 0x3c); // configure mode
+        // DAC setup
         m_fw->SetAlpideRegister("VRESETP", 0x75); //117
         m_fw->SetAlpideRegister("VRESETD", 0x93); //147
         m_fw->SetAlpideRegister("VCASP", 0x56);   //86
@@ -160,52 +113,39 @@ public:
         m_fw->SetAlpideRegister("IRESET", 0x32);  //50
         m_fw->SetAlpideRegister("IDB", 0x40);     //64
         m_fw->SetAlpideRegister("IBIAS", 0x40);   //64
-        m_fw->SetAlpideRegister("ITHR", 0x32);    //51  empty 0x32; 0x12 data, not full.  0x33 default, threshold
-
-        // 3.8 Chip initialization
-        // GRST
+        m_fw->SetAlpideRegister("ITHR", 40);    //51  empty 0x32; 0x12 data, not full.  0x33 default, threshold
         // 3.8.1 Configuration of in-pixel logic
-        m_fw->SetAlpideRegister("TEST_CTRL", 0x400); // Force Disable Busy Line
-        m_fw->SetAlpideRegister("TODO_MASK_PULSE", 0xffff);
-        m_fw->SetAlpideRegister("PIX_CONF_GLOBAL", 0x0);
-        m_fw->SetAlpideRegister("PIX_CONF_GLOBAL", 0x1);
-        m_fw->SetAlpideRegister("CHIP_MODE", 0x3c); // configure mode
-        m_fw->SendAlpideBroadcast("RORST"); // need?
-        
+        m_fw->SendAlpideBroadcast("PRST");  //pixel matrix reset
+        m_fw->BroadcastPixelRegister("MASK_EN", 0);
+        m_fw->BroadcastPixelRegister("PULSE_EN", 0);
+        // m_fw->SendAlpideBroadcast("PRST");  //pixel matrix reset
         // 3.8.2 Configuration and start-up of the Data Transmission Unit, PLL
         m_fw->SetAlpideRegister("DTU_CONF", 0x008d);
         m_fw->SetAlpideRegister("DTU_DAC",  0x0088);
         m_fw->SetAlpideRegister("DTU_CONF", 0x0085);
         m_fw->SetAlpideRegister("DTU_CONF", 0x0185);
         m_fw->SetAlpideRegister("DTU_CONF", 0x0085);
-
         // 3.8.3 Setting up of readout
         // 3.8.3.1a (OB) Setting CMU and DMU Configuration Register
         // Previous Chip
+        m_fw->SetAlpideRegister("CMU_DMU_CONF", 0x70); //disable MCH encoding, enable DDR, no previous OB
+        m_fw->SetAlpideRegister("TEST_CTRL", 0x400); //Disable Busy Line
         // Initial Token 1
         // 3.8.3.2 Setting FROMU Configuration Registers and enabling readout mode
         // FROMU Configuration Register 1,2
-        // FROMU Pulsing Register 1,2
-        // Periphery Control Register (CHIP MODE)
-        // RORST 
-        //===========end of init part ======================
-        
-        m_fw->SetAlpideRegister("TODO_MASK_PULSE", 0xffff);
-        m_fw->SetAlpideRegister("PIX_CONF_GLOBAL", 0x0);
-        m_fw->SetAlpideRegister("TODO_MASK_PULSE", 0xffff);
-        m_fw->SetAlpideRegister("PIX_CONF_GLOBAL", 0x1);
-        m_fw->SetAlpideRegister("FROMU_CONF_1", 0x10); // 
+        m_fw->SetAlpideRegister("FROMU_CONF_1", 0x00); //Disable external busy
         m_fw->SetAlpideRegister("FROMU_CONF_2", 156); //STROBE duration
-        //m_fw->SetAlpideRegister("FROMU_PULSING_2", 0xffff); //yiliu: test pulse duration, max  
+        // FROMU Pulsing Register 1,2
+        m_fw->SetAlpideRegister("FROMU_PULSING_2", 0xffff); //yiliu: test pulse duration, max  
+        // Periphery Control Register (CHIP MODE)
         m_fw->SetAlpideRegister("CHIP_MODE", 0x3d); //trigger MODE
-        //m_fw->SendAlpideBroadcast("BCRST"); //bunch counter reset
+        // RORST 
         m_fw->SendAlpideBroadcast("RORST"); //Readout (RRU/TRU/DMU) reset
-        m_fw->SendAlpideBroadcast("PRST");  //pixel matrix reset
+        //===========end of init part =====================
+        
         m_fw->SetFirmwareRegister("TRIG_DELAY", 100); //25ns per dig (FrameDuration?)
         m_fw->SetFirmwareRegister("GAP_INT_TRIG", 20);
         m_fw->SetFirmwareRegister("FIRMWARE_MODE", 1); //run ext trigger
-
-        
       };
 
       if(str_recv=="stop"){
@@ -238,10 +178,9 @@ public:
 
     //============ data send ====================
     // m_fw->SendAlpideBroadcast("PULSE");
-
     std::unique_lock<std::mutex> lk_in(m_mx_ev_to_wrt);
     while(m_qu_ev_to_wrt.empty()){
-      while(m_cv_valid_ev_to_wrt.wait_for(lk_in, 200ms) ==std::cv_status::timeout){
+      while(m_cv_valid_ev_to_wrt.wait_for(lk_in, 100ms) ==std::cv_status::timeout){
         return LWS_TP_RETURN_CHECKING_IN;
       }
     }
@@ -254,17 +193,32 @@ public:
     while(qu_df.size()){
       auto df = qu_df.front();
       qu_df.pop_front();      
-      df->Decode(2); //level 1, header-only
+      df->Decode(3); //level 1, header-only
       if(df->Data_X().empty()){
         //skip empty
         std::cout<<"*";
         continue;
-      }
-      has_hit = true;
-      rapidjson::StringBuffer sb;
-      rapidjson::PrettyWriter<rapidjson::StringBuffer> w(sb);
-      df->Serialize(w);
-      std::cout<< sb.GetString();
+      }else{
+        std::cout<<"+";
+        // ev_printed ++;
+        // if(ev_printed > 1)
+        //   continue;
+        std::cout<<df->Data_X().size();
+        has_hit = true;
+        rapidjson::StringBuffer sb;
+        // std::cout<<"init sb"<<std::endl;
+        rapidjson::Writer<rapidjson::StringBuffer> w(sb);
+        // std::cout<<"init wr"<<std::endl;
+        df->Serialize(w);
+        // std::cout<<"ser wr"<<std::endl;
+        std::cout<< "\n"<<sb.GetString();
+      } 
+      // has_hit = true;
+      // rapidjson::StringBuffer sb;
+      // rapidjson::PrettyWriter<rapidjson::StringBuffer> w(sb);
+      // df->Serialize(w);
+      // std::cout<< sb.GetString();
+
       // std::strcpy(m_send_buf, static_cast<const char*>(sb.GetString()));
     }
     // if(has_hit)
