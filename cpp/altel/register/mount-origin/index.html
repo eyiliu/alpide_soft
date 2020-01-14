@@ -1,7 +1,11 @@
 <html>
   <head>
     <meta charset=utf-8 http-equiv="Content-Language" content="en"/>
+    <script src="/js/d3.v4.js"></script>
+    <script src="/js/d3-scale-chromatic.v1.min.js"></script>
+
     <script src="/example.js"></script>
+    <script src="/colorblocks.js"></script>
   </head>
   <body>
     <b>ALPIDE ioctl/reader</b>
@@ -14,5 +18,10 @@
     <button id=stop>STOP</button>
     <br>
     <textarea id=r readonly cols=100 rows=30></textarea><br>
+
+    <input type="text" id="text-input" value="5000">
+    <div id="text-explain">...takes numbers between 1 and 10k</div>
+    <div id="container"></div>
+    <div id="tooltip">hello</div>
   </body>
 </html>
