@@ -3,25 +3,61 @@
     <meta charset=utf-8 http-equiv="Content-Language" content="en"/>
     <script src="/js/d3.v4.js"></script>
     <script src="/js/d3-scale-chromatic.v1.min.js"></script>
-
+    <link rel = "stylesheet" type = "text/css" href = "style.css" />
     <script src="/example.js"></script>
     <script src="/colorblocks.js"></script>
+    <script src="/js/openTAB.js"></script>
   </head>
   <body>
-    <b>ALPIDE ioctl/reader</b>
-    <br>
-    <br>
-    <input type="text" id=m cols=40 rows=1>
-    <button id=b>SEND</button>
-    <button id=conf>CONF</button>
-    <button id=start>START</button>
-    <button id=stop>STOP</button>
-    <br>
-    <textarea id=r readonly cols=100 rows=30></textarea><br>
+    <div class="tab">
+      <button class="tablinks" id=btn_alpide0 >ALPIDE0</button>
+      <button class="tablinks" id=btn_alpide1 >ALPIDE1</button>
+      <button class="tablinks" id=btn_alpide2 >ALPIDE2</button>
+      <button class="tablinks" id=btn_alpide3 >ALPIDE3</button>
+      <button class="tablinks" id=btn_alpide4 >ALPIDE4</button>
+      <button class="tablinks" id=btn_alpide5 >ALPIDE5</button>
+    </div>    
+    
+    <div id="tab_alpide0" class="tabcontent">
+      <h3>ALPIDE0</h3>
+      <b>ALPIDE ioctl/reader</b>
+      <br>
+      <br>
+      <input type="text" id=m cols=40 rows=1>
+      <button id=b>SEND</button>
+      <button id=conf>CONF</button>
+      <button id=start>START</button>
+      <button id=stop>STOP</button>
+      <br>
+      <textarea id=r readonly cols=100 rows=30></textarea><br>
+    </div>
 
-    <input type="text" id="text-input" value="5000">
-    <div id="text-explain">...takes numbers between 1 and 10k</div>
-    <div id="container"></div>
-    <div id="tooltip">hello</div>
+    <div id="tab_alpide1" class="tabcontent">
+      <h3>ALPIDE1</h3>          
+      <h3>Hits map</h3>
+      <input type="text" id="text-input" value="5000">
+      <div id="text-explain">...takes numbers between 1 and 10k</div>
+      <div id="container"></div>
+      <div id="tooltip">hello</div>
+    </div>
+
+    <div id="tab_alpide2" class="tabcontent">
+      <h3>ALPIDE2</h3>
+    </div>
+    
+    <div id="tab_alpide3" class="tabcontent">
+      <h3>ALPIDE3</h3>
+      <div id="vis"></div>      
+      <!-- <div id="vis1"></div> -->
+      <!-- <canvas id="orthogonal-map" class="canvas-map" ></canvas> -->
+    </div>
+
+    <div id="tab_alpide4" class="tabcontent">
+      <h3>ALPIDE4</h3>
+    </div>
+
+    <div id="tab_alpide5" class="tabcontent">
+      <h3>ALPIDE5</h3>
+    </div>
   </body>
 </html>
