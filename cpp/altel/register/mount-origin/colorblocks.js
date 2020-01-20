@@ -3,6 +3,7 @@ function DOMContentLoadedListener() {
     // settings for a grid with 40 cells in a row and 2x5 cells in a group
     var cellNumberX = 256;
     var cellNumberY = 128;
+    var cellNumber = cellNumberX * cellNumberY;
     var groupCellNumberX = 8;
     var groupCellNumberY = 128;
     var groupNumberX = Math.ceil(cellNumberX / groupCellNumberX);
@@ -15,12 +16,10 @@ function DOMContentLoadedListener() {
     
     var width =  groupSpacingX * (groupNumberX +1 ) + (cellSize + cellSpacing) * cellNumberX;
     var height = groupSpacingY * (groupNumberY +1 ) + (cellSize + cellSpacing) * cellNumberY;    
-    var value = cellNumberX * cellNumberY;
     
     var data = [];
-    d3.range(value).forEach(function(el) {        
-        data.push({ value: el });
-    });
+    var data_n = d3.range(0, cellNumber, 1);
+    data_n.forEach( function(d) { data.push({ value: d, x: d/10});}); 
     
     var mainCanvas = d3.select('#container')
         .append('canvas')
@@ -34,9 +33,14 @@ function DOMContentLoadedListener() {
     databind(data);
     var t = d3.timer(function(elapsed) {draw(mainCanvas);if (elapsed > 300) t.stop();});
     
+
     // === Bind and draw functions === //
     function databind(data) {
-        var colorScale = d3.scaleSequential(d3.interpolateSpectral).domain(d3.extent(data, function(d) { return d.value; }));        
+        // var colorScale = d3.scaleSequential(d3.interpolateSpectral).domain(d3.extent(data, function(d) { return d.value; })); 
+        var colorScale = d3.scaleSequential()
+            .domain([0, cellNumber])
+            .interpolator(d3.interpolateRainbow);
+
         var join = custom.selectAll('custom.rect').data(data);
         var enterSel = join.enter()
 	    .append('custom')
