@@ -1,5 +1,5 @@
 
-function DOMContentLoadedListener() {
+function DOMContentLoadedListener_colorblocks() {
     // settings for a grid with 40 cells in a row and 2x5 cells in a group
     var cellNumberX = 256;
     var cellNumberY = 128;
@@ -63,6 +63,15 @@ function DOMContentLoadedListener() {
 	    .attr('width', cellSize)
 	    .attr('height', cellSize)
 	    .attr('fillStyle', function(d) { return colorScale(d.value); })
+
+
+
+        var exitSel = join.exit()
+	    .transition()
+	    .attr('width', 0)
+	    .attr('height', 0)
+	    .remove();
+
     } // databind()
 
     function draw(canvas) { // <---- new arguments
@@ -77,4 +86,4 @@ function DOMContentLoadedListener() {
     }
 }
 
-document.addEventListener("DOMContentLoaded", DOMContentLoadedListener, false);
+document.addEventListener("DOMContentLoaded", DOMContentLoadedListener_colorblocks, false);

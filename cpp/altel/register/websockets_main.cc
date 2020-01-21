@@ -215,7 +215,7 @@ public:
       } 
       // has_hit = true;
       // rapidjson::StringBuffer sb;
-      // rapidjson::PrettyWriter<rapidjson::StringBuffer> w(sb);
+      // rapidjson::Writer<rapidjson::StringBuffer> w(sb);
       // df->Serialize(w);
       // std::cout<< sb.GetString();
 

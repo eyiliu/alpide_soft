@@ -68,22 +68,22 @@ public:
       w.StartObject();
       {
         w.String("type");
-        w.String("fired_pixels");
+        w.String("hit_xyz_array");
         
-        w.String("fired_pixels");
+        w.String("hit_xyz_array");
         w.StartArray();
         {
           auto it_x = m_data_x.begin();
           auto it_y = m_data_y.begin();
           auto it_z = m_data_d.begin();
           while(it_x!=m_data_x.end()){
-            w.StartObject();
-            w.String("x");
-            w.Uint(*it_x);
-            w.String("y");
-            w.Uint(*it_y);
-            w.String("z");
-            w.Uint(*it_z);
+            w.StartArray();
+            {
+              w.Uint(*it_x);
+              w.Uint(*it_y);
+              w.Uint(*it_z);
+            }
+            w.EndArray();
             it_x++;
             it_y++;
             it_z++;
