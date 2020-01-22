@@ -2,8 +2,8 @@ var head = 0, tail = 0, ring = new Array();
 
 function get_appropriate_ws_url(extra_url)
 {
-    var pcol;
-    var u = document.URL;
+    let pcol;
+    let u = document.URL;
 
     /*
      * We open the websocket encrypted if this page came on an
@@ -37,7 +37,7 @@ function new_ws(urlpath, protocol)
 
 function DOMContentLoadedListener() {
 
-    var n, wsa = new Array, alive = 0;
+    let n, wsa = new Array, alive = 0;
     
     for (n = 0; n < 1; n++) {
 	
@@ -50,7 +50,7 @@ function DOMContentLoadedListener() {
 	    };
 
 	    ws.onmessage = function got_packet(msg) {
-		var n, s = "";
+		let n, s = "";
 		
 		ring[head] = msg.data + "\n";
 		head = (head + 1) % 50;
