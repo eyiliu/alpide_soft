@@ -36,9 +36,7 @@ function new_ws(urlpath, protocol)
 
 
 function DOMContentLoadedListener() {
-
-    let n, wsa = new Array, alive = 0;
-    
+    let n, wsa = new Array, alive = 0;    
     for (n = 0; n < 1; n++) {
 	
 	ws = new_ws(get_appropriate_ws_url(""), "lws-minimal");

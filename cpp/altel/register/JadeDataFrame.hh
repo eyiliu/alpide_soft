@@ -45,54 +45,49 @@ public:
   void Serialize(W& w) const {
     w.StartObject();
     {
-      w.String("level");
-      w.Uint(m_level_decode);
-      w.String("trigger");
-      w.Uint(m_counter);
-      w.String("ext");
-      w.Uint(m_extension);
+      w.String("detector_type");
+      w.String("alpide");
 
       w.String("geometry");
-      w.StartObject();
+      w.StartArray();
       {
-        w.String("nx");
         w.Uint(m_n_x);
-        w.String("ny");
         w.Uint(m_n_y);
-        w.String("nz");
         w.Uint(m_n_d);
       }
-      w.EndObject();
+      w.EndArray();
       
-      w.String("data");
-      w.StartObject();
+      w.String("trigger");
+      w.Uint(m_counter);
+
+      w.String("ext");
+      w.Uint(m_extension);
+      
+      w.String("data_type");
+      w.String("hit_xyz_array");
+      
+      w.String("hit_xyz_array");
+      w.StartArray();
       {
-        w.String("type");
-        w.String("hit_xyz_array");
-        
-        w.String("hit_xyz_array");
-        w.StartArray();
-        {
-          auto it_x = m_data_x.begin();
-          auto it_y = m_data_y.begin();
-          auto it_z = m_data_d.begin();
-          while(it_x!=m_data_x.end()){
-            w.StartArray();
-            {
-              w.Uint(*it_x);
-              w.Uint(*it_y);
-              w.Uint(*it_z);
-            }
-            w.EndArray();
-            it_x++;
-            it_y++;
-            it_z++;
+        auto it_x = m_data_x.begin();
+        auto it_y = m_data_y.begin();
+        auto it_z = m_data_d.begin();
+        while(it_x!=m_data_x.end()){
+          w.StartArray();
+          {
+            w.Uint(*it_x);
+            w.Uint(*it_y);
+            w.Uint(*it_z);
           }
+          w.EndArray();
+          it_x++;
+          it_y++;
+          it_z++;
         }
-        w.EndArray();
       }
-      w.EndObject();
+      w.EndArray();
     }
+    w.EndArray();
     w.EndObject();
   }
   

@@ -20,6 +20,7 @@ function openTAB(btnName, tabName) {
 } 
 
 function DOMContentLoadedListener() {
+    document.getElementById("btn_aux0").addEventListener("click", function(){openTAB("btn_aux0","tab_aux0")});
     document.getElementById("btn_alpide0").addEventListener("click", function(){openTAB("btn_alpide0","tab_alpide0")});
     document.getElementById("btn_alpide1").addEventListener("click", function(){openTAB("btn_alpide1","tab_alpide1")});
     document.getElementById("btn_alpide2").addEventListener("click", function(){openTAB("btn_alpide2","tab_alpide2")});
@@ -27,7 +28,7 @@ function DOMContentLoadedListener() {
     document.getElementById("btn_alpide4").addEventListener("click", function(){openTAB("btn_alpide4","tab_alpide4")});
     document.getElementById("btn_alpide5").addEventListener("click", function(){openTAB("btn_alpide5","tab_alpide5")});
 
-    openTAB("btn_alpide0","tab_alpide0");
+    openTAB("btn_aux0","tab_aux0");
 }
 
     
