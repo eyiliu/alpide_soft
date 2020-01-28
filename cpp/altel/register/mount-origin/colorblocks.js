@@ -51,46 +51,23 @@ function getEventArray(){
 }
 //
 
-function updateCanvas(canvas, custom) {
-    let context = canvas.node().getContext('2d');
-    let u = custom.selectAll('custom.rect');
-    u.each(function(d,i) {
-        if(d.hit_count !== d.hit_count_old ){
-            let node = d3.select(this);
-	    context.fillStyle =  node.attr('fillStyle');
-	    context.fillRect(node.attr('x'), node.attr('y'), node.attr('width'), node.attr('height'))
-            node = null;
-        }
-    });
-    
-}
-
-// 
 let colorScale = d3.scaleSequential()
     .domain([0, 256])
     .interpolator(d3.interpolatePlasma);
 
-function databind(data, custom) {
-    // https://www.d3indepth.com/enterexit/
-    let u = custom
-        .selectAll('custom.rect')
-        .data(data);
-
-    u.enter()
-	.append('custom')
-        .merge(u)
-    	.attr('class', 'rect')
-	.attr('x', function(d, i) {return d.x_position;})
-	.attr('y', function(d, i) {return d.y_position;})
-        .attr('width', cellSize)
-        .attr('height', cellSize)
-        .attr('fillStyle', function(d) { return colorScale(d.hit_count); }  )
-    
-    u.exit()
-        .attr('width', 0)
-        .attr('height', 0)
-        .remove();
+function updateCanvas(canvas) {
+    let context = canvas.node().getContext('2d');
+    for(d of data){
+        if(! d.flushed){
+            d.flushed = true;
+            context.fillStyle = colorScale(d.hit_count);
+            context.fillRect(d.x_position, d.y_position, cellSize, cellSize);
+        }
+    }
 }
+
+// 
+
 
 function DOMContentLoadedListener_colorblocks() {
     for( let i = 0; i<cellNumber; i++ ){
@@ -100,12 +77,9 @@ function DOMContentLoadedListener_colorblocks() {
         let yg = Math.floor(y1 / groupCellNumberY);
         let x = (cellSpacing + cellSize) * x1 + groupSpacingX * (xg+1);
         let y = (cellSpacing + cellSize) * y1 + groupSpacingY * (yg+1);
-        data.push( { hit_count: 0, hit_count_old: 0, x_position: x, y_position: y} );
+        data.push( { hit_count: 0, flushed: true, x_position: x, y_position: y} );
     }
     
-    let customBase = document.createElement('custom');
-    let custom = d3.select(customBase); // this is our svg replacement
-
     let mainCanvas = d3.select('#container0')
         .append('canvas')
         .classed('mainCanvas', true)
@@ -128,18 +102,16 @@ function DOMContentLoadedListener_colorblocks() {
                 cellX=Math.floor(pixelX/scalerFactorX);
                 cellY=Math.floor(pixelY/scalerFactorY);
                 cellN= cellX + cellNumberX * cellY;
-                let hit_count_old = data[cellN].hit_count;
-                data[cellN].hit_count_old =  hit_count_old;
                 data[cellN].hit_count += 1;
+                data[cellN].flushed = false;
             }
         }
-        databind(data, custom);
         setTimeout(dummyEventTimer, 100);
     }
 
     updateCanvasTimer();
     function updateCanvasTimer(){
-        updateCanvas(mainCanvas, custom);
+        updateCanvas(mainCanvas);
         setTimeout(updateCanvasTimer, 1000);
     }
 }
