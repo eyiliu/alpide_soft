@@ -1,5 +1,6 @@
 
 let alive = 0;
+let wsa = [];
 
 function get_appropriate_ws_url(extra_url){
     let pcol;
@@ -35,7 +36,6 @@ function on_ws_close(){
 };
 
 function DOMContentLoadedListener() {
-    let wsa = [];
     ws = new_ws(get_appropriate_ws_url(""), "lws-minimal");
     wsa.push(ws);
     ws.onopen = on_ws_open;
@@ -71,6 +71,5 @@ function DOMContentLoadedListener() {
     
     document.getElementById("b").addEventListener("click", sendmsg);   
 }
-
 
 document.addEventListener("DOMContentLoaded", DOMContentLoadedListener, false);

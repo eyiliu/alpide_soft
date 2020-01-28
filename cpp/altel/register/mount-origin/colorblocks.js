@@ -1,3 +1,4 @@
+
 // matrix size
 let pixelNumberX = 1024;
 let pixelNumberY = 512;
@@ -16,7 +17,7 @@ let groupCellNumberY = Math.ceil(groupPixelNumberY/scalerFactorY);
 let groupNumberX = Math.ceil(cellNumberX / groupCellNumberX);
 let groupNumberY = Math.ceil(cellNumberY / groupCellNumberY);
 
-let groupSpacingX = 3;
+let groupSpacingX = 1;
 let groupSpacingY = 1;
 let cellSpacing = 1;
 let cellSize = 2;
@@ -50,25 +51,26 @@ function getEventArray(){
 }
 //
 
-// global width, height
 function updateCanvas(canvas, custom) {
     let context = canvas.node().getContext('2d');
-    context.clearRect(0, 0, canvas.width, canvas.height);  //clear full canvas
     let u = custom.selectAll('custom.rect');
     u.each(function(d,i) {
-	let node = d3.select(this);
-	context.fillStyle =  node.attr('fillStyle');
-	context.fillRect(node.attr('x'), node.attr('y'), node.attr('width'), node.attr('height'))
-        node = null;
+        if(d.hit_count !== d.hit_count_old ){
+            let node = d3.select(this);
+	    context.fillStyle =  node.attr('fillStyle');
+	    context.fillRect(node.attr('x'), node.attr('y'), node.attr('width'), node.attr('height'))
+            node = null;
+        }
     });
+    
 }
 
 // 
-function databind(data, custom) {    
-    let colorScale = d3.scaleSequential()
-        .domain([0, 256])
-        .interpolator(d3.interpolatePlasma);
+let colorScale = d3.scaleSequential()
+    .domain([0, 256])
+    .interpolator(d3.interpolatePlasma);
 
+function databind(data, custom) {
     // https://www.d3indepth.com/enterexit/
     let u = custom
         .selectAll('custom.rect')
@@ -77,24 +79,14 @@ function databind(data, custom) {
     u.enter()
 	.append('custom')
         .merge(u)
-        .transition()
     	.attr('class', 'rect')
-	.attr('x', function(d, i) {
-            let x1 = Math.floor(i % cellNumberX);
-            let xg = Math.floor(x1 / groupCellNumberX);
-            return (cellSpacing + cellSize) * x1 + groupSpacingX * (xg+1);
-        })
-	.attr('y', function(d, i) {
-            let y1 = Math.floor(i / cellNumberX);
-            let yg = Math.floor(y1 / groupCellNumberY);
-            return (cellSpacing + cellSize) * y1 + groupSpacingY * (yg+1);
-        })
+	.attr('x', function(d, i) {return d.x_position;})
+	.attr('y', function(d, i) {return d.y_position;})
         .attr('width', cellSize)
         .attr('height', cellSize)
         .attr('fillStyle', function(d) { return colorScale(d.hit_count); }  )
     
     u.exit()
-        .transition()
         .attr('width', 0)
         .attr('height', 0)
         .remove();
@@ -102,7 +94,13 @@ function databind(data, custom) {
 
 function DOMContentLoadedListener_colorblocks() {
     for( let i = 0; i<cellNumber; i++ ){
-        data.push( { hit_count: 0, hit_count_old: 0}   );
+        let x1 = Math.floor(i % cellNumberX);
+        let xg = Math.floor(x1 / groupCellNumberX);
+        let y1 = Math.floor(i / cellNumberX);
+        let yg = Math.floor(y1 / groupCellNumberY);
+        let x = (cellSpacing + cellSize) * x1 + groupSpacingX * (xg+1);
+        let y = (cellSpacing + cellSize) * y1 + groupSpacingY * (yg+1);
+        data.push( { hit_count: 0, hit_count_old: 0, x_position: x, y_position: y} );
     }
     
     let customBase = document.createElement('custom');
@@ -130,8 +128,9 @@ function DOMContentLoadedListener_colorblocks() {
                 cellX=Math.floor(pixelX/scalerFactorX);
                 cellY=Math.floor(pixelY/scalerFactorY);
                 cellN= cellX + cellNumberX * cellY;
-                data[cellN].hit_count_old =  data[cellN].hit_count;
-                data[cellN].hit_count = 255;
+                let hit_count_old = data[cellN].hit_count;
+                data[cellN].hit_count_old =  hit_count_old;
+                data[cellN].hit_count += 1;
             }
         }
         databind(data, custom);
