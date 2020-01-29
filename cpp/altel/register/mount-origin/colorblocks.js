@@ -32,12 +32,12 @@ let data = [];
 let trigger_n = 0
 function getEventArray(){
     let ev_array = new Array();
-    let n_ev = Math.floor(Math.random() * 10);
+    let n_ev = Math.floor(Math.random() * 20);
     for(let i = 0; i< n_ev; i++){
         trigger_n ++;
         let ev = {detector_type:"alpide", trigger: trigger_n, ext: 1, geometry:[1024, 512, 6], data_type: "hit_xyz_array"};
         let hit_array = new Array();
-        let n_hit = Math.floor(Math.random() * 10);
+        let n_hit = Math.floor(Math.random() * 40);
         for(let j = 0; j<n_hit; j++){
             let pixelX = Math.floor(Math.random() * pixelNumberX);
             let pixelY = Math.floor(Math.random() * pixelNumberY);
@@ -52,11 +52,12 @@ function getEventArray(){
 //
 
 let colorScale = d3.scaleSequential()
-    .domain([0, 256])
+    .domain([256, 0])
     .interpolator(d3.interpolatePlasma);
 
+
 function updateCanvas(canvas) {
-    let context = canvas.node().getContext('2d');
+    let context = canvas.getContext('2d');
     for(d of data){
         if(! d.flushed){
             d.flushed = true;
@@ -66,8 +67,7 @@ function updateCanvas(canvas) {
     }
 }
 
-// 
-
+//
 
 function DOMContentLoadedListener_colorblocks() {
     for( let i = 0; i<cellNumber; i++ ){
@@ -80,11 +80,9 @@ function DOMContentLoadedListener_colorblocks() {
         data.push( { hit_count: 0, flushed: true, x_position: x, y_position: y} );
     }
     
-    let mainCanvas = d3.select('#container0')
-        .append('canvas')
-        .classed('mainCanvas', true)
-        .attr('width', width)
-        .attr('height', height);
+    let mainCanvas = document.getElementById("hitmap0");
+    mainCanvas.setAttribute("width", width.toString());
+    mainCanvas.setAttribute("height", height.toString());
     
     dummyEventTimer();
     function dummyEventTimer(){
