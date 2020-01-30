@@ -2,6 +2,30 @@
 let alive = 0;
 let wsa = [];
 
+
+function dummyEventTimer(){
+    let ev_array = getEventArray();
+    //UpdateData
+    let n_ev =  ev_array.length;
+    for(let i=0; i< n_ev; i++ ){
+        let ev = ev_array[i];
+        let hit_array = ev_array[i].hit_xyz_array;
+        let n_hit = hit_array.length;
+        for(let j=0; j< n_hit; j++ ){
+            let pixelX = hit_array[j][0];
+            let pixelY = hit_array[j][1];
+            let pixelZ = hit_array[j][2];
+            cellX=Math.floor(pixelX/scalerFactorX);
+            cellY=Math.floor(pixelY/scalerFactorY);
+            cellN= cellX + cellNumberX * cellY;
+            data[cellN].hit_count += 1;
+            data[cellN].flushed = false;
+        }
+    }
+    setTimeout(dummyEventTimer, 100);
+}
+
+
 function get_appropriate_ws_url(extra_url){
     let pcol;
     let u = document.URL;
@@ -70,6 +94,8 @@ function DOMContentLoadedListener() {
     }
     
     document.getElementById("b").addEventListener("click", sendmsg);   
+
+    dummyEventTimer();
 }
 
 document.addEventListener("DOMContentLoaded", DOMContentLoadedListener, false);

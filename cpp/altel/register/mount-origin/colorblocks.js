@@ -1,4 +1,3 @@
-
 // matrix size
 let pixelNumberX = 1024;
 let pixelNumberY = 512;
@@ -84,29 +83,6 @@ function DOMContentLoadedListener_colorblocks() {
     mainCanvas.setAttribute("width", width.toString());
     mainCanvas.setAttribute("height", height.toString());
     
-    dummyEventTimer();
-    function dummyEventTimer(){
-        let ev_array = getEventArray();
-        //UpdateData
-        let n_ev =  ev_array.length;
-        for(let i=0; i< n_ev; i++ ){
-            let ev = ev_array[i];
-            let hit_array = ev_array[i].hit_xyz_array;
-            let n_hit = hit_array.length;
-            for(let j=0; j< n_hit; j++ ){
-                let pixelX = hit_array[j][0];
-                let pixelY = hit_array[j][1];
-                let pixelZ = hit_array[j][2];
-                cellX=Math.floor(pixelX/scalerFactorX);
-                cellY=Math.floor(pixelY/scalerFactorY);
-                cellN= cellX + cellNumberX * cellY;
-                data[cellN].hit_count += 1;
-                data[cellN].flushed = false;
-            }
-        }
-        setTimeout(dummyEventTimer, 100);
-    }
-
     updateCanvasTimer();
     function updateCanvasTimer(){
         updateCanvas(mainCanvas);
