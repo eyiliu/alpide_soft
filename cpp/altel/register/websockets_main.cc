@@ -514,7 +514,8 @@ int main(int argc, const char **argv){
   info.mounts = &mount;
   info.protocols = protocols;
   info.pvo = &pvo;               /* per-vhost options */
-  info.options = LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE;
+  //info.options = LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE;
+  // see https://libwebsockets.org/lws-api-doc-master/html/group__context-and-vhost.html
   info.ws_ping_pong_interval = 5; // idle ping-pong sec
   
   struct lws_context *context =  lws_create_context(&info);

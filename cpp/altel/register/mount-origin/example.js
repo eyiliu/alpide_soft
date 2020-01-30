@@ -22,7 +22,9 @@ function dummyEventTimer(){
             data[cellN].flushed = false;
         }
     }
-    setTimeout(dummyEventTimer, 100);
+
+       
+    setTimeout(dummyEventTimer, 2000);
 }
 
 
@@ -96,6 +98,21 @@ function DOMContentLoadedListener() {
     document.getElementById("b").addEventListener("click", sendmsg);   
 
     dummyEventTimer();
+    
+    document.getElementById("btn_download").addEventListener("click", startDownload_start);
+    //document.getElementById("btn_download_stop").addEventListener("click", startDownload_stop);
+    //TODO: start and stop download
 }
+
+
+function startDownload_start(){
+    streamSaver.mitm = location.href.substr(0, location.href.lastIndexOf('/')) +'/mitm.html'
+    let fileStream = streamSaver.createWriteStream('sample_yi.txt')
+    let writer = fileStream.getWriter()
+    let a = new Uint8Array(1024).fill(97)
+    writer.write(a);
+    writer.close();
+}
+
 
 document.addEventListener("DOMContentLoaded", DOMContentLoadedListener, false);
