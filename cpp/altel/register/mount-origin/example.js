@@ -99,20 +99,24 @@ function DOMContentLoadedListener() {
 
     dummyEventTimer();
     
-    document.getElementById("btn_download").addEventListener("click", startDownload_start);
-    //document.getElementById("btn_download_stop").addEventListener("click", startDownload_stop);
+    document.getElementById("btn_download_start").addEventListener("click", startDownload_start);
+    document.getElementById("btn_download_stop").addEventListener("click", startDownload_stop);
     //TODO: start and stop download
 }
 
+let fileStream;
+let writer;
 
 function startDownload_start(){
     streamSaver.mitm = location.href.substr(0, location.href.lastIndexOf('/')) +'/mitm.html'
-    let fileStream = streamSaver.createWriteStream('sample_yi.txt')
-    let writer = fileStream.getWriter()
+    fileStream = streamSaver.createWriteStream('sample_yi.txt')
+    writer = fileStream.getWriter()
+}
+
+
+function 
     let a = new Uint8Array(1024).fill(97)
     writer.write(a);
     writer.close();
-}
-
 
 document.addEventListener("DOMContentLoaded", DOMContentLoadedListener, false);
