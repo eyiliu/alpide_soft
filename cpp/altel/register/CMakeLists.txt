@@ -17,9 +17,14 @@ add_executable(myws FirmwarePortal.cc websockets_main.cc JadeDataFrame.cc AltelR
 target_include_directories(myws BEFORE PRIVATE common rbcp )
 target_link_libraries(myws PRIVATE mycommon rbcp websockets Threads::Threads)
 
+add_executable(mytele FirmwarePortal.cc telescope_main.cc JadeDataFrame.cc AltelReader.cc base64.cpp)
+target_include_directories(mytele BEFORE PRIVATE common rbcp )
+target_link_libraries(mytele PRIVATE mycommon rbcp websockets Threads::Threads)
+
 install(TARGETS
   mytest
   myws
+  mytele
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
