@@ -110,13 +110,80 @@ void fw_init(FirmwarePortal *m_fw){
   m_fw->SendAlpideBroadcast("RORST"); //Readout (RRU/TRU/DMU) reset
 
   //===========end of init part =====================
-
   m_fw->SetFirmwareRegister("TRIG_DELAY", 100); //25ns per dig (FrameDuration?)
   m_fw->SetFirmwareRegister("GAP_INT_TRIG", 20);
 }
 
+class Layer{
+public:
+  std::unique_ptr<FirmwarePortal> m_fw;
+  std::unique_ptr<AltelReader> m_rd;
+  std::future<uint64_t> m_fut_async_rd;
+  std::mutex m_mx_ev_to_wrt;
+  std::vector<JadeDataFrameSP> m_vec_ring_ev;
+  uint64_t m_size_ring{1000000};
+  std::atomic_uint64_t m_count_ring_write;
+  std::atomic_uint64_t m_count_ring_read;
+  uint64_t AsyncReading(){ // IMPROVE IT AS A RING
+    {
+      std::unique_lock<std::mutex> lk(m_mx_ring_ev);
+      m_vec_ring_ev.clear();
+      m_vec_ring_ev.resize(m_size_ring)
+    }
+    m_count_ring_write = 0;
+    m_count_ring_read = 0;
+    m_is_running_reading = true;
+    while (m_is_running_reading){
+      auto df = m_rd? m_rd->Read(1000ms):nullptr; // TODO: read a vector
+      if(!df){
+        continue;
+      }
+      uint64_t next_p_ring_write = m_count_ring_write % m_size_ring;
+      {
+        std::unique_lock<std::mutex> lk(m_mx_ev_to_wrt);
+        m_vec_ring_ev[next_p_ring_write] = df;
+        m_count_ring_write ++;      
+      }
+    }
+    m_is_running_reading = false;
+    std::cout<< "aysnc exit"<<std::endl;
+    return m_count_ring_write;
+  }
+
+  void ClearCachedEvents(){
+    std::unique_lock<std::mutex> lk(m_mx_ring_ev);
+    m_vec_ring_ev.clear();
+    m_vec_ring_ev.resize(m_size_ring)
+    m_count_ring_write = 0;
+    m_count_ring_read = 0;
+  }
+  
+  JadeDataFrameSP GetNextCachedEvent(){    
+    std::unique_lock<std::mutex> lk_out(m_mx_ev_to_wrt);
+    if(m_count_ring_write > m_count_ring_read) {
+      uint64_t next_p_ring_read = m_count_ring_read % m_size_ring;
+      auto ev = std::move(m_ring_ev[next_p_ring_read]);
+      m_count_ring_read ++;
+      //long skip
+      uint64_t size_unread_cached = (m_count_ring_write - m_count_ring_read) % m_size_ring;
+      m_count_ring_read = m_count_ring_write - size_unread_cached; // update read count (not real count)
+      return ev;
+    }
+    else{
+      return nullptr;
+    }
+  }
+  
+};
 
 
+  
+class Telescope{
+public:
+
+  
+  
+};
 
 int main(int argc, char **argv){
   const std::string help_usage("\n\
@@ -200,16 +267,13 @@ Usage:\n\
                                      }
                                    }
                                  } );
-
   
   const char* prompt = "\x1b[1;32malpide\x1b[0m> ";
   while (1) {
     char* result = linenoise(prompt);
     if (result == NULL) {
       break;
-    }
-    std::cout<< result<< std::endl;
-    
+    }    
     if ( std::regex_match(result, std::regex("\\s*(quit)\\s*")) ){
       printf("quiting \n");
       linenoiseHistoryAdd(result);
@@ -218,15 +282,28 @@ Usage:\n\
     }
     else if (std::regex_match(result, std::regex("\\s*(start)\\s*"))){
       printf("starting \n");
-      fw_start( layers[0].first.get());
+      for(auto& l: layers){
+        auto &fw = l.first;
+        auto &rd = l.second;
+        fw_start( fw.get());
+        
+      }
     }
     else if (std::regex_match(result, std::regex("\\s*(stop)\\s*"))){
       printf("stop \n");
-      fw_stop( layers[0].first.get());
+      for(auto& l: layers){
+        auto &fw = l.first;
+        auto &rd = l.second;
+        fw_stop( fw.get());
+      }
     }
     else if (std::regex_match(result, std::regex("\\s*(init)\\s*"))){
       printf("init \n");
-      fw_init( layers[0].first.get());
+      for(auto& l: layers){
+        auto &fw = l.first;
+        auto &rd = l.second;
+        fw_init( fw.get());
+      }
     }
     else if ( std::regex_match(result, std::regex("\\s*(sensor)\\s+(set)\\s+(\\w+)\\s+(?:(0[Xx])?([0-9]+))\\s*")) ){
       std::cmatch mt;
@@ -245,7 +322,7 @@ Usage:\n\
       for(auto& l: layers){
         auto &fw = l.first;
         uint64_t value = fw->GetAlpideRegister(name);
-        fprintf(stderr, "%s = %ull, 0x%xull\n", name.c_str(), value, value);
+        fprintf(stderr, "%s = %u, %#x\n", name.c_str(), value, value);
       }
     }    
     else if ( std::regex_match(result, std::regex("\\s*(firmware)\\s+(set)\\s+(\\w+)\\s+(?:(0[Xx])?([0-9]+))\\s*")) ){
@@ -265,7 +342,7 @@ Usage:\n\
       for(auto& l: layers){
         auto &fw = l.first;
         uint64_t value = fw->GetFirmwareRegister(name);
-        fprintf(stderr, "%s = %ull, 0x%xull\n", name.c_str(), value, value);
+        fprintf(stderr, "%s = %u, %#x\n", name.c_str(), value, value);
       }
     }
     else if ( std::regex_match(result, std::regex("\\s*(pixel)\\s+(mask)\\s+(?:(0[Xx])?([0-9]+))\\s+(?:(0[Xx])?([0-9]+))\\s+(true|false)\\s*")) ){
