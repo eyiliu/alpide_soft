@@ -9,6 +9,8 @@
 #include <mutex>
 #include <future>
 #include <condition_variable>
+#include <regex>
+
 #include <signal.h>
 
 #include "FirmwarePortal.hh"
@@ -116,78 +118,47 @@ void fw_init(FirmwarePortal *m_fw){
 
 
 
-
-static const char* examples[] =
-  {
-   "start", "stop", "init", "threshold", "window", "connect","quit", NULL
-  };
-
-void completionHook (char const* prefix, linenoiseCompletions* lc) {
-  size_t i;
-  for (i = 0;  examples[i] != NULL; ++i) {
-    if (strncmp(prefix, examples[i], strlen(prefix)) == 0) {
-      linenoiseAddCompletion(lc, examples[i]);
-    }
-  }
-}
-
-
 int main(int argc, char **argv){
   const std::string help_usage("\n\
 Usage:\n\
 -c json_file: path to json file\n\
--i ip_address: eg. 131.169.133.170 for alpide_0 \n\
--h : Print usage information to standard error and stop\n\
+-h : print usage information, and then quit\n\
 ");
   
-  int c;
   std::string c_opt;
-  std::string i_opt;
   std::string w_opt;
   bool w_opt_enable = false;
-  bool r_opt = false;
-  bool e_opt = false;
-  while ( (c = getopt(argc, argv, "c:i:w:reh")) != -1) {
+  int c;
+  while ( (c = getopt(argc, argv, "c:w:h")) != -1) {
     switch (c) {
     case 'c':
       c_opt = optarg;
-      break;
-    case 'i':
-      i_opt = optarg;
       break;
     case 'w':
       w_opt_enable = true;
       w_opt = optarg;
       break;
-    case 'r':
-      r_opt = true;
-      break;
-    case 'e':
-      e_opt = true;
-      break;
     case 'h':
-      std::cout<<help_usage;
+      fprintf(stdout, "%s", help_usage.c_str());
       return 0;
       break;
     default:
-      std::cerr<<help_usage;
+      fprintf(stderr, "%s", help_usage.c_str());
       return 1;
     }
   }
+  
   if (optind < argc) {
-    std::cerr<<"\ninvalid options: ";
+    fprintf(stderr, "\ninvalid options: ");
     while (optind < argc)
-      std::cerr<<argv[optind++]<<" \n";
-    std::cerr<<"\n";
+      fprintf(stderr, "%s\n", argv[optind++]);;
     return 1;
   }
 
   ////////////////////////
   //test if all opts
-  if(c_opt.empty() || i_opt.empty()){
-    std::cerr<<"\ninsufficient options.\n";
-    std::cerr<<help_usage;
-    std::cerr<<"\n\n\n";
+  if(c_opt.empty() ){
+    fprintf(stderr, "\ninsufficient options.\n%s\n\n\n",help_usage.c_str());
     return 1;
   }
   ///////////////////////
@@ -195,46 +166,144 @@ Usage:\n\
   std::string json_file_path = c_opt;
 
   ///////////////////////
-  
   std::string file_context = FirmwarePortal::LoadFileToString(json_file_path);
-  FirmwarePortal fw(file_context, i_opt);
+
+  rapidjson::Document js_doc;
+  js_doc.Parse(file_context.c_str());
+  if(js_doc.HasParseError()){
+    fprintf(stderr, "JSON parse error: %s (at string positon %u)", rapidjson::GetParseError_En(js_doc.GetParseError()), js_doc.GetErrorOffset());
+    throw;
+  }
+
+  std::vector< std::pair< std::unique_ptr<FirmwarePortal>, std::unique_ptr<AltelReader> > > layers;
+  for (auto& js_layer : js_doc.GetArray()){
+    if(!js_layer["disable"].GetBool()){
+      std::unique_ptr<FirmwarePortal> fw(new FirmwarePortal(FirmwarePortal::Stringify(js_layer["ctrl_link"])));
+      std::unique_ptr<AltelReader> rd(new AltelReader(FirmwarePortal::Stringify(js_layer["data_link"])));
+      layers.emplace_back(std::move(fw), std::move(rd));
+    }
+  }  
   
-  linenoiseInstallWindowChangeHandler();
+  const char* linenoise_history_path = "/tmp/.alpide_cmd_history";
+  linenoiseHistoryLoad(linenoise_history_path);
+  linenoiseSetCompletionCallback([](const char* prefix, linenoiseCompletions* lc)
+                                 {
+                                   static const char* examples[] =
+                                     {"help", "start", "stop", "init", "threshold", "window", "info",
+                                      "connect","quit", "sensor", "firmware", "set", "get", "region",
+                                      "broadcast", "pixel", "ture", "false",
+                                      NULL};
+                                   size_t i;
+                                   for (i = 0;  examples[i] != NULL; ++i) {
+                                     if (strncmp(prefix, examples[i], strlen(prefix)) == 0) {
+                                       linenoiseAddCompletion(lc, examples[i]);
+                                     }
+                                   }
+                                 } );
 
-  const char* file = "./tmp/alpide_cmd_history";
-
-  linenoiseHistoryLoad(file);
-  linenoiseSetCompletionCallback(completionHook);
-
-  char const* prompt = "\x1b[1;32malpide\x1b[0m> ";
-
+  
+  const char* prompt = "\x1b[1;32malpide\x1b[0m> ";
   while (1) {
     char* result = linenoise(prompt);
     if (result == NULL) {
       break;
     }
+    std::cout<< result<< std::endl;
     
-    if (!strncmp(result, "/history", 8)) {
-      /* Display the current history. */
-      for (int index = 0; ; ++index) {
-        char* hist = linenoiseHistoryLine(index);
-        if (hist == NULL)
-          break;
-        printf("%4d: %s\n", index, hist);
-        free(hist);
-       }
-    }
-    
-    if (*result == '\0') {
+    if ( std::regex_match(result, std::regex("\\s*(quit)\\s*")) ){
+      printf("quiting \n");
+      linenoiseHistoryAdd(result);
       free(result);
       break;
     }
-    
-       
+    else if (std::regex_match(result, std::regex("\\s*(start)\\s*"))){
+      printf("starting \n");
+      fw_start( layers[0].first.get());
+    }
+    else if (std::regex_match(result, std::regex("\\s*(stop)\\s*"))){
+      printf("stop \n");
+      fw_stop( layers[0].first.get());
+    }
+    else if (std::regex_match(result, std::regex("\\s*(init)\\s*"))){
+      printf("init \n");
+      fw_init( layers[0].first.get());
+    }
+    else if ( std::regex_match(result, std::regex("\\s*(sensor)\\s+(set)\\s+(\\w+)\\s+(?:(0[Xx])?([0-9]+))\\s*")) ){
+      std::cmatch mt;
+      std::regex_match(result, mt, std::regex("\\s*(sensor)\\s+(set)\\s+(\\w+)\\s+(?:(0[Xx])?([0-9]+))\\s*"));
+      std::string name = mt[3].str();
+      uint64_t value = std::stoull(mt[5].str(), 0, mt[4].str().empty()?10:16);
+      for(auto& l: layers){
+        auto &fw = l.first;
+        fw->SetAlpideRegister(name, value);
+      }
+    }
+    else if ( std::regex_match(result, std::regex("\\s*(sensor)\\s+(get)\\s+(\\w+)\\s*")) ){
+      std::cmatch mt;
+      std::regex_match(result, mt, std::regex("\\s*(sensor)\\s+(get)\\s+(\\w+)\\s*"));
+      std::string name = mt[3].str();
+      for(auto& l: layers){
+        auto &fw = l.first;
+        uint64_t value = fw->GetAlpideRegister(name);
+        fprintf(stderr, "%s = %ull, 0x%xull\n", name.c_str(), value, value);
+      }
+    }    
+    else if ( std::regex_match(result, std::regex("\\s*(firmware)\\s+(set)\\s+(\\w+)\\s+(?:(0[Xx])?([0-9]+))\\s*")) ){
+      std::cmatch mt;
+      std::regex_match(result, mt, std::regex("\\s*(firmware)\\s+(set)\\s+(\\w+)\\s+(?:(0[Xx])?([0-9]+))\\s*"));
+      std::string name = mt[3].str();
+      uint64_t value = std::stoull(mt[5].str(), 0, mt[4].str().empty()?10:16);
+      for(auto& l: layers){
+        auto &fw = l.first;
+        fw->SetFirmwareRegister(name, value);
+      }
+    }
+    else if ( std::regex_match(result, std::regex("\\s*(firmware)\\s+(get)\\s+(\\w+)\\s*")) ){
+      std::cmatch mt;
+      std::regex_match(result, mt, std::regex("\\s*(firmware)\\s+(get)\\s+(\\w+)\\s*"));
+      std::string name = mt[3].str();
+      for(auto& l: layers){
+        auto &fw = l.first;
+        uint64_t value = fw->GetFirmwareRegister(name);
+        fprintf(stderr, "%s = %ull, 0x%xull\n", name.c_str(), value, value);
+      }
+    }
+    else if ( std::regex_match(result, std::regex("\\s*(pixel)\\s+(mask)\\s+(?:(0[Xx])?([0-9]+))\\s+(?:(0[Xx])?([0-9]+))\\s+(true|false)\\s*")) ){
+      std::cmatch mt;
+      std::regex_match(result, mt, std::regex("\\s*(pixel)\\s+(mask)\\s+(?:(0[Xx])?([0-9]+))\\s+(?:(0[Xx])?([0-9]+))\\s+(true|false)\\s*"));
+      uint64_t x = std::stoull(mt[4].str(), 0, mt[3].str().empty()?10:16);
+      uint64_t y = std::stoull(mt[6].str(), 0, mt[5].str().empty()?10:16);
+      bool value =  (mt[7].str()=="true")?true:false;
+      for(auto& l: layers){
+        auto &fw = l.first;
+        fw->SetPixelRegister(x, y, "MASK_EN", value);
+      }
+    }
+    else if( std::regex_match(result, std::regex("\\s*(threshold)\\s+(?:(0[Xx])?([0-9]+))\\s*")) ){
+      std::cmatch mt;
+      std::regex_match(result, mt, std::regex("\\s*(threshold)\\s+(?:(0[Xx])?([0-9]+))\\s*"));
+      uint16_t base = mt[2].str().empty()?10:16;
+      uint64_t ithr = std::stoull(mt[3].str(), 0, base);
+      for(auto& l: layers){
+        auto &fw = l.first;
+        fw->SetAlpideRegister("ITHR", ithr);
+      }
+    }
+    else if (!strncmp(result, "info", 5)){
+      std::cout<<"layer number: "<< layers.size()<<std::endl;
+      for(auto& l: layers){
+        auto &fw = l.first;
+        uint32_t ip0 = fw->GetFirmwareRegister("IP0");
+        uint32_t ip1 = fw->GetFirmwareRegister("IP1");
+        uint32_t ip2 = fw->GetFirmwareRegister("IP2");
+        uint32_t ip3 = fw->GetFirmwareRegister("IP3");
+        std::cout<<"\n\ncurrent ip  " <<ip0<<":"<<ip1<<":"<<ip2<<":"<<ip3<<"\n\n"<<std::endl;
+      }
+    }
     linenoiseHistoryAdd(result);
     free(result);
   }
 
-  linenoiseHistorySave(file);
+  linenoiseHistorySave(linenoise_history_path);
   linenoiseHistoryFree();
 }

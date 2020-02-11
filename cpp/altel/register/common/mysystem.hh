@@ -113,4 +113,25 @@ using socket_t = decltype(socket(0, 0, 0));
 #  error Unable to set endian coverting functions. Need little-endian Windows, little-endian MacOS, GLIBC
 #endif
 
+
+#include <string>
+inline std::string binaryPath(){
+#ifdef _WIN32
+    void* address_return = _ReturnAddress();
+    HMODULE handle = NULL;
+    ::GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS
+			|GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+			static_cast<LPCSTR>(address_return), &handle);
+    char modpath[MAX_PATH] = {'\0'};
+    ::GetModuleFileNameA(handle, modpath, MAX_PATH);
+    return modpath;
+#else
+    void* address_return = (void*)(__builtin_return_address(0));
+    Dl_info dli;
+    dli.dli_fname = 0;
+    dladdr(address_return, &dli);
+    return dli.dli_fname;
+#endif
+}
+
 #endif

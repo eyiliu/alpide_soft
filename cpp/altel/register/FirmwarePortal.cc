@@ -11,6 +11,44 @@ FirmwarePortal::FirmwarePortal(const std::string &json_str, const std::string &i
   }    
 }
 
+
+FirmwarePortal::FirmwarePortal(const std::string &json_str){
+  rapidjson::Document js_doc;
+  js_doc.Parse(json_str.c_str());
+  if(js_doc.HasParseError()){
+    fprintf(stderr, "JSON parse error: %s (at string positon %u)", rapidjson::GetParseError_En(js_doc.GetParseError()), js_doc.GetErrorOffset());
+    throw;
+  }
+
+  auto& js_proto = js_doc["protocol"];
+  auto& js_opt = js_doc["options"];
+  std::string reg_file_path;
+  if(js_proto == "udp"){
+    m_alpide_ip_addr = js_opt["ip"].GetString();
+    reg_file_path = js_opt["path"].GetString();
+  }
+
+  if(reg_file_path.empty()){
+      fprintf(stderr, "empty reg_file_path");
+      throw;
+  }
+  
+  std::string reg_str = LoadFileToString(reg_file_path);
+  if(reg_str.empty()){
+    fprintf(stderr, "empty reg_str");
+    throw;
+  }
+  
+  m_json.Parse(reg_str.c_str());
+  if(m_json.HasParseError()){
+    fprintf(stderr, "JSON parse error: %s (at string positon %u)", rapidjson::GetParseError_En(m_json.GetParseError()), m_json.GetErrorOffset());
+    throw;
+  }
+
+}
+
+
+
 void  FirmwarePortal::WriteByte(uint64_t address, uint64_t value){
   FormatPrint(std::cout, "WriteByte( address=%#016x ,  value=%#016x )\n", address, value);
   // rbcp_write("131.169.133.173", 4660, static_cast<uint32_t>(address), static_cast<uint8_t>(value));
@@ -425,9 +463,9 @@ uint64_t FirmwarePortal::GetAlpideRegister(const std::string& name){
 	if(nr_new != nr_old){
 	  break;
 	}
-	std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	if(std::chrono::system_clock::now() > tp_timeout){
-	  FormatPrint(std::cerr, "ERROR<%s>:  timeout to read back Alpide register<>\n", __func__, name.c_str());
+	  FormatPrint(std::cerr, "ERROR<%s>:  timeout to read back Alpide register<%s>\n", __func__, name.c_str());
 	  throw;
 	}
       }
