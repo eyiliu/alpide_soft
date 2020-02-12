@@ -75,15 +75,21 @@ uint32_t JadeDataFrame::GetMatrixSizeY() const
   return m_n_y;
 }
 
-uint64_t JadeDataFrame::GetCounter() const
+uint64_t JadeDataFrame::GetCounter()
 {
+  if(m_level_decode < 1){
+    Decode(1);
+  }
   return m_counter;
 }
 
-uint64_t JadeDataFrame::GetExtension() const
+uint64_t JadeDataFrame::GetExtension()
 {
+  if(m_level_decode < 1){
+    Decode(1);
+  }
   return m_extension;
-} // 
+} //
 
 void JadeDataFrame::Decode(uint32_t level){
   if(level <= m_level_decode)

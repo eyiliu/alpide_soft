@@ -29,8 +29,8 @@ public:
   uint32_t GetMatrixDepth() const;
   uint32_t GetMatrixSizeX() const; //x row, y column
   uint32_t GetMatrixSizeY() const;
-  uint64_t GetCounter() const;
-  uint64_t GetExtension() const;
+  uint64_t GetCounter();
+  uint64_t GetExtension();
 
   const std::string& Data_Flat() const {return m_data_flat; }
   const std::vector<uint16_t>& Data_X() const {return m_data_x; }
