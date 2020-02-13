@@ -32,6 +32,10 @@ public:
   uint64_t GetCounter();
   uint64_t GetExtension();
 
+  uint64_t GetTrigger(){return m_trigger;};
+  void SetTrigger(uint64_t v){m_trigger = v;};
+  
+  
   const std::string& Data_Flat() const {return m_data_flat; }
   const std::vector<uint16_t>& Data_X() const {return m_data_x; }
   const std::vector<uint16_t>& Data_Y() const {return m_data_y; }
@@ -99,6 +103,7 @@ private:
 
   uint64_t m_counter;
   uint64_t m_extension;
+  uint64_t m_trigger;
   
   uint16_t m_n_x;
   uint16_t m_n_y;

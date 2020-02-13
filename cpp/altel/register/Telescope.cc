@@ -93,24 +93,56 @@ void Layer::rd_stop(){
 }
 
 uint64_t Layer::AsyncPushBack(){ // IMPROVE IT AS A RING
-    
   m_vec_ring_ev.clear();
   m_vec_ring_ev.resize(m_size_ring);
   m_count_ring_write = 0;
   m_count_ring_read = 0;
   m_hot_p_read = m_size_ring -1; // tail
-    
+
+  uint32_t m_tg_expected = 0;
+  uint32_t m_tg_last_send = 0;
+  uint32_t m_flag_wait_first_event = true;
+  
   m_is_async_reading = true;
   while (m_is_async_reading){
     auto df = m_rd? m_rd->Read(1000ms):nullptr; // TODO: read a vector
     if(!df){
       continue;
     }
+    
     uint64_t next_p_ring_write = m_count_ring_write % m_size_ring;
     if(next_p_ring_write == m_hot_p_read){
       // buffer full, permanent data lose
       continue;
     }
+
+    df->Decode(1); //level 1, header-only
+    uint16_t tg_l15 = 0x7fff & df->GetCounter();
+    if(m_flag_wait_first_event){
+      m_flag_wait_first_event = false;
+      m_tg_expected = tg_l15;
+    }
+    if(tg_l15 != (m_tg_expected & 0x7fff)){
+      // std::cout<<(m_tg_expected & 0x7fff)<< " " << tg_l15<<"\n";
+      uint32_t tg_guess_0 = (m_tg_expected & 0xffff8000) + tg_l15;
+      uint32_t tg_guess_1 = (m_tg_expected & 0xffff8000) + 0x8000 + tg_l15;
+      if(tg_guess_0 > m_tg_expected && tg_guess_0 - m_tg_expected < 200){
+        std::cout<< "missing trigger, expecting : provided "<< (m_tg_expected & 0x7fff) << " : "<< tg_l15<<"\n";
+        m_tg_expected =tg_guess_0;
+      }
+      else if (tg_guess_1 > m_tg_expected && tg_guess_1 - m_tg_expected < 200){
+        std::cout<< "missing trigger, expecting : provided "<< (m_tg_expected & 0x7fff) << " : "<< tg_l15<<"\n";
+        m_tg_expected =tg_guess_1;
+      }
+      else{
+        std::cout<< "broken trigger ID, expecting : provided "<< (m_tg_expected & 0x7fff) << " : "<< tg_l15<<"\n";
+        m_tg_expected ++;
+        // permanent data lose
+        continue;
+      }
+    }
+    df->SetTrigger(m_tg_expected-1); //TODO: fix tlu firmware, mismatch between modes
+
     m_vec_ring_ev[next_p_ring_write] = df;
     m_count_ring_write ++;
   }
@@ -174,7 +206,7 @@ std::vector<JadeDataFrameSP> Telescope::ReadEvent(){
       return ev_sync;
     }
     else{
-      uint32_t trigger_n_ev = l->Front()->GetCounter();
+      uint32_t trigger_n_ev = l->Front()->GetTrigger();
       if(trigger_n_ev< trigger_n)
         trigger_n = trigger_n_ev;
     }
@@ -182,12 +214,12 @@ std::vector<JadeDataFrameSP> Telescope::ReadEvent(){
 
   for(auto &l: m_vec_layer){
     auto &ev_front = l->Front(); 
-    if(ev_front->GetCounter() == trigger_n){
+    if(ev_front->GetTrigger() == trigger_n){
       ev_sync.push_back(ev_front);
       l->PopFront();
     }
   }
-    
+  
   if(ev_sync.size() < m_vec_layer.size() ){
     std::cout<< "dropped assambed event with subevent less than requried "<< m_vec_layer.size() <<" sub events" <<std::endl;
     std::string dev_numbers;
