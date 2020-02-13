@@ -70,6 +70,19 @@ public:
     return formated_string.size();
   }
 
+  template<typename ... Args>
+  static std::size_t DebugFormatPrint(std::ostream &os, const std::string& format, Args ... args ){
+    return 0;
+    std::size_t size = snprintf( nullptr, 0, format.c_str(), args ... ) + 1;
+    std::unique_ptr<char[]> buf( new char[ size ] ); 
+    std::snprintf( buf.get(), size, format.c_str(), args ... );
+    std::string formated_string( buf.get(), buf.get() + size - 1 );
+    os<<formated_string<<std::flush;
+    return formated_string.size();
+  }
+
+
+  
   template<typename T>
   static const std::string Stringify(const T& o){
     rapidjson::StringBuffer sb;

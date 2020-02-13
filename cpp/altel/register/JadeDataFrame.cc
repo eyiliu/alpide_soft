@@ -260,10 +260,8 @@ void JadeDataFrame::Print(std::ostream& os, size_t ws) const
   os << std::string(ws, ' ') << "{ name:JadeDataFrame,\n";
   os << std::string(ws + 2, ' ') << "level_decode:" << m_level_decode << ",\n";
   if (m_level_decode) {
-    os << std::string(ws + 2, ' ') << "meta:"
-       << "TODO"
-       << ",\n";
     os << std::string(ws + 2, ' ') << "counter:" << m_counter << ",\n";
+    os << std::string(ws + 2, ' ') << "ext:" << m_extension << ",\n";
     os << std::string(ws + 2, ' ') << "n_x:" << m_n_x << ",\n";
     os << std::string(ws + 2, ' ') << "n_y:" << m_n_y << ",\n";
     os << std::string(ws + 2, ' ') << "n_d:" << m_n_d << ",\n";

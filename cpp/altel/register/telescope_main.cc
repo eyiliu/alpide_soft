@@ -11,13 +11,11 @@
 #include "common/getopt/getopt.h"
 #include "common/linenoiseng/linenoise.h"
 
-using namespace std::chrono_literals;
 
 
 void fw_threshold(FirmwarePortal *m_fw, uint32_t thrshold){
   m_fw->SetAlpideRegister("ITHR", thrshold); //empty 0x32; 0x12 data, not full.
 }
-
 
 
 int main(int argc, char **argv){
@@ -79,7 +77,7 @@ Usage:\n\
                                    static const char* examples[] =
                                      {"help", "start", "stop", "init", "threshold", "window", "info",
                                       "connect","quit", "sensor", "firmware", "set", "get", "region",
-                                      "broadcast", "pixel", "ture", "false",
+                                      "broadcast", "pixel", "ture", "false", "ITHR",
                                       NULL};
                                    size_t i;
                                    for (i = 0;  examples[i] != NULL; ++i) {
@@ -103,15 +101,11 @@ Usage:\n\
     }
     else if (std::regex_match(result, std::regex("\\s*(start)\\s*"))){
       printf("starting \n");
-      for(auto& l: tel.m_vec_layer){
-        l->fw_start();
-      }
+      tel.Start();
     }
     else if (std::regex_match(result, std::regex("\\s*(stop)\\s*"))){
       printf("stop \n");
-      for(auto& l: tel.m_vec_layer){
-        l->fw_stop();
-      }
+      tel.Stop();
     }
     else if (std::regex_match(result, std::regex("\\s*(init)\\s*"))){
       printf("init \n");

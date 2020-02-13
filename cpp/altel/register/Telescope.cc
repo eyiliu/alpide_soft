@@ -75,11 +75,24 @@ void Layer::fw_init(){
 }
 
 
-uint64_t Layer::AsyncPushBack(){ // IMPROVE IT AS A RING
+
+void Layer::rd_start(){
   if(m_is_async_reading){
     std::cout<< "old AsyncReading() has not been stopped "<<std::endl;
-    return 0;
+    return;
   }
+
+  m_rd->Open();
+  m_fut_async_rd = std::async(std::launch::async, &Layer::AsyncPushBack, this);  
+}
+
+void Layer::rd_stop(){
+  m_is_async_reading = false;
+  if(m_fut_async_rd.valid())
+    m_fut_async_rd.get();
+}
+
+uint64_t Layer::AsyncPushBack(){ // IMPROVE IT AS A RING
     
   m_vec_ring_ev.clear();
   m_vec_ring_ev.resize(m_size_ring);
@@ -104,25 +117,12 @@ uint64_t Layer::AsyncPushBack(){ // IMPROVE IT AS A RING
   std::cout<< "aysnc exit"<<std::endl;
   return m_count_ring_write;
 }
-  
-JadeDataFrameSP Layer::GetNextCachedEvent(){
-  if(m_count_ring_write > m_count_ring_read) {
-    uint64_t next_p_ring_read = m_count_ring_read % m_size_ring;
-    m_hot_p_read = next_p_ring_read;
-    auto ev = std::move(m_vec_ring_ev[next_p_ring_read]);
-    // keep hot read to prevent write-overlapping
-    m_count_ring_read ++;
-    return ev;
-  }
-  else{
-    return m_ring_end;
-  }
-}
 
 JadeDataFrameSP& Layer::Front(){
   if(m_count_ring_write > m_count_ring_read) {
     uint64_t next_p_ring_read = m_count_ring_read % m_size_ring;
     m_hot_p_read = next_p_ring_read;
+    // keep hot read to prevent write-overlapping
     return m_vec_ring_ev[next_p_ring_read];
   }
   else{
@@ -134,6 +134,7 @@ void Layer::PopFront(){
   if(m_count_ring_write > m_count_ring_read) {
     uint64_t next_p_ring_read = m_count_ring_read % m_size_ring;
     m_hot_p_read = next_p_ring_read;
+    // keep hot read to prevent write-overlapping
     m_vec_ring_ev[next_p_ring_read].reset();
     m_count_ring_read ++;
   }
@@ -143,61 +144,118 @@ uint64_t Layer::Size(){
   return  m_count_ring_write - m_count_ring_read;
 }
 
-
-
-
-
 Telescope::Telescope(const std::string& file_context){
-    rapidjson::Document js_doc;
-    js_doc.Parse(file_context.c_str());
-    if(js_doc.HasParseError()){
-      fprintf(stderr, "JSON parse error: %s (at string positon %u)", rapidjson::GetParseError_En(js_doc.GetParseError()), js_doc.GetErrorOffset());
-      throw;
-    }
-
-    for (auto& js_layer : js_doc.GetArray()){
-      if(!js_layer["disable"].GetBool()){
-        std::unique_ptr<FirmwarePortal> fw(new FirmwarePortal(FirmwarePortal::Stringify(js_layer["ctrl_link"])));
-        std::unique_ptr<AltelReader> rd(new AltelReader(FirmwarePortal::Stringify(js_layer["data_link"])));
-        std::unique_ptr<Layer> l(new Layer);
-        l->m_fw.reset(new FirmwarePortal(FirmwarePortal::Stringify(js_layer["ctrl_link"])));
-        l->m_rd.reset(new AltelReader(FirmwarePortal::Stringify(js_layer["data_link"])));
-        m_vec_layer.push_back(std::move(l));
-      }
-    }
+  rapidjson::Document js_doc;
+  js_doc.Parse(file_context.c_str());
+  if(js_doc.HasParseError()){
+    fprintf(stderr, "JSON parse error: %s (at string positon %u)", rapidjson::GetParseError_En(js_doc.GetParseError()), js_doc.GetErrorOffset());
+    throw;
   }
+
+  for (auto& js_layer : js_doc.GetArray()){
+    if(js_layer.HasMember("disable") && js_layer["disable"].GetBool()){
+      continue;
+    }
+    std::unique_ptr<FirmwarePortal> fw(new FirmwarePortal(FirmwarePortal::Stringify(js_layer["ctrl_link"])));
+    std::unique_ptr<AltelReader> rd(new AltelReader(FirmwarePortal::Stringify(js_layer["data_link"])));
+    std::unique_ptr<Layer> l(new Layer);
+    l->m_fw.reset(new FirmwarePortal(FirmwarePortal::Stringify(js_layer["ctrl_link"])));
+    l->m_rd.reset(new AltelReader(FirmwarePortal::Stringify(js_layer["data_link"])));
+    m_vec_layer.push_back(std::move(l));
+  }
+}
   
 std::vector<JadeDataFrameSP> Telescope::ReadEvent(){
-    std::vector<JadeDataFrameSP> ev_sync;
-    uint32_t trigger_n = -1;
-    for(auto &l: m_vec_layer){
-      if( l->Size() == 0)
-        return ev_sync;
-      else{
-        uint32_t trigger_n_ev = l->Front()->GetCounter();
-        if(trigger_n_ev< trigger_n)
-          trigger_n = trigger_n_ev;
-      }
+  std::vector<JadeDataFrameSP> ev_sync;
+  uint32_t trigger_n = -1;
+  for(auto &l: m_vec_layer){
+    if( l->Size() == 0){
+      // TODO check cached size of all layers
+      return ev_sync;
     }
+    else{
+      uint32_t trigger_n_ev = l->Front()->GetCounter();
+      if(trigger_n_ev< trigger_n)
+        trigger_n = trigger_n_ev;
+    }
+  }
 
-    for(auto &l: m_vec_layer){
-      auto &ev_front = l->Front(); 
-      if(ev_front->GetCounter() == trigger_n){
-        ev_sync.push_back(ev_front);
-        l->PopFront();
-      }
+  for(auto &l: m_vec_layer){
+    auto &ev_front = l->Front(); 
+    if(ev_front->GetCounter() == trigger_n){
+      ev_sync.push_back(ev_front);
+      l->PopFront();
+    }
+  }
+    
+  if(ev_sync.size() < m_vec_layer.size() ){
+    std::cout<< "dropped assambed event with subevent less than requried "<< m_vec_layer.size() <<" sub events" <<std::endl;
+    std::string dev_numbers;
+    for(auto & ev : ev_sync){
+      dev_numbers += std::to_string(ev->GetExtension());
+      dev_numbers +=" ";
+    }
+    std::cout<< "  tluID="<<trigger_n<<" subevent= "<< dev_numbers <<std::endl;
+    std::vector<JadeDataFrameSP> empty;
+    return empty;
+  }
+  return ev_sync;
+}
+
+
+
+void Telescope::Start(){
+  for(auto & l: m_vec_layer){
+    l->fw_init();
+  }
+  for(auto & l: m_vec_layer){
+    l->rd_start();
+  }
+  for(auto & l: m_vec_layer){
+    l->fw_start();
+  }
+  m_fut_async_rd = std::async(std::launch::async, &Telescope::AsyncRead, this);
+}
+
+void Telescope::Stop(){
+  m_is_async_reading = false;
+  if(m_fut_async_rd.valid())
+    m_fut_async_rd.get();
+
+  for(auto & l: m_vec_layer){
+    l->fw_stop();
+  }
+  
+  for(auto & l: m_vec_layer){
+    l->rd_stop();
+  }
+  
+}
+
+uint64_t Telescope::AsyncRead(){
+  uint64_t n_ev = 0;
+  
+  m_is_async_reading = true;
+  while (m_is_async_reading){
+    auto ev = ReadEvent();
+    if(ev.empty()){
+      std::this_thread::sleep_for(100us);
+      continue;
+    }
+    n_ev ++;
+    for(auto& e: ev){
+      e->Decode(3);
+      //e->Print(std::cout);
     }
     
-    if(ev_sync.size() < m_vec_layer.size() ){
-      std::cout<< "dropped assambed event with subevent less than requried "<< m_vec_layer.size() <<" sub events" <<std::endl;
-      std::string dev_numbers;
-      for(auto & ev : ev_sync){
-	dev_numbers += std::to_string(ev->GetExtension());
-	dev_numbers +=" ";
-      }
-      std::cout<< "  tluID="<<trigger_n<<" subevent= "<< dev_numbers <<std::endl;
-      std::vector<JadeDataFrameSP> empty;
-      return empty;
-    }
-    return ev_sync;
   }
+  std::cout<< "aysnc exit, from Telescope::AsyncRead"<<std::endl;
+  return n_ev;
+}
+
+
+uint64_t Telescope::AsyncWatchDog(){
+
+  //sleep and watch running time status;
+  return 0;
+}

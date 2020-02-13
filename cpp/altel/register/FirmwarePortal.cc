@@ -50,7 +50,7 @@ FirmwarePortal::FirmwarePortal(const std::string &json_str){
 
 
 void  FirmwarePortal::WriteByte(uint64_t address, uint64_t value){
-  FormatPrint(std::cout, "WriteByte( address=%#016x ,  value=%#016x )\n", address, value);
+  DebugFormatPrint(std::cout, "WriteByte( address=%#016x ,  value=%#016x )\n", address, value);
   // rbcp_write("131.169.133.173", 4660, static_cast<uint32_t>(address), static_cast<uint8_t>(value));
   rbcp r(m_alpide_ip_addr);
   std::string recvStr(100, 0);
@@ -59,19 +59,19 @@ void  FirmwarePortal::WriteByte(uint64_t address, uint64_t value){
 
 
 uint64_t FirmwarePortal::ReadByte(uint64_t address){
-  FormatPrint(std::cout, "ReadByte( address=%#016x)\n", address);
+  DebugFormatPrint(std::cout, "ReadByte( address=%#016x)\n", address);
   uint8_t reg_value;
   // rbcp_read("131.169.133.173", 4660, static_cast<uint32_t>(address), reg_value);
   rbcp r(m_alpide_ip_addr);
   std::string recvStr(100, 0);
   r.DispatchCommand("rd", address, 1, &recvStr); 
   reg_value=recvStr[0];
-  FormatPrint(std::cout, "ReadByte( address=%#016x) return value=%#016x\n", address, reg_value);
+  DebugFormatPrint(std::cout, "ReadByte( address=%#016x) return value=%#016x\n", address, reg_value);
   return reg_value;
 };
 
 void FirmwarePortal::SetFirmwareRegister(const std::string& name, uint64_t value){
-  FormatPrint(std::cout, "INFO<%s>: %s( name=%s ,  value=%#016x )\n", __func__, __func__, name.c_str(), value);
+  DebugFormatPrint(std::cout, "INFO<%s>: %s( name=%s ,  value=%#016x )\n", __func__, __func__, name.c_str(), value);
   static const std::string array_name("FIRMWARE_REG_LIST_V2");
   auto& json_array = m_json[array_name];
   if(json_array.Empty()){
@@ -135,13 +135,13 @@ void FirmwarePortal::SetFirmwareRegister(const std::string& name, uint64_t value
 	  uint64_t f = 8*sizeof(value)-n_bits_per_word*(i+1);
 	  uint64_t b = 8*sizeof(value)-n_bits_per_word;
 	  sub_value = (value<<f)>>b;
-	  FormatPrint(std::cout, "INFO<%s>: %s value=%#016x (<<%u)  (>>%u) sub_value=%#016x \n", __func__, "LE", value, f, b, sub_value);
+	  DebugFormatPrint(std::cout, "INFO<%s>: %s value=%#016x (<<%u)  (>>%u) sub_value=%#016x \n", __func__, "LE", value, f, b, sub_value);
 	}
 	else{
 	  uint64_t f = 8*sizeof(value)-n_bits_per_word*(n_words-i);
 	  uint64_t b = 8*sizeof(value)-n_bits_per_word;
 	  sub_value = (value<<f)>>b;
-	  FormatPrint(std::cout, "INFO<%s>: %s value=%#016x (<<%u)  (>>%u) sub_value=%#016x \n", __func__, "BE", value, f, b, sub_value);
+	  DebugFormatPrint(std::cout, "INFO<%s>: %s value=%#016x (<<%u)  (>>%u) sub_value=%#016x \n", __func__, "BE", value, f, b, sub_value);
 	}
 	SetFirmwareRegister(name_in_array_str, sub_value);
 	i++;
@@ -161,7 +161,7 @@ void FirmwarePortal::SetFirmwareRegister(const std::string& name, uint64_t value
 }
 
 void FirmwarePortal::SetAlpideRegister(const std::string& name, uint64_t value){
-  FormatPrint(std::cout, "INFO<%s>: %s( name=%s ,  value=%#016x )\n", __func__, __func__, name.c_str(), value);
+  DebugFormatPrint(std::cout, "INFO<%s>: %s( name=%s ,  value=%#016x )\n", __func__, __func__, name.c_str(), value);
   static const std::string array_name("CHIP_REG_LIST");
   auto& json_array = m_json[array_name];
   if(json_array.Empty()){
@@ -228,13 +228,13 @@ void FirmwarePortal::SetAlpideRegister(const std::string& name, uint64_t value){
 	  uint64_t f = (8*sizeof(value)-n_bits_per_word*(i+1));
 	  uint64_t b = (8*sizeof(value)-n_bits_per_word);
 	  sub_value = (value<<f)>>b;
-	  FormatPrint(std::cout, "INFO<%s>:  %s value=%#016x << %u  >>%u sub_value=%#016x \n", __func__, "LE", value, f, b, sub_value);
+	  DebugFormatPrint(std::cout, "INFO<%s>:  %s value=%#016x << %u  >>%u sub_value=%#016x \n", __func__, "LE", value, f, b, sub_value);
 	}
 	else{
 	  uint64_t f = (8*sizeof(value)-n_bits_per_word*(n_words-i));
 	  uint64_t b = (8*sizeof(value)-n_bits_per_word);
 	  sub_value = (value<<f)>>b;
-	  FormatPrint(std::cout, "INFO<%s>:  %s value=%#016x << %u  >>%u sub_value=%#016x \n", __func__, "BE", value, f, b, sub_value);
+	  DebugFormatPrint(std::cout, "INFO<%s>:  %s value=%#016x << %u  >>%u sub_value=%#016x \n", __func__, "BE", value, f, b, sub_value);
 	}
 	SetAlpideRegister(name_in_array_str, sub_value);
 	i++;  
@@ -254,7 +254,7 @@ void FirmwarePortal::SetAlpideRegister(const std::string& name, uint64_t value){
 }
 
 void FirmwarePortal::SendFirmwareCommand(const std::string& name){
-  FormatPrint(std::cout, "INFO<%s>:  %s( name=%s )\n", __func__, __func__, name.c_str());
+  DebugFormatPrint(std::cout, "INFO<%s>:  %s( name=%s )\n", __func__, __func__, name.c_str());
   static const std::string array_name("FIRMWARE_CMD_LIST_V2");
   auto& json_array = m_json[array_name];
   if(json_array.Empty()){
@@ -278,11 +278,11 @@ void FirmwarePortal::SendFirmwareCommand(const std::string& name){
     FormatPrint(std::cerr, "ERROR<%s>: unable to find command<%s> in array<%s>\n", __func__, name.c_str(), array_name.c_str());
     throw;
   }
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
 void FirmwarePortal::SendAlpideCommand(const std::string& name){
-  FormatPrint(std::cout, "INFO<%s>:  %s( name=%s )\n", __func__, __func__, name.c_str());
+  DebugFormatPrint(std::cout, "INFO<%s>:  %s( name=%s )\n", __func__, __func__, name.c_str());
   static const std::string array_name("CHIP_CMD_LIST");
   auto& json_array = m_json[array_name];
   if(json_array.Empty()){
@@ -309,7 +309,7 @@ void FirmwarePortal::SendAlpideCommand(const std::string& name){
 }
 
 void FirmwarePortal::SendAlpideBroadcast(const std::string& name){
-  FormatPrint(std::cout, "INFO<%s>:  %s( name=%s )\n", __func__, __func__, name.c_str());
+  DebugFormatPrint(std::cout, "INFO<%s>:  %s( name=%s )\n", __func__, __func__, name.c_str());
   static const std::string array_name("CHIP_CMD_LIST");
   auto& json_array = m_json[array_name];
   if(json_array.Empty()){
@@ -338,7 +338,7 @@ void FirmwarePortal::SendAlpideBroadcast(const std::string& name){
 
 
 uint64_t FirmwarePortal::GetFirmwareRegister(const std::string& name){
-  FormatPrint(std::cout, "INFO<%s>:  %s( name=%s )\n", __func__, __func__, name.c_str());
+  DebugFormatPrint(std::cout, "INFO<%s>:  %s( name=%s )\n", __func__, __func__, name.c_str());
   static const std::string array_name("FIRMWARE_REG_LIST_V2");
   auto& json_array = m_json[array_name];
   if(json_array.Empty()){
@@ -405,13 +405,13 @@ uint64_t FirmwarePortal::GetFirmwareRegister(const std::string& name){
 	  uint64_t f = n_bits_per_word*i;
 	  uint64_t b = 0;
 	  add_value = (sub_value<<f)>>b;
-	  FormatPrint(std::cout, "INFO<%s>:  %s sub_value=%#016x << %u  >>%u add_value=%#016x \n", __func__, "LE", sub_value, f, b, add_value);
+	  DebugFormatPrint(std::cout, "INFO<%s>:  %s sub_value=%#016x << %u  >>%u add_value=%#016x \n", __func__, "LE", sub_value, f, b, add_value);
 	}
 	else{
 	  uint64_t f = n_bits_per_word*(n_words-1-i);
 	  uint64_t b = 0;
 	  add_value = (sub_value<<f)>>b;
-	  FormatPrint(std::cout, "INFO<%s>:  %s sub_value=%#016x << %u  >>%u add_value=%#016x \n", __func__, "BE", sub_value, f, b, add_value);
+	  DebugFormatPrint(std::cout, "INFO<%s>:  %s sub_value=%#016x << %u  >>%u add_value=%#016x \n", __func__, "BE", sub_value, f, b, add_value);
 	}
 	value += add_value;
 	i++;
@@ -428,13 +428,13 @@ uint64_t FirmwarePortal::GetFirmwareRegister(const std::string& name){
     FormatPrint(std::cerr, "ERROR<%s>: unable to find register<%s> in array<%s>\n", __func__, name.c_str(), array_name.c_str());
     throw;
   }
-  FormatPrint(std::cout, "INFO<%s>: %s( name=%s ) return value=%#016x \n", __func__, __func__, name.c_str(), value);
+  DebugFormatPrint(std::cout, "INFO<%s>: %s( name=%s ) return value=%#016x \n", __func__, __func__, name.c_str(), value);
   return value;
 }
 
 
 uint64_t FirmwarePortal::GetAlpideRegister(const std::string& name){  
-  FormatPrint(std::cout, "INFO<%s>:  %s( name=%s )\n",__func__, __func__, name.c_str());
+  DebugFormatPrint(std::cout, "INFO<%s>:  %s( name=%s )\n",__func__, __func__, name.c_str());
   static const std::string array_name("CHIP_REG_LIST");
   auto& json_array = m_json[array_name];
   if(json_array.Empty()){
@@ -463,7 +463,7 @@ uint64_t FirmwarePortal::GetAlpideRegister(const std::string& name){
 	if(nr_new != nr_old){
 	  break;
 	}
-	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+	std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	if(std::chrono::system_clock::now() > tp_timeout){
 	  FormatPrint(std::cerr, "ERROR<%s>:  timeout to read back Alpide register<%s>\n", __func__, name.c_str());
 	  throw;
@@ -521,13 +521,13 @@ uint64_t FirmwarePortal::GetAlpideRegister(const std::string& name){
 	  uint64_t f = n_bits_per_word*i;
 	  uint64_t b = 0;
 	  add_value = (sub_value<<f)>>b;
-	  FormatPrint(std::cout, "INFO<%s>:  %s sub_value=%#016x << %u  >>%u add_value=%#016x \n", __func__, "LE", sub_value, f, b, add_value);
+	  DebugFormatPrint(std::cout, "INFO<%s>:  %s sub_value=%#016x << %u  >>%u add_value=%#016x \n", __func__, "LE", sub_value, f, b, add_value);
 	}
 	else{
 	  uint64_t f = n_bits_per_word*(n_words-1-i);
 	  uint64_t b = 0;
 	  add_value = (sub_value<<f)>>b;
-	  FormatPrint(std::cout, "INFO<%s>:  %s sub_value=%#016x << %u  >>%u add_value=%#016x \n", __func__, "BE", sub_value, f, b, add_value);
+	  DebugFormatPrint(std::cout, "INFO<%s>:  %s sub_value=%#016x << %u  >>%u add_value=%#016x \n", __func__, "BE", sub_value, f, b, add_value);
 	}
 	value += add_value;
 	i++;
@@ -544,7 +544,7 @@ uint64_t FirmwarePortal::GetAlpideRegister(const std::string& name){
     FormatPrint(std::cerr, "ERROR<%s>: unable to find register<%s> in array<%s>\n", __func__, name.c_str(), array_name.c_str());
     throw;
   }  
-  FormatPrint(std::cout, "INFO<%s>: %s( name=%s ) return value=%#016x \n", __func__, __func__, name.c_str(), value);
+  DebugFormatPrint(std::cout, "INFO<%s>: %s( name=%s ) return value=%#016x \n", __func__, __func__, name.c_str(), value);
   return value;  
 }
 
@@ -631,13 +631,13 @@ void FirmwarePortal::SetRegionRegister(uint64_t region, const std::string& name,
 	  uint64_t f = (8*sizeof(value)-n_bits_per_word*(i+1));
 	  uint64_t b = (8*sizeof(value)-n_bits_per_word);
 	  sub_value = (value<<f)>>b;
-	  FormatPrint(std::cout, "INFO<%s>:  %s value=%#016x << %u  >>%u sub_value=%#016x \n", __func__, "LE", value, f, b, sub_value);
+	  DebugFormatPrint(std::cout, "INFO<%s>:  %s value=%#016x << %u  >>%u sub_value=%#016x \n", __func__, "LE", value, f, b, sub_value);
 	}
 	else{
 	  uint64_t f = (8*sizeof(value)-n_bits_per_word*(n_words-i));
 	  uint64_t b = (8*sizeof(value)-n_bits_per_word);
 	  sub_value = (value<<f)>>b;
-	  FormatPrint(std::cout, "INFO<%s>:  %s value=%#016x << %u  >>%u sub_value=%#016x \n", __func__, "BE", value, f, b, sub_value);
+	  DebugFormatPrint(std::cout, "INFO<%s>:  %s value=%#016x << %u  >>%u sub_value=%#016x \n", __func__, "BE", value, f, b, sub_value);
 	}
 	SetRegionRegister(region, name_in_array_str, sub_value);
 	i++;  
@@ -659,7 +659,7 @@ void FirmwarePortal::SetRegionRegister(uint64_t region, const std::string& name,
 
 
 void FirmwarePortal::BroadcastRegionRegister(const std::string& name, uint64_t value){
-  FormatPrint(std::cout, "INFO<%s>: %s( name=%s ,  value=%#016x )\n", __func__, __func__, name.c_str(), value);
+  DebugFormatPrint(std::cout, "INFO<%s>: %s( name=%s ,  value=%#016x )\n", __func__, __func__, name.c_str(), value);
   static const std::string array_name("CHIP_REG_LIST");
   auto& json_array = m_json[array_name];
   if(json_array.Empty()){
@@ -727,13 +727,13 @@ void FirmwarePortal::BroadcastRegionRegister(const std::string& name, uint64_t v
 	  uint64_t f = (8*sizeof(value)-n_bits_per_word*(i+1));
 	  uint64_t b = (8*sizeof(value)-n_bits_per_word);
 	  sub_value = (value<<f)>>b;
-	  FormatPrint(std::cout, "INFO<%s>:  %s value=%#016x << %u  >>%u sub_value=%#016x \n", __func__, "LE", value, f, b, sub_value);
+	  DebugFormatPrint(std::cout, "INFO<%s>:  %s value=%#016x << %u  >>%u sub_value=%#016x \n", __func__, "LE", value, f, b, sub_value);
 	}
 	else{
 	  uint64_t f = (8*sizeof(value)-n_bits_per_word*(n_words-i));
 	  uint64_t b = (8*sizeof(value)-n_bits_per_word);
 	  sub_value = (value<<f)>>b;
-	  FormatPrint(std::cout, "INFO<%s>:  %s value=%#016x << %u  >>%u sub_value=%#016x \n", __func__, "BE", value, f, b, sub_value);
+	  DebugFormatPrint(std::cout, "INFO<%s>:  %s value=%#016x << %u  >>%u sub_value=%#016x \n", __func__, "BE", value, f, b, sub_value);
 	}
 	BroadcastRegionRegister(name_in_array_str, sub_value);
 	i++;  
