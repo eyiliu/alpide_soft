@@ -21,7 +21,24 @@ public:
   std::atomic_uint64_t m_hot_p_read;
   uint64_t m_count_ring_read;
   bool m_is_async_reading{false};
+  bool m_is_async_watching{false};
 
+  
+  //status variable:
+  std::atomic_uint64_t m_st_n_tg_ev_now{0};
+  std::atomic_uint64_t m_st_n_ev_input_now{0};
+  std::atomic_uint64_t m_st_n_ev_output_now{0};
+  std::atomic_uint64_t m_st_n_ev_bad_now{0};
+  std::atomic_uint64_t m_st_n_ev_overflow_now{0};
+
+  uint64_t m_st_n_tg_ev_old{0};
+  uint64_t m_st_n_ev_input_old{0};
+  //uint64_t m_st_n_ev_output_old{0};
+  uint64_t m_st_n_ev_bad_old{0};
+  uint64_t m_st_n_ev_overflow_old{0};
+  std::chrono::system_clock::time_point m_tp_old;
+  std::chrono::system_clock::time_point m_tp_run_begin;
+  
 public:
   void fw_start();
   void fw_stop();
@@ -34,6 +51,9 @@ public:
   JadeDataFrameSP& Front();
   void PopFront();
   uint64_t Size();
+  
+  uint64_t AsyncWatchDog();
+
   
 };
 

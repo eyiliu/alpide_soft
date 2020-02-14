@@ -75,7 +75,6 @@ void Layer::fw_init(){
 }
 
 
-
 void Layer::rd_start(){
   if(m_is_async_reading){
     std::cout<< "old AsyncReading() has not been stopped "<<std::endl;
@@ -109,15 +108,18 @@ uint64_t Layer::AsyncPushBack(){ // IMPROVE IT AS A RING
     if(!df){
       continue;
     }
-    
+
+    m_st_n_ev_input_now ++;
     uint64_t next_p_ring_write = m_count_ring_write % m_size_ring;
     if(next_p_ring_write == m_hot_p_read){
       // buffer full, permanent data lose
+      m_st_n_ev_overflow_now ++;
       continue;
     }
 
     df->Decode(1); //level 1, header-only
     uint16_t tg_l15 = 0x7fff & df->GetCounter();
+    std::cout<< "id "<< tg_l15 <<"  ";
     if(m_flag_wait_first_event){
       m_flag_wait_first_event = false;
       m_tg_expected = tg_l15;
@@ -127,28 +129,91 @@ uint64_t Layer::AsyncPushBack(){ // IMPROVE IT AS A RING
       uint32_t tg_guess_0 = (m_tg_expected & 0xffff8000) + tg_l15;
       uint32_t tg_guess_1 = (m_tg_expected & 0xffff8000) + 0x8000 + tg_l15;
       if(tg_guess_0 > m_tg_expected && tg_guess_0 - m_tg_expected < 200){
-        std::cout<< "missing trigger, expecting : provided "<< (m_tg_expected & 0x7fff) << " : "<< tg_l15<<"\n";
+        std::cout<< "missing trigger, expecting : provided "<< (m_tg_expected & 0x7fff) << " : "<< tg_l15<<" ("<<df->GetExtension() <<") \n";
         m_tg_expected =tg_guess_0;
       }
       else if (tg_guess_1 > m_tg_expected && tg_guess_1 - m_tg_expected < 200){
-        std::cout<< "missing trigger, expecting : provided "<< (m_tg_expected & 0x7fff) << " : "<< tg_l15<<"\n";
+        std::cout<< "missing trigger, expecting : provided "<< (m_tg_expected & 0x7fff) << " : "<< tg_l15<<" ("<<df->GetExtension() <<") \n";
         m_tg_expected =tg_guess_1;
       }
       else{
-        std::cout<< "broken trigger ID, expecting : provided "<< (m_tg_expected & 0x7fff) << " : "<< tg_l15<<"\n";
+        std::cout<< "broken trigger ID, expecting : provided "<< (m_tg_expected & 0x7fff) << " : "<< tg_l15<<" ("<<df->GetExtension() <<") \n";
         m_tg_expected ++;
+        m_st_n_ev_bad_now ++;
         // permanent data lose
         continue;
       }
     }
     df->SetTrigger(m_tg_expected-1); //TODO: fix tlu firmware, mismatch between modes
-
+    m_st_n_tg_ev_now = m_tg_expected-1;
+    
     m_vec_ring_ev[next_p_ring_write] = df;
     m_count_ring_write ++;
   }
   std::cout<< "aysnc exit"<<std::endl;
   return m_count_ring_write;
 }
+
+uint64_t Layer::AsyncWatchDog(){
+  m_tp_run_begin = std::chrono::system_clock::now();
+  m_tp_old = m_tp_run_begin;
+  m_is_async_watching = true;
+  while(m_is_async_watching){
+    std::this_thread::sleep_for(1s);
+    
+    uint64_t st_n_tg_ev_now = m_st_n_tg_ev_now;
+    uint64_t st_n_ev_input_now = m_st_n_ev_input_now;
+    //uint64_t st_n_ev_output_now = m_st_n_ev_output_now;
+    uint64_t st_n_ev_bad_now = m_st_n_ev_bad_now;
+    uint64_t st_n_ev_overflow_now = m_st_n_ev_overflow_now;
+
+    // time
+    auto tp_now = std::chrono::system_clock::now();
+    std::chrono::duration<double> dur_period_sec = tp_now - m_tp_old;
+    std::chrono::duration<double> dur_accu_sec = tp_now - m_tp_run_begin;
+    double sec_period = dur_period_sec.count();
+    double sec_accu = dur_accu_sec.count();
+
+    // period
+    uint64_t st_n_tg_ev_period = st_n_tg_ev_now - m_st_n_tg_ev_old;
+    uint64_t st_n_ev_input_period = st_n_ev_input_now - m_st_n_ev_input_old;
+    uint64_t st_n_ev_bad_period = st_n_ev_bad_now - m_st_n_ev_bad_old;
+    uint64_t st_n_ev_overflow_period = st_n_ev_overflow_now - m_st_n_ev_overflow_old;
+    
+    // ratio
+    //double st_output_vs_input_accu = st_n_ev_input_now? st_ev_output_now / st_ev_input_now : 1;
+    double st_bad_vs_input_accu = st_n_ev_input_now? st_n_ev_bad_now / st_n_ev_input_now : 0;
+    double st_overflow_vs_input_accu = st_n_ev_input_now? st_n_ev_overflow_now / st_n_ev_input_now : 0;
+    double st_input_vs_trigger_accu = st_n_tg_ev_now? st_n_ev_input_now / st_n_tg_ev_now : 1;
+    
+    //double st_output_vs_input_period = st_ev_input_period? st_ev_output_period / st_ev_input_period : 1;
+    double st_bad_vs_input_period = st_n_ev_input_period? st_n_ev_bad_period / st_n_ev_input_period : 0;
+    double st_overflow_vs_input_period = st_n_ev_input_period? st_n_ev_overflow_period / st_n_ev_input_period : 0;
+    double st_input_vs_trigger_period = st_n_tg_ev_period? st_n_ev_input_period / st_n_tg_ev_period : 1;
+    
+    // hz
+    double st_hz_tg_accu = st_n_tg_ev_now / sec_accu ;
+    double st_hz_input_accu = st_n_ev_input_now / sec_accu ; 
+
+    double st_hz_tg_period = st_n_tg_ev_period / sec_period ;
+    double st_hz_input_period = st_n_ev_input_period / sec_period ;
+
+    printf("event(%u)/trigger(%u)=e/t(%d)  De/Dt(%d)  trigger_accu(%d hz) event_accu(%d hz) trigger_period(%d hz) event_period(%d hz) /n",
+           st_n_ev_input_now, st_n_tg_ev_now, st_input_vs_trigger_accu, st_input_vs_trigger_period,
+           st_hz_tg_accu, st_hz_input_accu, st_hz_tg_period, st_hz_input_period
+           );
+
+    //write to old
+    m_st_n_tg_ev_old = st_n_tg_ev_now;
+    m_st_n_ev_input_old = st_n_ev_input_now;
+    m_st_n_ev_bad_old = st_n_ev_bad_now;
+    m_st_n_ev_overflow_old = st_n_ev_overflow_now;
+    m_tp_old = tp_now;
+  }
+  return 0;
+}
+
+
 
 JadeDataFrameSP& Layer::Front(){
   if(m_count_ring_write > m_count_ring_read) {
@@ -175,6 +240,7 @@ void Layer::PopFront(){
 uint64_t Layer::Size(){
   return  m_count_ring_write - m_count_ring_read;
 }
+
 
 Telescope::Telescope(const std::string& file_context){
   rapidjson::Document js_doc;
