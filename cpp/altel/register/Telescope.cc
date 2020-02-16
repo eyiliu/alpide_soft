@@ -262,6 +262,7 @@ uint64_t Layer::Size(){
   return  m_count_ring_write - m_count_ring_read;
 }
 
+
 Telescope::Telescope(const std::string& file_context){
   rapidjson::Document js_doc;
   js_doc.Parse(file_context.c_str());
@@ -282,7 +283,11 @@ Telescope::Telescope(const std::string& file_context){
     m_vec_layer.push_back(std::move(l));
   }
 }
-  
+
+Telescope::~Telescope(){
+  Stop();
+}
+
 std::vector<JadeDataFrameSP> Telescope::ReadEvent(){
   std::vector<JadeDataFrameSP> ev_sync;
   uint32_t trigger_n = -1;
@@ -337,6 +342,7 @@ void Telescope::Start(){
   
   m_fut_async_rd = std::async(std::launch::async, &Telescope::AsyncRead, this);  
 }
+
 
 void Telescope::Stop(){
   m_is_async_reading = false;

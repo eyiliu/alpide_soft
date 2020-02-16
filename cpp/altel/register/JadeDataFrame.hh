@@ -81,7 +81,8 @@ public:
           {
             w.Uint(*it_x);
             w.Uint(*it_y);
-            w.Uint(*it_z);
+            //w.Uint(*it_z);
+            w.Uint(m_extension);
           }
           w.EndArray();
           it_x++;

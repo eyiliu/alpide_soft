@@ -73,7 +73,7 @@ public:
 
   std::atomic_uint64_t m_st_n_ev{0};
   
-  
+  ~Telescope();
   Telescope(const std::string& file_context);
   std::vector<JadeDataFrameSP> ReadEvent();
   
@@ -84,6 +84,5 @@ public:
   uint64_t AsyncWatchDog();
   
 };
-
 
 #endif

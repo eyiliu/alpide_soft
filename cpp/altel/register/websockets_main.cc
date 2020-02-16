@@ -14,11 +14,9 @@
 #include "common/getopt/getopt.h"
 #include "common/linenoiseng/linenoise.h"
 
-#include "FirmwarePortal.hh"
-#include "AltelReader.hh"
+#include "Telescope.hh"
 
 using namespace std::chrono_literals;
-
 
 template<typename ... Args>
 static std::size_t FormatPrint(std::ostream &os, const std::string& format, Args ... args ){
@@ -37,229 +35,85 @@ public:
   char m_header[LWS_PRE]; // internally protocol header
   //this buffer MUST have LWS_PRE bytes valid BEFORE the pointer. This is so the protocol header data can be added in-situ.
   char m_send_buf[32768]; // must follow header LWS_PRE
-  FirmwarePortal* m_fw{nullptr};
+  Telescope* m_tel{nullptr};
   
   std::mutex m_mx_recv;
-  std::deque<std::string> m_qu_recv;  
-  uint64_t ev_printed{0};
+  std::atomic_uint64_t m_n_recv{0};
+  std::deque<std::string> m_qu_recv; 
 
   bool m_flag_call_back_closed{false};
-  bool m_is_running_reading{false};
-  std::unique_ptr<AltelReader> m_rd;
-  std::future<uint64_t> m_fut_async_rd;
-
-  std::mutex m_mx_ev_to_wrt;
-  std::deque<JadeDataFrameSP> m_qu_ev_to_wrt;
-  std::condition_variable m_cv_valid_ev_to_wrt;
   
   void callback_add_recv(char* in,  size_t len){
     std::string str_recv(in, len); //TODO: split combined recv.
     std::cout<< "recv: "<<str_recv<<std::endl;
     std::unique_lock<std::mutex> lk_recv(m_mx_recv);
     m_qu_recv.push_back(std::move(str_recv));
-  } 
+    m_n_recv ++;
+  }
   
   lws_threadpool_task_return
   task_exe(lws_threadpool_task_status s){
     std::cout<< " .";
     if ( (s != LWS_TP_STATUS_RUNNING) || m_flag_call_back_closed){
-      std::cout<< "my stopping "<<std::endl;
-      m_is_running_reading = false;
-      if(m_fut_async_rd.valid())
-        m_fut_async_rd.get();
-      m_rd.reset();
+      m_tel->Stop();
       return LWS_TP_RETURN_STOPPED;
     }
     //============== cmd execute  =================
-    std::string str_recv;
-    {
-      std::unique_lock<std::mutex> lk_recv(m_mx_recv);
-      if(!m_qu_recv.empty()){
+    if(m_n_recv){
+      std::string str_recv;
+      {
+        std::unique_lock<std::mutex> lk_recv(m_mx_recv);
         std::swap(str_recv, m_qu_recv.front());
         m_qu_recv.pop_front();
       }
-    }
-    if(!str_recv.empty()){
-      std::cout<< "run recv: <"<<str_recv<<">"<<std::endl;
-      if(str_recv=="start"){
-        std::string file_context = FirmwarePortal::LoadFileToString("jsonfile/reader.json");
-        if(m_rd){
-          m_rd->Close();
-        }
-        m_rd.reset();//delete old object
-        m_rd.reset(new AltelReader(file_context) );
-        m_rd->Open();
-        m_is_running_reading = true;
-        m_fut_async_rd = std::async(std::launch::async, &Task_data::async_reading, this);
-
-        //=========== init part ========================
-        // 3.8 Chip initialization
-        // GRST
-        m_fw->SetFirmwareRegister("FIRMWARE_MODE", 0);
-        m_fw->SetFirmwareRegister("ADDR_CHIP_ID", 0x10); //OB
-        m_fw->SendAlpideBroadcast("GRST"); // chip global reset
-        m_fw->SetAlpideRegister("CHIP_MODE", 0x3c); // configure mode
-        // DAC setup
-        m_fw->SetAlpideRegister("VRESETP", 0x75); //117
-        m_fw->SetAlpideRegister("VRESETD", 0x93); //147
-        m_fw->SetAlpideRegister("VCASP", 0x56);   //86
-        m_fw->SetAlpideRegister("VCASN", 0x32);   //57 Y50
-        m_fw->SetAlpideRegister("VPULSEH", 0xff); //255 
-        m_fw->SetAlpideRegister("VPULSEL", 0x0);  //0
-        m_fw->SetAlpideRegister("VCASN2", 0x39);  //62 Y63
-        m_fw->SetAlpideRegister("VCLIP", 0x0);    //0
-        m_fw->SetAlpideRegister("VTEMP", 0x0);
-        m_fw->SetAlpideRegister("IAUX2", 0x0);
-        m_fw->SetAlpideRegister("IRESET", 0x32);  //50
-        m_fw->SetAlpideRegister("IDB", 0x40);     //64
-        m_fw->SetAlpideRegister("IBIAS", 0x40);   //64
-        m_fw->SetAlpideRegister("ITHR", 40);    //51  empty 0x32; 0x12 data, not full.  0x33 default, threshold
-        // 3.8.1 Configuration of in-pixel logic
-        m_fw->SendAlpideBroadcast("PRST");  //pixel matrix reset
-        m_fw->BroadcastPixelRegister("MASK_EN", 0);
-        m_fw->BroadcastPixelRegister("PULSE_EN", 0);
-        // m_fw->SendAlpideBroadcast("PRST");  //pixel matrix reset
-        // 3.8.2 Configuration and start-up of the Data Transmission Unit, PLL
-        m_fw->SetAlpideRegister("DTU_CONF", 0x008d);
-        m_fw->SetAlpideRegister("DTU_DAC",  0x0088);
-        m_fw->SetAlpideRegister("DTU_CONF", 0x0085);
-        m_fw->SetAlpideRegister("DTU_CONF", 0x0185);
-        m_fw->SetAlpideRegister("DTU_CONF", 0x0085);
-        // 3.8.3 Setting up of readout
-        // 3.8.3.1a (OB) Setting CMU and DMU Configuration Register
-        // Previous Chip
-        m_fw->SetAlpideRegister("CMU_DMU_CONF", 0x70); //disable MCH encoding, enable DDR, no previous OB
-        m_fw->SetAlpideRegister("TEST_CTRL", 0x400); //Disable Busy Line
-        // Initial Token 1
-        // 3.8.3.2 Setting FROMU Configuration Registers and enabling readout mode
-        // FROMU Configuration Register 1,2
-        m_fw->SetAlpideRegister("FROMU_CONF_1", 0x00); //Disable external busy
-        m_fw->SetAlpideRegister("FROMU_CONF_2", 156); //STROBE duration
-        // FROMU Pulsing Register 1,2
-        m_fw->SetAlpideRegister("FROMU_PULSING_2", 0xffff); //yiliu: test pulse duration, max  
-        // Periphery Control Register (CHIP MODE)
-        m_fw->SetAlpideRegister("CHIP_MODE", 0x3d); //trigger MODE
-        // RORST 
-        m_fw->SendAlpideBroadcast("RORST"); //Readout (RRU/TRU/DMU) reset
-        //===========end of init part =====================
-        
-        m_fw->SetFirmwareRegister("TRIG_DELAY", 100); //25ns per dig (FrameDuration?)
-        m_fw->SetFirmwareRegister("GAP_INT_TRIG", 20);
-        m_fw->SetFirmwareRegister("FIRMWARE_MODE", 1); //run ext trigger
-      };
-
-      if(str_recv=="stop"){
-        m_fw->SetFirmwareRegister("FIRMWARE_MODE", 0);
-
-        m_is_running_reading = false;
-        if(m_fut_async_rd.valid())
-          m_fut_async_rd.get();
-        m_rd.reset();
-      };
-
-      if(str_recv=="reset"){
-        m_fw->SendFirmwareCommand("RESET");  
-        m_is_running_reading = false;
-        if(m_fut_async_rd.valid())
-          m_fut_async_rd.get();
-        m_rd.reset();
-      };
+      m_n_recv --;
+      if(!str_recv.empty()){
+        //std::cout<< "run recv: <"<<str_recv<<">"<<std::endl;
+        if(str_recv=="start"){
+          m_tel->Start();
+        };
       
-      if(str_recv=="teminate"){
-        m_is_running_reading = false;
-        if(m_fut_async_rd.valid())
-          m_fut_async_rd.get();
-        m_rd.reset();        
-        return LWS_TP_RETURN_FINISHED;        
-      };      
-      return LWS_TP_RETURN_CHECKING_IN;
-      // return LWS_TP_RETURN_SYNC;
-    }
-
-    //============ data send ====================
-    // m_fw->SendAlpideBroadcast("PULSE");
-    std::unique_lock<std::mutex> lk_in(m_mx_ev_to_wrt);
-    while(m_qu_ev_to_wrt.empty()){
-      while(m_cv_valid_ev_to_wrt.wait_for(lk_in, 100ms) ==std::cv_status::timeout){
+        if(str_recv=="stop"){
+          m_tel->Stop();       
+        };
+      
+        if(str_recv=="teminate"){
+          return LWS_TP_RETURN_FINISHED;        
+        };
         return LWS_TP_RETURN_CHECKING_IN;
+        // return LWS_TP_RETURN_SYNC;
       }
     }
-
-    auto qu_df = m_qu_ev_to_wrt;
-    m_qu_ev_to_wrt.clear();
-    lk_in.unlock();
-
-    bool has_hit = false;
-    while(qu_df.size()){
-      auto df = qu_df.front();
-      qu_df.pop_front();      
-      df->Decode(3); //level 1, header-only
-      if(df->Data_X().empty()){
-        //skip empty
-        std::cout<<"*";
-        continue;
-      }else{
-        std::cout<<"+";
-        // ev_printed ++;
-        // if(ev_printed > 1)
-        //   continue;
-        std::cout<<df->Data_X().size();
-        has_hit = true;
-        rapidjson::StringBuffer sb;
-        // std::cout<<"init sb"<<std::endl;
-        rapidjson::Writer<rapidjson::StringBuffer> w(sb);
-        // std::cout<<"init wr"<<std::endl;
-        df->Serialize(w);
-        // std::cout<<"ser wr"<<std::endl;
-        std::cout<< "\n"<<sb.GetString();
-      } 
-      // has_hit = true;
-      // rapidjson::StringBuffer sb;
-      // rapidjson::Writer<rapidjson::StringBuffer> w(sb);
-      // df->Serialize(w);
-      // std::cout<< sb.GetString();
-
-      // std::strcpy(m_send_buf, static_cast<const char*>(sb.GetString()));
+    
+    //============ data send ====================
+    if(!m_tel){
+      return LWS_TP_RETURN_CHECKING_IN;
     }
-    // if(has_hit)
-    //   return LWS_TP_RETURN_SYNC; // LWS_CALLBACK_SERVER_WRITEABLE TP_STATUS_SYNC
-    // else
-      return LWS_TP_RETURN_CHECKING_IN; // "check in" to see if it has been asked to stop.
+    auto ev = m_tel->ReadEvent();
+    if(ev.empty()){ // no event
+      return LWS_TP_RETURN_CHECKING_IN;
+    }
+
+    for(auto& e: ev){
+      rapidjson::StringBuffer sb;
+      rapidjson::Writer<rapidjson::StringBuffer> w(sb);
+      e->Serialize(w);
+    }
+    //std::cout<<sb.GetString();
+    //std::strcpy(m_send_buf, static_cast<const char*>(sb.GetString()));
+    return LWS_TP_RETURN_SYNC; // LWS_CALLBACK_SERVER_WRITEABLE TP_STATUS_SYNC
+    // return LWS_TP_RETURN_CHECKING_IN; // "check in" to see if it has been asked to stop.
   };
-  
-  uint64_t async_reading(){
-    std::cout<< "aysnc enter"<<std::endl;
-    auto tp_start = std::chrono::system_clock::now();
-    auto tp_print_prev = std::chrono::system_clock::now();
-    uint64_t ndf_print_next = 10000;
-    uint64_t ndf_print_prev = 0;
-    uint64_t n_df = 0;
-    m_is_running_reading = true;
-    while (m_is_running_reading){
-      auto df = m_rd? m_rd->Read(1000ms):nullptr;
-      if(!df){
-        continue;
-      }
-      std::unique_lock<std::mutex> lk_out(m_mx_ev_to_wrt);
-      m_qu_ev_to_wrt.push_back(df);
-      n_df ++;
-      lk_out.unlock();
-      m_cv_valid_ev_to_wrt.notify_all();
-    }
-    std::cout<< "aysnc exit"<<std::endl;
-    return n_df;
-  }
-  
+    
   Task_data(const std::string& json_path, const std::string& ip_addr){
     std::string file_context = FirmwarePortal::LoadFileToString(json_path);
-    m_fw = new FirmwarePortal(file_context, ip_addr);
-    
+    m_tel = new Telescope(file_context);;
   };
-    
+  
   ~Task_data(){
-    if(m_fw){
-      delete m_fw;
-      m_fw = nullptr;
+    if(m_tel){
+      delete m_tel;
+      m_tel = nullptr;
     }
     std::cout<< "Task_data instance is distructed"<< std::endl;
   };
@@ -348,7 +202,7 @@ callback_minimal(struct lws *wsi, enum lws_callback_reasons reason,
   case LWS_CALLBACK_ESTABLISHED:{ // (VH) after the server completes a handshake with an incoming client, per ws session
     std::cout<< "ESTABLISHED++"<<std::endl;
         
-    Task_data *priv_new = new Task_data("jsonfile/reg_cmd_list.json", "131.169.133.174");
+    Task_data *priv_new = new Task_data("jsonfile/telescope.json", "");
     if (!priv_new)
       return 1;
 
