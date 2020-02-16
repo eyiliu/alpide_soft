@@ -12,17 +12,19 @@ public:
   std::unique_ptr<FirmwarePortal> m_fw;
   std::unique_ptr<AltelReader> m_rd;
   std::future<uint64_t> m_fut_async_rd;
+  std::future<uint64_t> m_fut_async_watch;
   std::mutex m_mx_ev_to_wrt;
   std::vector<JadeDataFrameSP> m_vec_ring_ev;
   JadeDataFrameSP m_ring_end;
   
-  uint64_t m_size_ring{1000000};
+  uint64_t m_size_ring{200000};
   std::atomic_uint64_t m_count_ring_write;
   std::atomic_uint64_t m_hot_p_read;
   uint64_t m_count_ring_read;
   bool m_is_async_reading{false};
   bool m_is_async_watching{false};
 
+  uint64_t m_extension{0};
   
   //status variable:
   std::atomic_uint64_t m_st_n_tg_ev_now{0};
@@ -38,7 +40,11 @@ public:
   uint64_t m_st_n_ev_overflow_old{0};
   std::chrono::system_clock::time_point m_tp_old;
   std::chrono::system_clock::time_point m_tp_run_begin;
-  
+
+
+  std::string m_st_string;
+  std::mutex m_mtx_st;
+
 public:
   void fw_start();
   void fw_stop();
@@ -51,9 +57,9 @@ public:
   JadeDataFrameSP& Front();
   void PopFront();
   uint64_t Size();
-  
-  uint64_t AsyncWatchDog();
 
+  std::string GetStatusString();
+  uint64_t AsyncWatchDog();
   
 };
 
@@ -61,9 +67,12 @@ class Telescope{
 public:
   std::vector<std::unique_ptr<Layer>> m_vec_layer;
   std::future<uint64_t> m_fut_async_rd;
-  std::future<uint64_t> m_fut_async_watch_dog;
+  std::future<uint64_t> m_fut_async_watch;
   bool m_is_async_reading{false};
   bool m_is_async_watching{false};
+
+  std::atomic_uint64_t m_st_n_ev{0};
+  
   
   Telescope(const std::string& file_context);
   std::vector<JadeDataFrameSP> ReadEvent();

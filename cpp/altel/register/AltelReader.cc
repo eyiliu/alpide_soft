@@ -161,8 +161,9 @@ JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout_idel)
             if(size_filled == 0){
               if(m_file_terminate_eof)
                 return nullptr;
-              else
-                std::cerr<<"JadeRead: no data at all. ("<<m_tcp_ip <<")\n";
+              else{
+                //std::cerr<<"JadeRead: no data at all. ("<<m_tcp_ip <<")\n";
+              }
               return nullptr;
             }
             //TODO: keep remain data, nothrow
@@ -188,9 +189,9 @@ JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout_idel)
         }
         else{
           if(std::chrono::system_clock::now() > tp_timeout_idel){
-            std::cerr<<"JadeRead: reading timeout\n";
+            //std::cerr<<"JadeRead: reading timeout\n";
             if(size_filled == 0){
-              std::cerr<<"JadeRead: no data at all. ("<<m_tcp_ip <<")\n";
+              //std::cerr<<"JadeRead: no data at all. ("<<m_tcp_ip <<")\n";
               return nullptr;
             }
             std::cerr<<"JadeRead: remaining data\n";
@@ -201,8 +202,9 @@ JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout_idel)
           }
         }
         continue;
-      } 
+      }
       read_len_real = recv(m_fd, &buf[size_filled], (unsigned int)(size_buf-size_filled), MSG_WAITALL);
+      if( read_len_real == 0) continue;
       if(read_len_real <= 0){
         std::cerr<<"JadeRead: reading error\n";
         throw;
