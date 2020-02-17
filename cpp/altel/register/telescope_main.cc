@@ -77,7 +77,7 @@ Usage:\n\
                                    static const char* examples[] =
                                      {"help", "start", "stop", "init", "threshold", "window", "info",
                                       "connect","quit", "sensor", "firmware", "set", "get", "region",
-                                      "broadcast", "pixel", "ture", "false", "ITHR",
+                                      "broadcast", "pixel", "ture", "reset","false", "ITHR",
                                       NULL};
                                    size_t i;
                                    for (i = 0;  examples[i] != NULL; ++i) {
@@ -113,6 +113,13 @@ Usage:\n\
         l->fw_init();
       }
     }
+    else if (std::regex_match(result, std::regex("\\s*(reset)\\s*"))){
+      printf("rest \n");
+      for(auto& l: tel.m_vec_layer){
+        l->m_fw->SendFirmwareCommand("RESET");
+      }
+    }
+
     else if ( std::regex_match(result, std::regex("\\s*(sensor)\\s+(set)\\s+(\\w+)\\s+(?:(0[Xx])?([0-9]+))\\s*")) ){
       std::cmatch mt;
       std::regex_match(result, mt, std::regex("\\s*(sensor)\\s+(set)\\s+(\\w+)\\s+(?:(0[Xx])?([0-9]+))\\s*"));
