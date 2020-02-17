@@ -32,16 +32,16 @@ static std::size_t FormatPrint(std::ostream &os, const std::string& format, Args
 class Task_data;
 class Task_data { // c++ style
 public:
-  char m_header[LWS_PRE]; // internally protocol header
-  //this buffer MUST have LWS_PRE bytes valid BEFORE the pointer. This is so the protocol header data can be added in-situ.
-  char m_send_buf[32768]; // must follow header LWS_PRE
-  Telescope* m_tel{nullptr};
-  
+  Telescope* m_tel{nullptr}; 
   std::mutex m_mx_recv;
   std::atomic_uint64_t m_n_recv{0};
-  std::deque<std::string> m_qu_recv; 
-
+  std::deque<std::string> m_qu_recv;
+  
+  rapidjson::StringBuffer m_sb;
+  rapidjson::Writer<rapidjson::StringBuffer> m_js_writer;
+  
   bool m_flag_call_back_closed{false};
+  uint64_t m_dummy_tr_n{0};
   
   void callback_add_recv(char* in,  size_t len){
     std::string str_recv(in, len); //TODO: split combined recv.
@@ -53,7 +53,7 @@ public:
   
   lws_threadpool_task_return
   task_exe(lws_threadpool_task_status s){
-    std::cout<< " .";
+    //std::cout<< " .";
     if ( (s != LWS_TP_STATUS_RUNNING) || m_flag_call_back_closed){
       m_tel->Stop();
       return LWS_TP_RETURN_STOPPED;
@@ -70,7 +70,8 @@ public:
       if(!str_recv.empty()){
         //std::cout<< "run recv: <"<<str_recv<<">"<<std::endl;
         if(str_recv=="start"){
-          m_tel->Start();
+          //m_tel->Start();
+          m_tel->Start_no_tel_reading();
         };
       
         if(str_recv=="stop"){
@@ -89,17 +90,70 @@ public:
     if(!m_tel){
       return LWS_TP_RETURN_CHECKING_IN;
     }
+    if(1){
+      m_sb.Clear();
+      rapidjson::PutN(m_sb, '\t', LWS_PRE);
+      m_js_writer.Reset(m_sb);
+      m_js_writer.StartArray();
+      {
+        m_js_writer.StartObject();
+        {
+          m_js_writer.String("detector_type");
+          m_js_writer.String("alpide");
+
+          m_js_writer.String("geometry");
+          m_js_writer.StartArray();
+          {
+            m_js_writer.Uint(1024);
+            m_js_writer.Uint(512);
+            m_js_writer.Uint(6);
+          }
+          m_js_writer.EndArray();
+      
+          m_js_writer.String("trigger");
+          m_js_writer.Uint(m_dummy_tr_n);
+          m_dummy_tr_n++;
+          std::cout<< m_dummy_tr_n<<std::endl;
+          m_js_writer.String("ext");
+          m_js_writer.Uint(1);
+      
+          m_js_writer.String("data_type");
+          m_js_writer.String("hit_xyz_array");
+      
+          m_js_writer.String("hit_xyz_array");
+          m_js_writer.StartArray();
+          {
+            m_js_writer.StartArray();
+            {
+              m_js_writer.Uint(10);
+              m_js_writer.Uint(10);
+              m_js_writer.Uint(1);
+            }
+            m_js_writer.EndArray();
+          }
+          m_js_writer.EndArray();
+        }
+        m_js_writer.EndObject();
+      }
+      m_js_writer.EndArray();
+      return LWS_TP_RETURN_SYNC;
+    }
+  
+    // 
     auto ev = m_tel->ReadEvent();
     if(ev.empty()){ // no event
-      return LWS_TP_RETURN_CHECKING_IN;
+     return LWS_TP_RETURN_CHECKING_IN;
     }
 
+    m_sb.Clear();
+    rapidjson::PutN(m_sb, '\t', LWS_PRE);
+    m_js_writer.Reset(m_sb);
+    m_js_writer.StartArray();
     for(auto& e: ev){
-      rapidjson::StringBuffer sb;
-      rapidjson::Writer<rapidjson::StringBuffer> w(sb);
-      e->Serialize(w);
+      e->Serialize(m_js_writer);
     }
-    //std::cout<<sb.GetString();
+    m_js_writer.EndArray();
+        
     //std::strcpy(m_send_buf, static_cast<const char*>(sb.GetString()));
     return LWS_TP_RETURN_SYNC; // LWS_CALLBACK_SERVER_WRITEABLE TP_STATUS_SYNC
     // return LWS_TP_RETURN_CHECKING_IN; // "check in" to see if it has been asked to stop.
@@ -131,6 +185,10 @@ public:
   };
     
 };
+
+
+
+
 
 struct per_vhost_data__minimal { //c style, allocated internally
   struct lws_threadpool *tp;
@@ -223,7 +281,7 @@ callback_minimal(struct lws *wsi, enum lws_callback_reasons reason,
     }
 
     lws_set_timeout(wsi, PENDING_TIMEOUT_THREADPOOL, 30);
-
+    
     /*
      * so the asynchronous worker will let us know the next step
      * by causing LWS_CALLBACK_SERVER_WRITEABLE
@@ -261,7 +319,7 @@ callback_minimal(struct lws *wsi, enum lws_callback_reasons reason,
     // cleanup)function will be called in lws_threadpool_task_status_wsi in case task is completed/stop/finished
     int tp_status = lws_threadpool_task_status_wsi(wsi, &task, (void**)&task_data);
     lwsl_debug("%s: LWS_CALLBACK_SERVER_WRITEABLE: status %d\n", __func__, tp_status);
-        
+    
     switch(tp_status){
     case LWS_TP_STATUS_FINISHED:{
       std::cout<< "LWS_TP_STATUS_FINISHED"<<std::endl;
@@ -281,9 +339,12 @@ callback_minimal(struct lws *wsi, enum lws_callback_reasons reason,
     case LWS_TP_STATUS_SYNCING:{
       /* the task has paused (blocked) for us to do something */
       lws_set_timeout(wsi, PENDING_TIMEOUT_THREADPOOL_TASK, 5);
-      int n = strlen(task_data->m_send_buf);
-      int m = lws_write(wsi, (unsigned char *)task_data->m_send_buf, n, LWS_WRITE_TEXT);
-      if (m < n) {
+      
+      auto p_Ch = task_data->m_sb.GetString();
+      auto n_Ch = task_data->m_sb.GetSize();
+      int m = lws_write(wsi, (unsigned char *)(p_Ch+LWS_PRE), n_Ch-LWS_PRE, LWS_WRITE_BINARY);
+      ///// LWS_WRITE_BINARY LWS_WRITE_TEXT
+      if (m < n_Ch-LWS_PRE ) {
         lwsl_err("ERROR %d writing to ws socket\n", m);
         lws_threadpool_task_sync(task, 1); // task to be stopped
         return -1;
