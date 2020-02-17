@@ -92,7 +92,6 @@ public:
       }
       w.EndArray();
     }
-    w.EndArray();
     w.EndObject();
   }
   

@@ -162,7 +162,7 @@ JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout_idel)
               if(m_file_terminate_eof)
                 return nullptr;
               else{
-                //std::cerr<<"JadeRead: no data at all. ("<<m_tcp_ip <<")\n";
+                std::cerr<<"JadeRead: no data at all. ("<<m_tcp_ip <<")\n";
               }
               return nullptr;
             }
@@ -191,7 +191,7 @@ JadeDataFrameSP AltelReader::Read(const std::chrono::milliseconds &timeout_idel)
           if(std::chrono::system_clock::now() > tp_timeout_idel){
             //std::cerr<<"JadeRead: reading timeout\n";
             if(size_filled == 0){
-              //std::cerr<<"JadeRead: no data at all. ("<<m_tcp_ip <<")\n";
+              std::cerr<<"JadeRead: no data at all. ("<<m_tcp_ip <<")\n";
               return nullptr;
             }
             std::cerr<<"JadeRead: remaining data\n";

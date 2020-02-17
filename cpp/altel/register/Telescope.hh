@@ -70,7 +70,8 @@ public:
   std::future<uint64_t> m_fut_async_watch;
   bool m_is_async_reading{false};
   bool m_is_async_watching{false};
-
+  bool m_is_running{false};
+  
   std::atomic_uint64_t m_st_n_ev{0};
   
   ~Telescope();
@@ -79,7 +80,7 @@ public:
   
   void Start();
   void Stop();
-
+  void Start_no_tel_reading();
   uint64_t AsyncRead();
   uint64_t AsyncWatchDog();
   

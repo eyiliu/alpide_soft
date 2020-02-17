@@ -290,6 +290,10 @@ Telescope::~Telescope(){
 
 std::vector<JadeDataFrameSP> Telescope::ReadEvent(){
   std::vector<JadeDataFrameSP> ev_sync;
+  if (!m_is_running) return ev_sync;
+
+  
+  
   uint32_t trigger_n = -1;
   for(auto &l: m_vec_layer){
     if( l->Size() == 0){
@@ -340,9 +344,28 @@ void Telescope::Start(){
     m_fut_async_watch = std::async(std::launch::async, &Telescope::AsyncWatchDog, this);
   }
   
-  m_fut_async_rd = std::async(std::launch::async, &Telescope::AsyncRead, this);  
+  m_fut_async_rd = std::async(std::launch::async, &Telescope::AsyncRead, this);
+
+  m_is_running = true;
 }
 
+void Telescope::Start_no_tel_reading(){
+  for(auto & l: m_vec_layer){
+    l->fw_init();
+  }
+  for(auto & l: m_vec_layer){
+    l->rd_start();
+  }
+  for(auto & l: m_vec_layer){
+    l->fw_start();
+  }
+  if(!m_is_async_watching){
+    m_fut_async_watch = std::async(std::launch::async, &Telescope::AsyncWatchDog, this);
+  }
+  //m_fut_async_rd = std::async(std::launch::async, &Telescope::AsyncRead, this);  
+  m_is_running = true;
+
+}
 
 void Telescope::Stop(){
   m_is_async_reading = false;
@@ -360,7 +383,7 @@ void Telescope::Stop(){
   for(auto & l: m_vec_layer){
     l->rd_stop();
   }
-  
+  m_is_running = false;
 }
 
 uint64_t Telescope::AsyncRead(){
