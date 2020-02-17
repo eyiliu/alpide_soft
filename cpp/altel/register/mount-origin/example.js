@@ -66,28 +66,15 @@ function DOMContentLoadedListener() {
     wsa.push(ws);
     ws.onopen = on_ws_open;
     ws.onclose = on_ws_close;
-        
+    ws.binaryType = 'arraybuffer';
     let head = 0;
     let tail = 0;
     let ring = [];
     ws.onmessage = function got_packet(msg) {
-	let n;
-        let s = "";
-	
-	ring[head] = msg.data + "\n";
-	head = (head + 1) % 50;
-	if (tail === head)
-	    tail = (tail + 1) % 50;
-	
-	n = tail;
-	do {
-	    s = s + ring[n];
-	    n = (n + 1) % 50;
-	} while (n !== head);
-	
-	document.getElementById("r").value = s; 
-	document.getElementById("r").scrollTop =
-	    document.getElementById("r").scrollHeight;
+        if(writer){
+            let view = new Uint8Array(msg.data);
+            writer.write(view);
+        }        
     };
     
     function sendmsg(){
@@ -97,7 +84,7 @@ function DOMContentLoadedListener() {
     
     document.getElementById("b").addEventListener("click", sendmsg);   
 
-    dummyEventTimer();
+    // dummyEventTimer();
     
     document.getElementById("btn_download_start").addEventListener("click", startDownload);
     document.getElementById("btn_download_stop").addEventListener("click", stopDownload);
@@ -111,12 +98,15 @@ function startDownload(){
     streamSaver.mitm = location.href.substr(0, location.href.lastIndexOf('/')) +'/mitm.html'
     fileStream = streamSaver.createWriteStream('sample_yi.txt')
     writer = fileStream.getWriter()
+    
     let a = new Uint8Array(1024).fill(97)
     writer.write(a);
 }
 
+
 function stopDownload(){
     writer.close();
+    writer = null;
 }
 
 document.addEventListener("DOMContentLoaded", DOMContentLoadedListener, false);

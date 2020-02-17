@@ -83,7 +83,7 @@ function DOMContentLoadedListener_colorblocks() {
     mainCanvas.setAttribute("width", width.toString());
     mainCanvas.setAttribute("height", height.toString());
     
-    updateCanvasTimer();
+    // updateCanvasTimer();
     function updateCanvasTimer(){
         updateCanvas(mainCanvas);
         setTimeout(updateCanvasTimer, 1000);
