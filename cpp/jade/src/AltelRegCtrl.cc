@@ -220,7 +220,7 @@ void AltelRegCtrl::InitALPIDE(){
   // ReadReg(0x05);
   
 
-  Broadcast(0xD2);
+  Broadcast(0xD2);  //GRST
   WriteReg(0x10,0x70);
   WriteReg(0x4,0x10);
   WriteReg(0x5,0x28);
@@ -243,7 +243,7 @@ void AltelRegCtrl::InitALPIDE(){
   WriteReg(0x500,0x0);
   WriteReg(0x500,0x1);
   WriteReg(0x1,0x3C);
-  Broadcast(0x63);
+  Broadcast(0x63); //RORST
   StartPLL();
 }
 
@@ -264,8 +264,8 @@ void AltelRegCtrl::StartWorking(uint8_t trigmode){
   WriteReg(0x5,156);   //3900ns    
   //WriteReg(0x5,1);   //25ns    
   WriteReg(0x1,0x3D);
-  Broadcast(0x63);
-  Broadcast(0xe4);
+  Broadcast(0x63); //RORST
+  Broadcast(0xe4); //PRST
   //SetFrameDuration(16);   //400ns
   SetFrameDuration(100);   //400ns  //2500ns
   SetInTrigGap(20);

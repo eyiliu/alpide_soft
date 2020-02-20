@@ -6,8 +6,9 @@ using namespace std::chrono_literals;
 
 void Layer::fw_start(){
   if(!m_fw) return;
+  m_fw->SetAlpideRegister("CMU_DMU_CONF", 0x70);// token
+  m_fw->SendAlpideBroadcast("RORST"); //Readout (RRU/TRU/DMU) reset, commit token
   m_fw->SetAlpideRegister("CHIP_MODE", 0x3d); //trigger MODE
-  m_fw->SendAlpideBroadcast("RORST"); //Readout (RRU/TRU/DMU) reset
   m_fw->SetFirmwareRegister("FIRMWARE_MODE", 1); //run ext trigger
 }
 
@@ -19,6 +20,9 @@ void Layer::fw_stop(){
   
 void Layer::fw_init(){
   if(!m_fw) return;
+  m_fw->SetFirmwareRegister("TRIG_DELAY", 100); //25ns per dig (FrameDuration?)
+  m_fw->SetFirmwareRegister("GAP_INT_TRIG", 20);
+
   //=========== init part ========================
   // 3.8 Chip initialization
   // GRST
@@ -45,35 +49,30 @@ void Layer::fw_init(){
   m_fw->SendAlpideBroadcast("PRST");  //pixel matrix reset
   m_fw->BroadcastPixelRegister("MASK_EN", 0);
   m_fw->BroadcastPixelRegister("PULSE_EN", 0);
-  // m_fw->SendAlpideBroadcast("PRST");  //pixel matrix reset
+  m_fw->SendAlpideBroadcast("PRST");  //pixel matrix reset
   // 3.8.2 Configuration and start-up of the Data Transmission Unit, PLL
-  m_fw->SetAlpideRegister("DTU_CONF", 0x008d);
-  m_fw->SetAlpideRegister("DTU_DAC",  0x0088);
-  m_fw->SetAlpideRegister("DTU_CONF", 0x0085);
-  m_fw->SetAlpideRegister("DTU_CONF", 0x0185);
-  m_fw->SetAlpideRegister("DTU_CONF", 0x0085);
+  m_fw->SetAlpideRegister("DTU_CONF", 0x008d); // default
+  m_fw->SetAlpideRegister("DTU_DAC",  0x0088); // default
+  m_fw->SetAlpideRegister("DTU_CONF", 0x0085); // clear pll disable bit
+  m_fw->SetAlpideRegister("DTU_CONF", 0x0185); // set pll reset bit
+  m_fw->SetAlpideRegister("DTU_CONF", 0x0085); // clear reset bit
   // 3.8.3 Setting up of readout
   // 3.8.3.1a (OB) Setting CMU and DMU Configuration Register
-  // Previous Chip
-  m_fw->SetAlpideRegister("CMU_DMU_CONF", 0x70); //disable MCH encoding, enable DDR, no previous OB
+  m_fw->SetAlpideRegister("CMU_DMU_CONF", 0x70); //Token, disable MCH, enable DDR, no previous OB
   m_fw->SetAlpideRegister("TEST_CTRL", 0x400); //Disable Busy Line
-  // Initial Token 1
   // 3.8.3.2 Setting FROMU Configuration Registers and enabling readout mode
   // FROMU Configuration Register 1,2
   m_fw->SetAlpideRegister("FROMU_CONF_1", 0x00); //Disable external busy
   m_fw->SetAlpideRegister("FROMU_CONF_2", 156); //STROBE duration
   // FROMU Pulsing Register 1,2
-  m_fw->SetAlpideRegister("FROMU_PULSING_2", 0xffff); //yiliu: test pulse duration, max  
+  // m_fw->SetAlpideRegister("FROMU_PULSING_2", 0xffff); //yiliu: test pulse duration, max  
   // Periphery Control Register (CHIP MODE)
-  m_fw->SetAlpideRegister("CHIP_MODE", 0x3d); //trigger MODE
+  // m_fw->SetAlpideRegister("CHIP_MODE", 0x3d); //trigger MODE
   // RORST 
-  m_fw->SendAlpideBroadcast("RORST"); //Readout (RRU/TRU/DMU) reset
+  // m_fw->SendAlpideBroadcast("RORST"); //Readout (RRU/TRU/DMU) reset, commit token
 
   //===========end of init part =====================
-  m_fw->SetFirmwareRegister("TRIG_DELAY", 100); //25ns per dig (FrameDuration?)
-  m_fw->SetFirmwareRegister("GAP_INT_TRIG", 20);
 }
-
 
 void Layer::rd_start(){
   if(m_is_async_reading){
@@ -377,7 +376,7 @@ void Telescope::Stop(){
     m_fut_async_watch.get();
   
   for(auto & l: m_vec_layer){
-    l->fw_stop();
+    //l->fw_stop(); // commment out, unable to restar after fw_stop.
   }
   
   for(auto & l: m_vec_layer){
