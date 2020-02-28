@@ -17,10 +17,10 @@ void Layer::fw_stop(){
   m_fw->SetAlpideRegister("CHIP_MODE", 0x3c); // configure mode
   m_fw->SetFirmwareRegister("FIRMWARE_MODE", 0);
 }
-  
+
 void Layer::fw_init(){
   if(!m_fw) return;
-  m_fw->SetFirmwareRegister("TRIG_DELAY", 100); //25ns per dig (FrameDuration?)
+  m_fw->SetFirmwareRegister("TRIG_DELAY", 1); //25ns per dig (FrameDuration?)
   m_fw->SetFirmwareRegister("GAP_INT_TRIG", 20);
 
   //=========== init part ========================
@@ -44,7 +44,7 @@ void Layer::fw_init(){
   m_fw->SetAlpideRegister("IRESET", 0x32);  //50
   m_fw->SetAlpideRegister("IDB", 0x40);     //64
   m_fw->SetAlpideRegister("IBIAS", 0x40);   //64
-  m_fw->SetAlpideRegister("ITHR", 40);    //51  empty 0x32; 0x12 data, not full.  0x33 default, threshold
+  m_fw->SetAlpideRegister("ITHR", 51);    //51  empty 0x32; 0x12 data, not full.  0x33 default, threshold
   // 3.8.1 Configuration of in-pixel logic
   m_fw->SendAlpideBroadcast("PRST");  //pixel matrix reset
   m_fw->BroadcastPixelRegister("MASK_EN", 0);
@@ -63,14 +63,13 @@ void Layer::fw_init(){
   // 3.8.3.2 Setting FROMU Configuration Registers and enabling readout mode
   // FROMU Configuration Register 1,2
   m_fw->SetAlpideRegister("FROMU_CONF_1", 0x00); //Disable external busy
-  m_fw->SetAlpideRegister("FROMU_CONF_2", 156); //STROBE duration
+  m_fw->SetAlpideRegister("FROMU_CONF_2", 40); //STROBE duration
   // FROMU Pulsing Register 1,2
   // m_fw->SetAlpideRegister("FROMU_PULSING_2", 0xffff); //yiliu: test pulse duration, max  
   // Periphery Control Register (CHIP MODE)
   // m_fw->SetAlpideRegister("CHIP_MODE", 0x3d); //trigger MODE
   // RORST 
   // m_fw->SendAlpideBroadcast("RORST"); //Readout (RRU/TRU/DMU) reset, commit token
-
   //===========end of init part =====================
 }
 
@@ -80,7 +79,6 @@ void Layer::rd_start(){
     return;
   }
 
-  m_rd->Open();
   m_fut_async_rd = std::async(std::launch::async, &Layer::AsyncPushBack, this);
 
   if(!m_is_async_watching){
@@ -95,8 +93,7 @@ void Layer::rd_stop(){
 
   m_is_async_watching = false;
   if(m_fut_async_watch.valid())
-    m_fut_async_watch.get();  
-  
+    m_fut_async_watch.get();
 }
 
 uint64_t Layer::AsyncPushBack(){ // IMPROVE IT AS A RING
@@ -108,7 +105,8 @@ uint64_t Layer::AsyncPushBack(){ // IMPROVE IT AS A RING
 
   uint32_t tg_expected = 0;
   uint32_t flag_wait_first_event = true;
-  
+
+  m_rd->Open();
   m_is_async_reading = true;
   while (m_is_async_reading){
     auto df = m_rd? m_rd->Read(1000ms):nullptr; // TODO: read a vector
@@ -159,6 +157,7 @@ uint64_t Layer::AsyncPushBack(){ // IMPROVE IT AS A RING
     m_count_ring_write ++;
     tg_expected ++;
   }
+  m_rd->Close();
   std::cout<< "aysnc exit"<<std::endl;
   return m_count_ring_write;
 }
@@ -261,6 +260,10 @@ uint64_t Layer::Size(){
   return  m_count_ring_write - m_count_ring_read;
 }
 
+void Layer::ClearBuffer(){
+  m_count_ring_write = m_count_ring_read;
+  m_vec_ring_ev.clear();
+}
 
 Telescope::Telescope(const std::string& file_context){
   rapidjson::Document js_doc;
@@ -289,9 +292,7 @@ Telescope::~Telescope(){
 
 std::vector<JadeDataFrameSP> Telescope::ReadEvent(){
   std::vector<JadeDataFrameSP> ev_sync;
-  if (!m_is_running) return ev_sync;
-
-  
+  if (!m_is_running) return ev_sync;  
   
   uint32_t trigger_n = -1;
   for(auto &l: m_vec_layer){
@@ -332,19 +333,21 @@ void Telescope::Start(){
   for(auto & l: m_vec_layer){
     l->fw_init();
   }
+  std::cout<< "fw_init"<<std::endl;
   for(auto & l: m_vec_layer){
     l->rd_start();
   }
+  std::cout<< "rd_start"<<std::endl;
   for(auto & l: m_vec_layer){
     l->fw_start();
   }
+  std::cout<< "fw_start"<<std::endl;
 
   if(!m_is_async_watching){
     m_fut_async_watch = std::async(std::launch::async, &Telescope::AsyncWatchDog, this);
   }
   
   m_fut_async_rd = std::async(std::launch::async, &Telescope::AsyncRead, this);
-
   m_is_running = true;
 }
 
@@ -376,16 +379,31 @@ void Telescope::Stop(){
     m_fut_async_watch.get();
   
   for(auto & l: m_vec_layer){
-    //l->fw_stop(); // commment out, unable to restar after fw_stop.
+    //l->fw_stop(); // commment out, unable to restart after fw_stop.
   }
   
   for(auto & l: m_vec_layer){
     l->rd_stop();
   }
+
+  for(auto & l: m_vec_layer){
+    l->ClearBuffer();
+  }
+  
   m_is_running = false;
 }
 
 uint64_t Telescope::AsyncRead(){
+  auto now = std::chrono::system_clock::now();
+  auto now_c = std::chrono::system_clock::to_time_t(now);
+  std::stringstream ss;
+  ss<<std::put_time(std::localtime(&now_c), "%y%m%d%H%M%S");
+  std::string now_str = ss.str();
+  std::string data_path = "data/alpide_"+now_str+".json";
+  FILE* fd = fopen(data_path.c_str(), "wb");
+  rapidjson::StringBuffer js_sb;
+  rapidjson::Writer<rapidjson::StringBuffer> js_writer;
+  
   uint64_t n_ev = 0;
   
   m_is_async_reading = true;
@@ -397,15 +415,25 @@ uint64_t Telescope::AsyncRead(){
     }
     n_ev ++;
     m_st_n_ev ++;
+    //continue;
+    js_sb.Clear();
+    js_writer.Reset(js_sb);
+    js_writer.StartArray();
     for(auto& e: ev){
-      //e->Decode(3);
-      rapidjson::StringBuffer sb;
-      rapidjson::Writer<rapidjson::StringBuffer> w(sb);
-      e->Serialize(w);
+      e->Serialize(js_writer);
+      rapidjson::PutN(js_sb, '\n', 1);
     }
-    
+    js_writer.EndArray();
+    rapidjson::PutN(js_sb, '\n', 1);
+    auto p_ch = js_sb.GetString();
+    auto n_ch = js_sb.GetSize();
+    std::fwrite(reinterpret_cast<const char *>(p_ch), 1, n_ch, fd);
   }
+  
+  
+  
   std::cout<< "aysnc exit, from Telescope::AsyncRead"<<std::endl;
+  fclose(fd);
   return n_ev;
 }
 
@@ -419,7 +447,6 @@ uint64_t Telescope::AsyncWatchDog(){
     uint64_t st_n_ev = m_st_n_ev;
     printf("Tele: event(%u)\n\n", st_n_ev);
   }
-
   //sleep and watch running time status;
   return 0;
 }

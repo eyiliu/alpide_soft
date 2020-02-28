@@ -4,8 +4,11 @@
 #include <mutex>
 #include <future>
 
+#include <cstdio>
+
 #include "FirmwarePortal.hh"
 #include "AltelReader.hh"
+
 
 class Layer{
 public:
@@ -57,7 +60,8 @@ public:
   JadeDataFrameSP& Front();
   void PopFront();
   uint64_t Size();
-
+  void ClearBuffer();
+  
   std::string GetStatusString();
   uint64_t AsyncWatchDog();
   
@@ -73,6 +77,7 @@ public:
   bool m_is_running{false};
   
   std::atomic_uint64_t m_st_n_ev{0};
+
   
   ~Telescope();
   Telescope(const std::string& file_context);

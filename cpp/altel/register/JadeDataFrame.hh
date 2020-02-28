@@ -49,10 +49,10 @@ public:
   void Serialize(W& w) const {
     w.StartObject();
     {
-      w.String("detector_type");
+      w.String("det");
       w.String("alpide");
 
-      w.String("geometry");
+      w.String("geo");
       w.StartArray();
       {
         w.Uint(m_n_x);
@@ -66,9 +66,6 @@ public:
 
       w.String("ext");
       w.Uint(m_extension);
-      
-      w.String("data_type");
-      w.String("hit_xyz_array");
       
       w.String("hit_xyz_array");
       w.StartArray();
