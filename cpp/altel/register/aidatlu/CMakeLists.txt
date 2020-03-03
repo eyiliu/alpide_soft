@@ -11,6 +11,15 @@ set(CACTUS_LIBRARIES
   /opt/cactus/lib/libcactus_uhal_log.a
   /opt/cactus/lib/libcactus_uhal_tests.a
   /opt/cactus/lib/libcactus_uhal_uhal.a
+  boost_chrono
+  boost_filesystem
+  boost_program_options
+  boost_unit_test_framework
+  boost_regex
+  boost_system
+  boost_thread
+  rt
+  pthread
   )
 
 set(AIDA_TLU_REG_XML ${CMAKE_SOURCE_DIR}/aida_tlu_address-fw_version_14.xml)
@@ -26,9 +35,13 @@ include_directories(${CACTUS_INCLUDE_DIR})
 include_directories(include)
 include_directories(${CMAKE_BINARY_DIR})
 aux_source_directory(src LIB_SRC)
-add_library(aidatlu SHARED ${LIB_SRC})
+add_library(aidatlu STATIC ${LIB_SRC})
 
+#target_link_libraries(aidatlu PRIVATE -Wl,--whole-archive ${CACTUS_LIBRARIES})
 
-target_link_libraries(aidatlu PRIVATE ${CACTUS_LIBRARIES})
+target_link_libraries(aidatlu PRIVATE -Wl,--whole-archive ${CACTUS_LIBRARIES} -Wl,--no-whole-archive)
 
 #set_target_properties(${EUDAQ_MODULE} PROPERTIES INSTALL_RPATH ${CACTUS_LIBRARY_DIR})
+
+add_subdirectory(exe)
+

@@ -52,6 +52,10 @@ namespace tlu {
     SetUhalLogLevel(2); //  Get rid of initial flood of messages for address map
   }
 
+  AidaTluController::~AidaTluController(){
+    ResetEventsBuffer();
+  }
+  
   void AidaTluController::configureHDMI(unsigned int hdmiN, unsigned int enable, uint8_t verbose){
     int nDUTs;
     unsigned char oldStatus;

@@ -27,7 +27,7 @@ namespace tlu {
   class AidaTluController {
   public:
     AidaTluController(const std::string & connectionFilename, const std::string & deviceName);
-    ~AidaTluController(){ResetEventsBuffer();};
+    ~AidaTluController();
 
     void compareWriteRead(uint32_t written, uint32_t readback, uint32_t mask, const std::string & regName);
     void configureHDMI(unsigned int hdmiN, unsigned int enable, uint8_t verbose);
