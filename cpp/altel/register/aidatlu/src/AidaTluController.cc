@@ -11,18 +11,39 @@
 #include <bitset>
 #include <iomanip>
 
+
 #include "uhal/uhal.hpp"
+
+static const std::string reg_table_xml_content = 
+#include "aida_tlu_address-fw_version_14.hh"
+  ;
 
 namespace tlu {
   AidaTluController::AidaTluController(const std::string & connectionFilename, const std::string & deviceName) : m_DACaddr(0), m_IDaddr(0) {
+
+    // void* address_return = (void*)(__builtin_return_address(0));
+    // Dl_info dli;
+    // dli.dli_fname = 0;
+    // dladdr(address_return, &dli);
+    // std::string binary_dir_str(dli.dli_fname);    
+    // std::string reg_xml_path_str("file://"+binary_dir_str+"/aida_tlu_reg.xml");
+    auto now = std::chrono::system_clock::now();
+    auto now_c = std::chrono::system_clock::to_time_t(now);
+    std::stringstream suffix_ss;
+    suffix_ss<<"_time_"<<std::put_time(std::localtime(&now_c), "%y%m%d%H%M%S")<<"_thread_"<<std::this_thread::get_id();
+    std::string suffix_str = suffix_ss.str();
+    std::string xml_path = "/tmp/aida_tlu_reg_table"+suffix_str+".xml";
+    FILE* fd = std::fopen(xml_path.c_str(), "wb");
+    std::fwrite(reg_table_xml_content.data(), 1, reg_table_xml_content.size(), fd);
+    std::fclose(fd);
     m_zeDAC1.reset( new AD5665R);
     m_zeDAC2.reset(new AD5665R);
     m_IOexpander1.reset(new PCA9539PW);
     m_IOexpander2.reset(new PCA9539PW);
     m_zeClock.reset(new Si5345);
 
-    std::cout<<" \n\n\n require file file:///work/datataking/aida_tlu_conf/aida_tlu_address-fw_version_14.xml \n\n\n"<<std::endl;
-    m_hw.reset(new uhal::HwInterface(uhal::ConnectionManager::getDevice( "aida_tlu.controlhub","chtcp-2.0://localhost:10203?target=192.168.200.30:50001","file:///work/aida_tlu_address-fw_version_14.xml")));
+    std::string xml_path_for_uhal="file://"+xml_path;
+    m_hw.reset(new uhal::HwInterface(uhal::ConnectionManager::getDevice( "aida_tlu.controlhub","chtcp-2.0://localhost:10203?target=192.168.200.30:50001",xml_path_for_uhal.c_str())));
     m_i2c.reset(new i2cCore(m_hw.get()));
     m_pwrled.reset(new PWRLED);
     m_lcddisp.reset(new LCD09052);

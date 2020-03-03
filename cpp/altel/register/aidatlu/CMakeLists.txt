@@ -13,10 +13,21 @@ set(CACTUS_LIBRARIES
   /opt/cactus/lib/libcactus_uhal_uhal.a
   )
 
+set(AIDA_TLU_REG_XML ${CMAKE_SOURCE_DIR}/aida_tlu_address-fw_version_14.xml)
+set(AIDA_TLU_REG_HH  ${CMAKE_BINARY_DIR}/aida_tlu_address-fw_version_14.hh)
+if( (NOT EXISTS ${AIDA_TLU_REG_HH}) OR (${AIDA_TLU_REG_XML} IS_NEWER_THAN ${AIDA_TLU_REG_HH}) )
+  set(AIDA_TLU_REG_HH_DELIM "~~~cpp~raw~~~")
+  file(READ ${AIDA_TLU_REG_XML} AIDA_TLU_REG_XML_CONTENT)
+  set(AIDA_TLU_REG_XML_CONTENT "R\"${AIDA_TLU_REG_HH_DELIM}(\n${AIDA_TLU_REG_XML_CONTENT})${AIDA_TLU_REG_HH_DELIM}\"")
+  file(WRITE ${AIDA_TLU_REG_HH} "${AIDA_TLU_REG_XML_CONTENT}")
+endif()
+
 include_directories(${CACTUS_INCLUDE_DIR})
 include_directories(include)
+include_directories(${CMAKE_BINARY_DIR})
 aux_source_directory(src LIB_SRC)
 add_library(aidatlu SHARED ${LIB_SRC})
+
 
 target_link_libraries(aidatlu PRIVATE ${CACTUS_LIBRARIES})
 
