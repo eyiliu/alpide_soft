@@ -325,7 +325,7 @@ std::vector< std::vector< unsigned int> > Si5345::parseClkFile(const std::string
       std::vector< unsigned int > tmpVec;
       std::string regAddress;
       std::string regData;
-      if (onerow.at(0) != '#'){//Skip comment lines
+      if ( !onerow.empty() && onerow.at(0) != '#'){//Skip comment lines
 	size_t pos = onerow.find(',');
 	regAddress = onerow.substr(0, pos);
 	regData   = onerow.substr(pos + 1);
@@ -342,7 +342,6 @@ std::vector< std::vector< unsigned int> > Si5345::parseClkFile(const std::string
       }
     }
   }
-
   std::cout << std::dec;
   return regSetting;
 }
