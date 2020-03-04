@@ -26,7 +26,7 @@ namespace tlu {
 
   class AidaTluController {
   public:
-    AidaTluController(const std::string & connectionFilename, const std::string & deviceName);
+    AidaTluController(const std::string & url);
     ~AidaTluController();
 
     void compareWriteRead(uint32_t written, uint32_t readback, uint32_t mask, const std::string & regName);
@@ -154,7 +154,7 @@ namespace tlu {
     void enableClkLEMO(bool enable, uint8_t verbose);
     //void InitializeI2C(char DACaddr, char IDaddr);
     float GetDACref(){return m_vref;};
-    int InitializeClkChip(const std::string & filename, uint8_t verbose);
+    int InitializeClkChip(uint8_t verbose);
     void InitializeDAC(bool intRef, float Vref, uint8_t verbose);
     void InitializeIOexp(uint8_t verbose);
     void InitializeI2C(uint8_t verbose);

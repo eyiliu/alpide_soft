@@ -312,16 +312,12 @@ std::string Si5345::checkDesignID(uint8_t verbose){
   return desID;
 }
 
-std::vector< std::vector< unsigned int> > Si5345::parseClkFile(const std::string & filename, uint8_t verbose){
+std::vector< std::vector< unsigned int> > Si5345::parseClkFile(const std::string & file_content, uint8_t verbose){
   //Parse the configuration file produced by Clockbuilder Pro (Silicon Labs)
   //Returns a 2-dimensional vector with each row being a couple (ADDRESS, DATA)
   //It could be improved by using pairs. Not sure if the library can be included.
   std::vector< std::vector< unsigned int> > regSetting;
-  if (verbose > 0){
-    std::cout << "  Parsing clock configuration file:" << std::endl;
-    std::cout << "\t" << filename << std::endl;
-  }
-  std::ifstream myfile(filename);
+  std::istringstream myfile(file_content);
   if (myfile.good()){
     std::string onerow;
     while (std::getline(myfile, onerow)){
@@ -345,10 +341,6 @@ std::vector< std::vector< unsigned int> > Si5345::parseClkFile(const std::string
 	}
       }
     }
-  }
-  else{
-    std::cout << "\tSi5345 - ERROR: Problem with the configuration file. Make sure the file exists and the path is correct." << std::endl;
-    return regSetting;
   }
 
   std::cout << std::dec;

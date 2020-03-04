@@ -22,7 +22,7 @@ set(CACTUS_LIBRARIES
   pthread
   )
 
-set(AIDA_TLU_REG_XML ${CMAKE_SOURCE_DIR}/aida_tlu_address-fw_version_14.xml)
+set(AIDA_TLU_REG_XML ${CMAKE_SOURCE_DIR}/doc/aida_tlu_address-fw_version_14.xml)
 set(AIDA_TLU_REG_HH  ${CMAKE_BINARY_DIR}/aida_tlu_address-fw_version_14.hh)
 if( (NOT EXISTS ${AIDA_TLU_REG_HH}) OR (${AIDA_TLU_REG_XML} IS_NEWER_THAN ${AIDA_TLU_REG_HH}) )
   set(AIDA_TLU_REG_HH_DELIM "~~~cpp~raw~~~")
@@ -30,6 +30,17 @@ if( (NOT EXISTS ${AIDA_TLU_REG_HH}) OR (${AIDA_TLU_REG_XML} IS_NEWER_THAN ${AIDA
   set(AIDA_TLU_REG_XML_CONTENT "R\"${AIDA_TLU_REG_HH_DELIM}(\n${AIDA_TLU_REG_XML_CONTENT})${AIDA_TLU_REG_HH_DELIM}\"")
   file(WRITE ${AIDA_TLU_REG_HH} "${AIDA_TLU_REG_XML_CONTENT}")
 endif()
+
+set(AIDA_TLU_CLK_TXT ${CMAKE_SOURCE_DIR}/doc/aida_tlu_clk_config.txt)
+set(AIDA_TLU_CLK_HH  ${CMAKE_BINARY_DIR}/aida_tlu_clk_config.hh)
+if( (NOT EXISTS ${AIDA_TLU_CLK_HH}) OR (${AIDA_TLU_CLK_TXT} IS_NEWER_THAN ${AIDA_TLU_CLK_HH}) )
+  set(AIDA_TLU_CLK_HH_DELIM "~~~cpp~raw~~~")
+  file(READ ${AIDA_TLU_CLK_TXT} AIDA_TLU_CLK_TXT_CONTENT)
+  set(AIDA_TLU_CLK_TXT_CONTENT "R\"${AIDA_TLU_CLK_HH_DELIM}(\n${AIDA_TLU_CLK_TXT_CONTENT})${AIDA_TLU_CLK_HH_DELIM}\"")
+  file(WRITE ${AIDA_TLU_CLK_HH} "${AIDA_TLU_CLK_TXT_CONTENT}")
+endif()
+
+
 
 include_directories(${CACTUS_INCLUDE_DIR})
 include_directories(include)

@@ -11,22 +11,18 @@
 #include <bitset>
 #include <iomanip>
 
-
 #include "uhal/uhal.hpp"
 
 static const std::string reg_table_xml_content = 
 #include "aida_tlu_address-fw_version_14.hh"
   ;
 
+static const std::string clk_config_content = 
+#include "aida_tlu_clk_config.hh"
+  ;
+  
 namespace tlu {
-  AidaTluController::AidaTluController(const std::string & connectionFilename, const std::string & deviceName) : m_DACaddr(0), m_IDaddr(0) {
-
-    // void* address_return = (void*)(__builtin_return_address(0));
-    // Dl_info dli;
-    // dli.dli_fname = 0;
-    // dladdr(address_return, &dli);
-    // std::string binary_dir_str(dli.dli_fname);    
-    // std::string reg_xml_path_str("file://"+binary_dir_str+"/aida_tlu_reg.xml");
+  AidaTluController::AidaTluController(const std::string & url) : m_DACaddr(0), m_IDaddr(0) {
     auto now = std::chrono::system_clock::now();
     auto now_c = std::chrono::system_clock::to_time_t(now);
     std::stringstream suffix_ss;
@@ -43,7 +39,7 @@ namespace tlu {
     m_zeClock.reset(new Si5345);
 
     std::string xml_path_for_uhal="file://"+xml_path;
-    m_hw.reset(new uhal::HwInterface(uhal::ConnectionManager::getDevice( "aida_tlu.controlhub","chtcp-2.0://localhost:10203?target=192.168.200.30:50001",xml_path_for_uhal.c_str())));
+    m_hw.reset(new uhal::HwInterface(uhal::ConnectionManager::getDevice( "aida_tlu.controlhub",url.c_str(),xml_path_for_uhal.c_str())));
     m_i2c.reset(new i2cCore(m_hw.get()));
     m_pwrled.reset(new PWRLED);
     m_lcddisp.reset(new LCD09052);
@@ -421,13 +417,13 @@ namespace tlu {
     return 1;
   }
 
-  int AidaTluController::InitializeClkChip(const std::string & filename, uint8_t verbose){
+  int AidaTluController::InitializeClkChip(uint8_t verbose){
     std::vector< std::vector< unsigned int> > tmpConf;
     std::stringstream ss;
     m_zeClock->SetI2CPar(m_i2c.get(), m_I2C_address.clockChip);
     m_zeClock->getDeviceVersion(verbose);
     //std::string filename = "/users/phpgb/workspace/myFirmware/AIDA/bitFiles/TLU_CLK_Config.txt";
-    tmpConf= m_zeClock->parseClkFile(filename, false);
+    tmpConf= m_zeClock->parseClkFile(clk_config_content, false);
     if (tmpConf.size() == 0){
       return -1;
     }
