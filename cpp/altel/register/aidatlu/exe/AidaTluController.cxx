@@ -13,10 +13,7 @@
 #include <unistd.h>
 #include <getopt.h>
 
-
-static sig_atomic_t g_done = 0;
-int main(int argc, char ** argv) {
-  const std::string help_usage = R"(
+static const std::string help_usage = R"(
 Usage:
   -d dutmask, The mask for enabling the DUT connections
   -b dutnobusy, Mask for disable the veto of the DUT busy singals
@@ -25,21 +22,55 @@ Usage:
   -i 1/160MHz, The interval of internally generated triggers (0 = off)
   -v vetomask, The mask for vetoing external triggers
   -a andmask, The mask for coincidence of external triggers
-  -0 Volts, Threshold 0
-  -1 Volts, Threshold 1
-  -2 Volts, Threshold 2
-  -3 Volts, Threshold 3
-  -4 Volts, Threshold 4
-  -5 Volts, Threshold 5
-
-  -w Time to wait between updates in milliseconds
-  -q Quit after configuring TLU
-  -u Wait for user input before starting triggers
-  -s The filename to save trigger numbers and timestamps
+  -u update interval in milliseconds
+  -q quit after configuring TLU
+  -p pause for user input before starting triggers
+  -s save trigger numbers and timestamps
   -z Debugg level of IPBus
-
 )";
 
+
+static sig_atomic_t g_done = 0;
+int main(int argc, char ** argv) {
+
+  int do_quit = false;
+  int do_pause = false;
+  int do_help = false;
+  int do_verbose = false;
+
+  struct option longopts[] =
+    {
+     { "help",       no_argument,       &do_help,      1  },
+     { "verbose",    no_argument,       &do_verbose,   1  },
+
+     { "quit",       no_argument,       &do_quit,      1  },
+     { "pause",      no_argument,       &do_pause,     1  },
+     { "save",       optional_argument, NULL,         's' },
+     { "update",     required_argument, NULL,         'u' },
+   
+     { "dutmask",    required_argument, NULL,         'd' },
+     { "dutnobusy",  required_argument, NULL,         'b' },
+     { "dutmode",    required_argument, NULL,         'm' },
+     { "dutmm",      required_argument, NULL,         'f' },
+     { "vetomask",   required_argument, NULL,         'v' },
+     { "andmask",    required_argument, NULL,         'a' },
+     { "dutnobusy",  required_argument, NULL,         'b' },
+     { "hz",         required_argument, NULL,         'i' },
+     { "threshold",  required_argument, NULL,         't' },
+   
+     { "thr0",       required_argument, NULL,         'A' },
+     { "thr1",       required_argument, NULL,         'B' },
+     { "thr3",       required_argument, NULL,         'C' },
+     { "thr4",       required_argument, NULL,         'D' },
+     { "thr5",       required_argument, NULL,         'E' },
+   
+     { "dut1",       required_argument, NULL,         'F' },
+     { "dut2",       required_argument, NULL,         'G' },
+     { "dut3",       required_argument, NULL,         'H' },
+     { "dut4",       required_argument, NULL,         'I' },
+     { 0, 0, 0, 0 }};
+
+  
   uchar_t dmask = 1;
   uchar_t dutnobusy = 7;
   uchar_t dutmode = 60;
@@ -56,14 +87,28 @@ Usage:
   float vthresh_5 = 0;
 
   uint32_t wait = 1000;
-  bool quit = false;
-  bool pause = false;
   std::string sname;
   uchar_t  ipbusDebug = 2;  
-  
+
   int c;
-  while ( (c = getopt(argc, argv, "d:b:m:f:i:v:a:0:1:2:3:4:5:w:qus:z:h")) != -1) {
+  while ((c = getopt_long_only(argc, argv, ":hqps::u:d:b:m:f:v:a:b:i:t:z:", longopts, NULL))!= -1) {
     switch (c) {
+    case 'h':
+      do_help = 1;
+      break;
+    case 'q':
+      do_quit = 1;
+      break;
+    case 'p':
+      do_pause = 1;
+      break;
+    case 's':
+      if (optarg != NULL)
+        sname = optarg;
+      else
+        sname = "data.txt";
+      break;
+
     case 'd':
       dmask = static_cast<uchar_t>(std::stoull(optarg, 0, 16));
       break;
@@ -85,55 +130,51 @@ Usage:
     case 'a':
       amask = static_cast<uchar_t>(std::stoull(optarg, 0, 16));
       break;
-    case '0':
+    case 't':
       vthresh_0 = std::stof(optarg, 0);
-      break;
-    case '1':
       vthresh_1 = std::stof(optarg, 0);  
-      break;
-    case '2':
       vthresh_2 = std::stof(optarg, 0);
-      break;
-    case '3':
       vthresh_3 = std::stof(optarg, 0);
-      break;
-    case '4':
       vthresh_4 = std::stof(optarg, 0);
-      break;
-    case '5':
       vthresh_5 = std::stof(optarg, 0);
       break;
-    case 'w':
+    case 'u':
       wait  = static_cast<uint32_t>(std::stoull(optarg, 0, 10));
-      break;
-    case 'q':
-      quit = true;
-      break;
-    case 'p':
-      pause = true;
-      break;
-    case 's':
-      sname = optarg;
       break;
     case 'z':
       ipbusDebug = static_cast<uchar_t>(std::stoull(optarg, 0, 10));
       break;
-    case 'h':
-      std::cout<<help_usage;
-      return 0;
+      ////////////////
+    case 0:     /* getopt_long() set a variable, just keep going */
       break;
-    default:
-      std::cerr<<help_usage;
-      return 1;
+#if 0
+    case 1:
+      /*
+       * Use this case if getopt_long() should go through all
+       * arguments. If so, add a leading '-' character to optstring.
+       * Actual code, if any, goes here.
+       */
+      break;
+#endif
+    case ':':   /* missing option argument */
+      fprintf(stderr, "%s: option `-%c' requires an argument\n",
+              argv[0], optopt);
+      exit(1);
+      break;
+    case '?':
+    default:    /* invalid option */
+      fprintf(stderr, "%s: option `-%c' is invalid: ignored\n",
+              argv[0], optopt);
+      exit(1);
+      break;
     }
   }
-  if (optind < argc) {
-    std::cerr<<"\ninvalid options: ";
-    while (optind < argc)
-      std::cerr<<argv[optind++]<<" \n";
-    std::cerr<<"\n";
-    return 1;
+
+  if(do_help){
+    std::cout<<help_usage<<std::endl;
+    exit(0);
   }
+  
   
   std::shared_ptr<std::ofstream> sfile;
   if (sname != "") {
@@ -204,9 +245,9 @@ Usage:
   std::printf("Board ID number  = %#012x\n ", bid);
   std::printf("Firmware version  = %d\n ", fid);
   
-  if (quit) return 0;
+  if (do_quit) return 0;
 
-  if (pause) {
+  if (do_pause) {
     std::cerr << "Press enter to start triggers." << std::endl;
     std::getchar();
   }
