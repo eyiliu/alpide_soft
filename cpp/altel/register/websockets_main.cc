@@ -90,7 +90,7 @@ public:
     if(!m_tel){
       return LWS_TP_RETURN_CHECKING_IN;
     }
-    if(1){
+    if(0){
       m_sb.Clear();
       rapidjson::PutN(m_sb, '\t', LWS_PRE);
       m_js_writer.Reset(m_sb);
@@ -158,7 +158,7 @@ public:
     return LWS_TP_RETURN_SYNC; // LWS_CALLBACK_SERVER_WRITEABLE TP_STATUS_SYNC
     // return LWS_TP_RETURN_CHECKING_IN; // "check in" to see if it has been asked to stop.
   };
-    
+  
   Task_data(const std::string& json_path, const std::string& ip_addr){
     std::string file_context = FirmwarePortal::LoadFileToString(json_path);
     m_tel = new Telescope(file_context);;

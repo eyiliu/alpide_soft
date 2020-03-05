@@ -2,7 +2,6 @@
 let alive = 0;
 let wsa = [];
 
-
 function dummyEventTimer(){
     let ev_array = getEventArray();
     //UpdateData
@@ -98,11 +97,9 @@ function startDownload(){
     streamSaver.mitm = location.href.substr(0, location.href.lastIndexOf('/')) +'/mitm.html'
     fileStream = streamSaver.createWriteStream('sample_yi.txt')
     writer = fileStream.getWriter()
-    
-    let a = new Uint8Array(1024).fill(97)
+    let a = new Uint8Array(1).fill(10)  // 10 = asicii /n
     writer.write(a);
 }
-
 
 function stopDownload(){
     writer.close();
