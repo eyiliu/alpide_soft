@@ -9,26 +9,26 @@
 #include <memory>
 #include <chrono>
 #include <thread>
+#include <regex>
 
 #include <unistd.h>
 #include <getopt.h>
 
 static const std::string help_usage = R"(
 Usage:
-  -d dutmask, The mask for enabling the DUT connections
-  -b dutnobusy, Mask for disable the veto of the DUT busy singals
-  -m dutmode, Mask for DUT Mode (2 bits each channel)
-  -f dutmm, Mask for DUT Mode Modifier (2 bits each channel)
-  -i 1/160MHz, The interval of internally generated triggers (0 = off)
-  -v vetomask, The mask for vetoing external triggers
-  -a andmask, The mask for coincidence of external triggers
-  -u update interval in milliseconds
-  -q quit after configuring TLU
-  -p pause for user input before starting triggers
-  -s save trigger numbers and timestamps
-  -z Debugg level of IPBus
+  -hz        interval trigger frequency
+  -vetomask  for vetoing external triggers
+  -andmask   for coincidence of external triggers
+  -update    output message interval in millisecond
+  -quit      after configuring TLU
+  -pause     for user input before starting triggers
+  -save      file with trigger numbers and timestamps
 )";
 
+void OverwriteBits(uint16_t &dst, uint16_t src, int pos, int len) {
+    uint16_t mask = (((uint16_t)1 << len) - 1) << pos;
+    dst = (dst & ~mask) | (src & mask);
+}
 
 static sig_atomic_t g_done = 0;
 int main(int argc, char ** argv) {
@@ -48,50 +48,50 @@ int main(int argc, char ** argv) {
      { "save",       optional_argument, NULL,         's' },
      { "update",     required_argument, NULL,         'u' },
    
-     { "dutmask",    required_argument, NULL,         'd' },
-     { "dutnobusy",  required_argument, NULL,         'b' },
-     { "dutmode",    required_argument, NULL,         'm' },
-     { "dutmm",      required_argument, NULL,         'f' },
      { "vetomask",   required_argument, NULL,         'v' },
      { "andmask",    required_argument, NULL,         'a' },
-     { "dutnobusy",  required_argument, NULL,         'b' },
      { "hz",         required_argument, NULL,         'i' },
-     { "threshold",  required_argument, NULL,         't' },
-   
-     { "thr0",       required_argument, NULL,         'A' },
-     { "thr1",       required_argument, NULL,         'B' },
-     { "thr3",       required_argument, NULL,         'C' },
-     { "thr4",       required_argument, NULL,         'D' },
-     { "thr5",       required_argument, NULL,         'E' },
-   
-     { "dut1",       required_argument, NULL,         'F' },
-     { "dut2",       required_argument, NULL,         'G' },
-     { "dut3",       required_argument, NULL,         'H' },
-     { "dut4",       required_argument, NULL,         'I' },
+     
+     { "tA",       required_argument, NULL,         'A' },
+     { "tB",       required_argument, NULL,         'B' },
+     { "tC",       required_argument, NULL,         'C' },
+     { "tD",       required_argument, NULL,         'D' },
+     { "tE",       required_argument, NULL,         'E' },
+     { "tF",       required_argument, NULL,         'F' },
+     
+     { "vA",       required_argument, NULL,         'O' },
+     { "vB",       required_argument, NULL,         'P' },
+     { "vC",       required_argument, NULL,         'Q' },
+     { "vD",       required_argument, NULL,         'R' },
+     
+     { "dA",       required_argument, NULL,         'H' },
+     { "dB",       required_argument, NULL,         'I' },
+     { "dC",       required_argument, NULL,         'J' },
+     { "dD",       required_argument, NULL,         'K' },
      { 0, 0, 0, 0 }};
-
   
-  uchar_t dmask = 1;
-  uchar_t dutnobusy = 7;
-  uchar_t dutmode = 60;
-  uchar_t dutmm = 60;
-  uint32_t clk = 0;
+  uint32_t hz = 0;
   uchar_t vmask = 0;
   uchar_t amask = 15;
   
-  float vthresh_0 = 0;
-  float vthresh_1 = 0;
-  float vthresh_2 = 0;
-  float vthresh_3 = 0;
-  float vthresh_4 = 0;
-  float vthresh_5 = 0;
-
-  uint32_t wait = 1000;
+  uint32_t update = 1000;
   std::string sname;
   uchar_t  ipbusDebug = 2;  
 
+  uint16_t dut_enable = 0b0000;
+  uint16_t dut_mode = 0b00000000;
+  uint16_t dut_modifier = 0b0000;
+  uint16_t dut_nobusy = 0b0000;
+  //uint16_t dut_noveto =
+  uint16_t dut_hdmi[4] = {0b0111, 0b0111, 0b0111, 0b0111}; // bit 0= CTRL, bit 1= SPARE/SYNC/T0/AIDA_ID, bit 2= TRIG/EUDET_ID, bit 3= BUSY
+  uint16_t dut_clk[4] = {0b00, 0b00, 0b00, 0b00};
+
+  float vthresh[6] = {0, 0, 0, 0, 0, 0};
+  float vpmt[6] = {0, 0, 0, 0, 0, 0};
+
   int c;
-  while ((c = getopt_long_only(argc, argv, ":hqps::u:d:b:m:f:v:a:b:i:t:z:", longopts, NULL))!= -1) {
+  opterr = 1;
+  while ((c = getopt_long_only(argc, argv, "", longopts, NULL))!= -1) {
     switch (c) {
     case 'h':
       do_help = 1;
@@ -102,27 +102,17 @@ int main(int argc, char ** argv) {
     case 'p':
       do_pause = 1;
       break;
+    case 'u':
+      update  = static_cast<uint32_t>(std::stoull(optarg, 0, 10));
+      break;
     case 's':
-      if (optarg != NULL)
+      if(optarg != NULL)
         sname = optarg;
       else
         sname = "data.txt";
       break;
-
-    case 'd':
-      dmask = static_cast<uchar_t>(std::stoull(optarg, 0, 16));
-      break;
-    case 'b':
-      dutnobusy = static_cast<uchar_t>(std::stoull(optarg, 0, 16));
-      break;
-    case 'm':
-      dutmode = static_cast<uchar_t>(std::stoull(optarg, 0, 16));
-      break;
-    case 'f':
-      dutmm = static_cast<uchar_t>(std::stoull(optarg, 0, 16));
-      break;
     case 'i':
-      clk = static_cast<uint32_t>(std::stoull(optarg, 0, 10));
+      hz = static_cast<uint32_t>(std::stoull(optarg, 0, 10));
       break;
     case 'v':
       vmask = static_cast<uchar_t>(std::stoull(optarg, 0, 16));
@@ -130,41 +120,97 @@ int main(int argc, char ** argv) {
     case 'a':
       amask = static_cast<uchar_t>(std::stoull(optarg, 0, 16));
       break;
-    case 't':
-      vthresh_0 = std::stof(optarg, 0);
-      vthresh_1 = std::stof(optarg, 0);  
-      vthresh_2 = std::stof(optarg, 0);
-      vthresh_3 = std::stof(optarg, 0);
-      vthresh_4 = std::stof(optarg, 0);
-      vthresh_5 = std::stof(optarg, 0);
+    case 'A':
+    case 'B':
+    case 'C':
+    case 'D':
+    case 'E':
+    case 'F':{
+      uint16_t ch = c - 'A'; //First ch, A case
+      try{
+        vthresh[ch] = std::stof(optarg);
+      }
+      catch(...){
+        fprintf(stderr, "error of stod\n");
+        exit(1);
+      }
       break;
-    case 'u':
-      wait  = static_cast<uint32_t>(std::stoull(optarg, 0, 10));
+    }
+    case 'O':
+    case 'P':
+    case 'Q':
+    case 'R':{
+      uint16_t ch = c - 'O';
+      try{
+        vpmt[ch] = std::stof(optarg);
+      }
+      catch(...){
+        fprintf(stderr, "error of stod\n");
+        exit(1);
+      }
       break;
-    case 'z':
-      ipbusDebug = static_cast<uchar_t>(std::stoull(optarg, 0, 10));
+    }
+    case 'H':
+    case 'I':
+    case 'J':
+    case 'K':{
+      fprintf(stdout, "case %c\n", c);
+      optind--;
+      uint16_t ch = c - 'H'; //dut0, H case
+      for( ;optind < argc && *argv[optind] != '-'; optind++){
+        std::cout<<argv[optind]<<std::endl;
+        const char* mode = argv[optind];
+        if(std::regex_match(mode, std::regex("\\s*(eudet)\\s*"))){
+          OverwriteBits(dut_enable, 0b1, ch, 1);
+          OverwriteBits(dut_mode, 0b00, ch*2, 2);
+          OverwriteBits(dut_modifier, 0b1, ch, 1);
+          dut_hdmi[ch] = 0b0111;
+          dut_clk[ch] = 0b00;
+        }
+        else if(std::regex_match(mode, std::regex("\\s*(aida)\\s*"))){
+          OverwriteBits(dut_enable, 0b1, ch, 1);
+          OverwriteBits(dut_mode, 0b11, ch*2, 2);
+          OverwriteBits(dut_modifier, 0b0, ch, 1);
+          dut_hdmi[ch] = 0b0111;
+          dut_clk[ch] = 0b01;
+        }
+        else if(std::regex_match(mode, std::regex("\\s*(aida_id)\\s*"))){
+          OverwriteBits(dut_enable, 0b1, ch, 1);
+          OverwriteBits(dut_mode, 0b01, ch*2, 2);
+          OverwriteBits(dut_modifier, 0b0, ch, 1);
+          dut_hdmi[ch] = 0b0111;
+          dut_clk[ch] = 0b01;
+        }
+        else if(std::regex_match(mode, std::regex("\\s*(busy|enable_busy|with_busy)\\s*"))){
+          OverwriteBits(dut_nobusy, 0b0, ch, 1);
+        }
+        else if(std::regex_match(mode, std::regex("\\s*(nobusy|ignore_busy|no_busy|disable_busy|without_busy)\\s*"))){
+          OverwriteBits(dut_nobusy, 0b1, ch, 1);
+        }
+        else{
+          fprintf(stderr, "dut%u unknow dut parmaters: %s", ch, mode);
+          exit(1);
+        }
+      }
       break;
+    }
       ////////////////
-    case 0:     /* getopt_long() set a variable, just keep going */
+    case 0: /* getopt_long() set a variable, just keep going */
       break;
-#if 0
     case 1:
-      /*
-       * Use this case if getopt_long() should go through all
-       * arguments. If so, add a leading '-' character to optstring.
-       * Actual code, if any, goes here.
-       */
+      fprintf(stderr,"case 1\n");
+      exit(1);
       break;
-#endif
-    case ':':   /* missing option argument */
-      fprintf(stderr, "%s: option `-%c' requires an argument\n",
-              argv[0], optopt);
+    case ':':
+      fprintf(stderr,"case :\n");
       exit(1);
       break;
     case '?':
-    default:    /* invalid option */
-      fprintf(stderr, "%s: option `-%c' is invalid: ignored\n",
-              argv[0], optopt);
+      fprintf(stderr,"case ?\n");
+      exit(1);
+      break;
+    default:
+      fprintf(stderr, "case default, missing branch in switch-case\n");
       exit(1);
       break;
     }
@@ -174,7 +220,7 @@ int main(int argc, char ** argv) {
     std::cout<<help_usage<<std::endl;
     exit(0);
   }
-  
+  //return 0;
   
   std::shared_ptr<std::ofstream> sfile;
   if (sname != "") {
@@ -218,26 +264,42 @@ int main(int argc, char ** argv) {
   TLU.ResetEventsBuffer();
   TLU.ResetTimestamp();
 
-
   //conf
-  
-  TLU.SetThresholdValue(0, vthresh_0, verbose);
-  TLU.SetThresholdValue(1, vthresh_1, verbose);
-  TLU.SetThresholdValue(2, vthresh_2, verbose);
-  TLU.SetThresholdValue(3, vthresh_3, verbose);
-  TLU.SetThresholdValue(4, vthresh_4, verbose);
-  TLU.SetThresholdValue(5, vthresh_5, verbose);
+  TLU.pwrled_setVoltages( vpmt[0], vpmt[1], vpmt[2], vpmt[3],verbose);  
+  TLU.SetThresholdValue(0, vthresh[0], verbose);
+  TLU.SetThresholdValue(1, vthresh[1], verbose);
+  TLU.SetThresholdValue(2, vthresh[2], verbose);
+  TLU.SetThresholdValue(3, vthresh[3], verbose);
+  TLU.SetThresholdValue(4, vthresh[4], verbose);
+  TLU.SetThresholdValue(5, vthresh[5], verbose);
 
-  TLU.SetDUTMask(dmask, verbose);
-  TLU.SetDUTMaskMode(dutmode, verbose);
-  TLU.SetDUTMaskModeModifier(dutmm, verbose);
-  TLU.SetDUTIgnoreBusy(dutnobusy, verbose);
+  TLU.SetDUTMask(dut_enable, verbose);
+  TLU.SetDUTMaskMode(dut_mode, verbose);
+  TLU.SetDUTMaskModeModifier(dut_modifier, verbose);
+  TLU.SetDUTIgnoreBusy(dut_nobusy, verbose);
+
+  TLU.configureHDMI(1, dut_hdmi[0], verbose);
+  TLU.configureHDMI(2, dut_hdmi[1], verbose);
+  TLU.configureHDMI(3, dut_hdmi[2], verbose);
+  TLU.configureHDMI(4, dut_hdmi[3], verbose);
+
+  // Select clock to HDMI
+  // 0 = DUT, 1 = Si5434, 2 = FPGA 
+  TLU.SetDutClkSrc(1, dut_clk[0], verbose);
+  TLU.SetDutClkSrc(2, dut_clk[1], verbose);
+  TLU.SetDutClkSrc(3, dut_clk[2], verbose);
+  TLU.SetDutClkSrc(4, dut_clk[3], verbose);
+
   TLU.SetDUTIgnoreShutterVeto(1, verbose);
+  TLU.enableClkLEMO(true, verbose);
+  
+  TLU.SetShutterParameters( false, 0, 0, 0, 0, 0, verbose);  
+  TLU.SetInternalTriggerFrequency(hz, verbose );
+
   TLU.SetEnableRecordData(1);
 
-  TLU.SetInternalTriggerInterval(clk);
-  TLU.SetTriggerMask(amask, verbose);
-  TLU.SetTriggerVeto(vmask, verbose);
+  TLU.SetTriggerMask(amask, verbose); //?
+  TLU.SetTriggerVeto(vmask, verbose);// ?
   TLU.SetUhalLogLevel(ipbusDebug);
 
   uint32_t bid = TLU.GetBoardID();
@@ -269,8 +331,8 @@ int main(int argc, char ** argv) {
       }
     }
     total += nev;
-    if (wait > 0) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(wait));
+    if (update > 0) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(update));
     }
   }
   std::cout << "Quitting..." << std::endl;
