@@ -16,13 +16,35 @@
 
 static const std::string help_usage = R"(
 Usage:
-  -hz        interval trigger frequency
-  -vetomask  for vetoing external triggers
-  -andmask   for coincidence of external triggers
-  -update    output message interval in millisecond
+  -help      help message
+  -verbose   verbose flag
+
   -quit      after configuring TLU
+  -update    output message interval in millisecond
   -pause     for user input before starting triggers
   -save      file with trigger numbers and timestamps
+
+  -hz [n]     internal trigger frequency
+  -tmaskh [n] trigger mask low word
+  -tmaskl [n] trigger mask high word, trigMaskLo = 0x00000008 (pmtA B),  0x00000002 (A)   0x00000004 (B)
+
+  -tA [n]     discriminator threshold for pmtA
+  -tB [n]     discriminator threshold for pmtB
+  -tC [n]     discriminator threshold for pmtC
+  -tD [n]     discriminator threshold for pmtD
+  -tE [n]     discriminator threshold for pmtE
+  -tF [n]     discriminator threshold for pmtF
+
+  -vA [n]     output voltage pmtA
+  -vB [n]     output voltage pmtB
+  -vC [n]     output voltage pmtC
+  -vD [n]     output voltage pmtD
+ 
+  -dA [eudet|aida|aida_id] [with_busy|without_busy] mode for dutA
+  -dB [eudet|aida|aida_id] [with_busy|without_busy] mode for dutB
+  -dC [eudet|aida|aida_id] [with_busy|without_busy] mode for dutC
+  -dD [eudet|aida|aida_id] [with_busy|without_busy] mode for dutD
+
 )";
 
 void OverwriteBits(uint16_t &dst, uint16_t src, int pos, int len) {
@@ -48,8 +70,9 @@ int main(int argc, char ** argv) {
      { "save",       optional_argument, NULL,         's' },
      { "update",     required_argument, NULL,         'u' },
    
-     { "vetomask",   required_argument, NULL,         'v' },
-     { "andmask",    required_argument, NULL,         'a' },
+     { "url",        required_argument, NULL,         'm' },
+     { "tmaskh",     required_argument, NULL,         'v' },
+     { "tmaskl",     required_argument, NULL,         'a' },
      { "hz",         required_argument, NULL,         'i' },
      
      { "tA",       required_argument, NULL,         'A' },
@@ -71,11 +94,12 @@ int main(int argc, char ** argv) {
      { 0, 0, 0, 0 }};
   
   uint32_t hz = 0;
-  uchar_t vmask = 0;
-  uchar_t amask = 15;
+  uchar_t tmaskh = 0;
+  uchar_t tmaskl = 0;
   
   uint32_t update = 1000;
   std::string sname;
+  std::string url;
   uchar_t  ipbusDebug = 2;  
 
   uint16_t dut_enable = 0b0000;
@@ -88,7 +112,7 @@ int main(int argc, char ** argv) {
 
   float vthresh[6] = {0, 0, 0, 0, 0, 0};
   float vpmt[6] = {0, 0, 0, 0, 0, 0};
-
+  
   int c;
   opterr = 1;
   while ((c = getopt_long_only(argc, argv, "", longopts, NULL))!= -1) {
@@ -105,6 +129,9 @@ int main(int argc, char ** argv) {
     case 'u':
       update  = static_cast<uint32_t>(std::stoull(optarg, 0, 10));
       break;
+    case 'm':
+      url = optarg;
+      break;
     case 's':
       if(optarg != NULL)
         sname = optarg;
@@ -115,10 +142,10 @@ int main(int argc, char ** argv) {
       hz = static_cast<uint32_t>(std::stoull(optarg, 0, 10));
       break;
     case 'v':
-      vmask = static_cast<uchar_t>(std::stoull(optarg, 0, 16));
+      tmaskh = static_cast<uchar_t>(std::stoull(optarg, 0, 16));
       break;
     case 'a':
-      amask = static_cast<uchar_t>(std::stoull(optarg, 0, 16));
+      tmaskl = static_cast<uchar_t>(std::stoull(optarg, 0, 16));
       break;
     case 'A':
     case 'B':
@@ -232,9 +259,14 @@ int main(int argc, char ** argv) {
   }
   signal(SIGINT, [](int){g_done+=1;});
 
-  tlu::AidaTluController TLU("chtcp-2.0://localhost:10203?target=192.168.200.30:50001");
+  std::string url_default("chtcp-2.0://localhost:10203?target=192.168.200.30:50001");
+  if(url.empty()){
+    url=url_default;
+    std::printf("using default tlu url location:   %s", url.c_str());
+  }
+  std::printf("open tlu at url location:   %s", url.c_str());
+  tlu::AidaTluController TLU(url);
   uint8_t verbose = 2;
-  
   // Define constants
   TLU.DefineConst(4, 6);
 
@@ -298,8 +330,7 @@ int main(int argc, char ** argv) {
 
   TLU.SetEnableRecordData(1);
 
-  TLU.SetTriggerMask(amask, verbose); //?
-  TLU.SetTriggerVeto(vmask, verbose);// ?
+  TLU.SetTriggerMask( tmaskh,  tmaskl ); // MaskHi, MaskLow, # trigMaskLo = 0x00000008 (pmt1 2),  0x00000002 (1)   0x00000004 (2)   
   TLU.SetUhalLogLevel(ipbusDebug);
 
   uint32_t bid = TLU.GetBoardID();
@@ -310,12 +341,12 @@ int main(int argc, char ** argv) {
   if (do_quit) return 0;
 
   if (do_pause) {
-    std::cerr << "Press enter to start triggers." << std::endl;
+    std::printf("Press enter to start triggers.\n");
     std::getchar();
   }
   TLU.SetTriggerVeto(0, verbose);
-  std::cout << "FMC TLU Started!" << std::endl;
-
+  std::printf( "FMC TLU Started!\n");
+  
   uint32_t total = 0;
   while (!g_done) {
     TLU.ReceiveEvents(verbose);
@@ -335,7 +366,7 @@ int main(int argc, char ** argv) {
       std::this_thread::sleep_for(std::chrono::milliseconds(update));
     }
   }
-  std::cout << "Quitting..." << std::endl;
+  std::printf("Quitting...\n\n");
   TLU.SetTriggerVeto(1, verbose);
   return 0;
 }
