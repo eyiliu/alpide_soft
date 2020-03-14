@@ -71,9 +71,15 @@ aux_source_directory(src LIB_SRC)
 add_library(aidatlu STATIC ${LIB_SRC})
 target_link_libraries(aidatlu PRIVATE cactus)
 
-
 #target_link_libraries(aidatlu PRIVATE -Wl,--whole-archive ${CACTUS_LIBRARIES} -Wl,--no-whole-archive)
 #set_target_properties(aidatlu PROPERTIES INSTALL_RPATH /opt/cactus/lib)
 
 add_subdirectory(exe)
+
+install(TARGETS
+  aidatlu
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib)
+
 

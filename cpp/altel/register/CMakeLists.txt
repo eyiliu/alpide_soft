@@ -58,10 +58,16 @@ add_executable(mytele FirmwarePortal.cc Telescope.cc telescope_main.cc JadeDataF
 target_include_directories(mytele BEFORE PRIVATE common rbcp )
 target_link_libraries(mytele PRIVATE mycommon rbcp Threads::Threads stdc++fs)
 
+
+add_executable(mygl FirmwarePortal.cc Telescope.cc opengl_main.cc JadeDataFrame.cc AltelReader.cc base64.cpp)
+target_include_directories(mygl BEFORE PRIVATE common rbcp )
+target_link_libraries(mygl PRIVATE mycommon rbcp Threads::Threads stdc++fs m glut GL GLU)
+
 install(TARGETS
   mytest
   myws
   mytele
+  mygl
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)

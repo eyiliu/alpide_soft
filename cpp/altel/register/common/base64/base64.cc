@@ -1,174 +1,122 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string>
+/* 
+   base64.cpp and base64.h
 
-// Orignal code from  https://sourceforge.net/projects/base64/
-// LICENCE: MIT
-// AUTHOR: Bob Trower 2001/08/04
+   base64 encoding and decoding with C++.
 
-// Modified for jade daq 2018/07/30
+   Version: 1.01.00
 
-/*
-** Translation Table as described in RFC1113
+   Copyright (C) 2004-2017 René Nyffenegger
+
+   This source code is provided 'as-is', without any express or implied
+   warranty. In no event will the author be held liable for any damages
+   arising from the use of this software.
+
+   Permission is granted to anyone to use this software for any purpose,
+   including commercial applications, and to alter it and redistribute it
+   freely, subject to the following restrictions:
+
+   1. The origin of this source code must not be misrepresented; you must not
+      claim that you wrote the original source code. If you use this source code
+      in a product, an acknowledgment in the product documentation would be
+      appreciated but is not required.
+
+   2. Altered source versions must be plainly marked as such, and must not be
+      misrepresented as being the original source code.
+
+   3. This notice may not be removed or altered from any source distribution.
+
+   René Nyffenegger rene.nyffenegger@adp-gmbh.ch
+
 */
-static const char cb64[]="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-/*
-** Translation Table to decode (created by author)
-*/
-static const char cd64[]="|$$$}rstuvwxyz{$$$$$$$>?@ABCDEFGHIJKLMNOPQRSTUVW$$$$$$XYZ[\\]^_`abcdefghijklmnopq";
+#include "base64.hh"
+#include <iostream>
 
-/*
-** encodeblock
-**
-** encode 3 8-bit binary bytes as 4 '6-bit' characters
-*/
-void encodeblock( unsigned char *in, unsigned char *out, int len )
-{
-  out[0] = (unsigned char) cb64[ (int)(in[0] >> 2) ];
-  out[1] = (unsigned char) cb64[ (int)(((in[0] & 0x03) << 4) | ((in[1] & 0xf0) >> 4)) ];
-  out[2] = (unsigned char) (len > 1 ? cb64[ (int)(((in[1] & 0x0f) << 2) | ((in[2] & 0xc0) >> 6)) ] : '=');
-  out[3] = (unsigned char) (len > 2 ? cb64[ (int)(in[2] & 0x3f) ] : '=');
+static const std::string base64_chars = 
+             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+             "abcdefghijklmnopqrstuvwxyz"
+             "0123456789+/";
+
+
+static inline bool is_base64(unsigned char c) {
+  return (isalnum(c) || (c == '+') || (c == '/'));
 }
 
-/*
-** encode
-**
-** base64 encode a stream adding padding and line breaks as per spec.
-*/
-int base64_btoa(const std::string &in_str, std::string &out_str)
-{
-  const unsigned char *in_chars_beg = (const unsigned char*)(in_str.c_str());
-  const unsigned char *in_chars_end = (const unsigned char*)(in_chars_beg + in_str.size());
-  const unsigned char *in_chars_pos = in_chars_beg;
-  out_str.clear();
-  out_str.reserve(in_str.size() + in_str.size()/2);
-  
-  unsigned char in[3];
-  unsigned char out[4];
-  int i, len, blocksout = 0;
-  int retcode = 0;
+std::string base64_encode(unsigned char const* bytes_to_encode, unsigned int in_len) {
+  std::string ret;
+  int i = 0;
+  int j = 0;
+  unsigned char char_array_3[3];
+  unsigned char char_array_4[4];
 
-  *in = (unsigned char) 0;
-  *out = (unsigned char) 0;
-  /* while( feof( infile ) == 0 ) { */
-  while( in_chars_pos < in_chars_end ) {
-    len = 0;
-    for( i = 0; i < 3; i++ ) {
-      /* in[i] = (unsigned char) getc( infile ); */
-      if(in_chars_pos < in_chars_end)
-        in[i] = *in_chars_pos;
-      else
-        in[i] = -1;
-      ++in_chars_pos;
-      /* if( feof( infile ) == 0 ) { */
-      if( in_chars_pos < in_chars_end ) {
-        len++;
-      }
-      else {
-        in[i] = (unsigned char) 0;
-      }
-    }
-    if( len > 0 ) {
-      encodeblock( in, out, len );
-      /* for( i = 0; i < 4; i++ ) { */
-        /* if( putc( (int)(out[i]), outfile ) == EOF ){ */
-        /*   if( ferror( outfile ) != 0 )      { */
-        /*     perror( b64_message( B64_FILE_IO_ERROR ) ); */
-        /*     retcode = B64_FILE_IO_ERROR; */
-        /*   } */
-        /*   break; */
-        /* } */
-      /* } */
-      out_str.append((const char*)out, 4);
-      blocksout++;          
+  while (in_len--) {
+    char_array_3[i++] = *(bytes_to_encode++);
+    if (i == 3) {
+      char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+      char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+      char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+      char_array_4[3] = char_array_3[2] & 0x3f;
+
+      for(i = 0; (i <4) ; i++)
+        ret += base64_chars[char_array_4[i]];
+      i = 0;
     }
   }
-  return( retcode );
+
+  if (i)
+  {
+    for(j = i; j < 3; j++)
+      char_array_3[j] = '\0';
+
+    char_array_4[0] = ( char_array_3[0] & 0xfc) >> 2;
+    char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+    char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+
+    for (j = 0; (j < i + 1); j++)
+      ret += base64_chars[char_array_4[j]];
+
+    while((i++ < 3))
+      ret += '=';
+
+  }
+
+  return ret;
+
 }
 
-/*
-** decodeblock
-**
-** decode 4 '6-bit' characters into 3 8-bit binary bytes
-*/
-void decodeblock( unsigned char *in, unsigned char *out )
-{   
-  out[ 0 ] = (unsigned char ) (in[0] << 2 | in[1] >> 4);
-  out[ 1 ] = (unsigned char ) (in[1] << 4 | in[2] >> 2);
-  out[ 2 ] = (unsigned char ) (((in[2] << 6) & 0xc0) | in[3]);
-}
+std::string base64_decode(std::string const& encoded_string) {
+  size_t in_len = encoded_string.size();
+  int i = 0;
+  int j = 0;
+  int in_ = 0;
+  unsigned char char_array_4[4], char_array_3[3];
+  std::string ret;
 
-/*
-** decode
-**
-** decode a base64 encoded stream discarding padding, line breaks and noise
-*/
-int base64_atob( const std::string &in_str, std::string &out_str )
-{
-  unsigned char *in_chars_beg = (unsigned char*)(in_str.c_str());
-  unsigned char *in_chars_end = (unsigned char*)(in_chars_beg + in_str.size());
-  unsigned char *in_chars_pos = in_chars_beg;
-  out_str.clear();
-  out_str.reserve(in_str.size());
-  
-  int retcode = 0;
-  unsigned char in[4];
-  unsigned char out[3];
-  int v;
-  int i, len;
+  while (in_len-- && ( encoded_string[in_] != '=') && is_base64(encoded_string[in_])) {
+    char_array_4[i++] = encoded_string[in_]; in_++;
+    if (i ==4) {
+      for (i = 0; i <4; i++)
+        char_array_4[i] = base64_chars.find(char_array_4[i]) & 0xff;
 
-  *in = (unsigned char) 0;
-  *out = (unsigned char) 0;
-  /* while( feof( infile ) == 0 ) { */
-  while( in_chars_pos < in_chars_end ) {
-    /* for( len = 0, i = 0; i < 4 && feof( infile ) == 0; i++ ) { */
-    for( len = 0, i = 0; i < 4 && in_chars_pos < in_chars_end; i++ ) {
-      v = 0;
-      /* while( feof( infile ) == 0 && v == 0 ) { */
-      while( in_chars_pos < in_chars_end && v == 0 ) {
-        /* v = getc( infile ); */
-        if(in_chars_pos < in_chars_end)
-          v = *in_chars_pos;
-        else
-          v = -1;
+      char_array_3[0] = ( char_array_4[0] << 2       ) + ((char_array_4[1] & 0x30) >> 4);
+      char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+      char_array_3[2] = ((char_array_4[2] & 0x3) << 6) +   char_array_4[3];
 
-        ++in_chars_pos;
-
-        /* if( feof( infile ) == 0 ) { */
-        if( in_chars_pos < in_chars_end ) {
-          v = ((v < 43 || v > 122) ? 0 : (int) cd64[ v - 43 ]);
-          if( v != 0 ) {
-            v = ((v == (int)'$') ? 0 : v - 61);
-          }
-        }
-      }
-      /* if( feof( infile ) == 0 ) { */
-      if( in_chars_pos < in_chars_end ) {
-        len++;
-        if( v != 0 ) {
-          in[ i ] = (unsigned char) (v - 1);
-        }
-      }
-      else {
-        in[i] = (unsigned char) 0;
-      }
-    }
-    if( len > 0 ) {
-      decodeblock( in, out );
-      /* for( i = 0; i < len - 1; i++ ) { */
-      /*   if( putc( (int) out[i], outfile ) == EOF ){ */
-      /*     if( ferror( outfile ) != 0 )      { */
-      /*       perror( b64_message( B64_FILE_IO_ERROR ) ); */
-      /*       retcode = B64_FILE_IO_ERROR; */
-      /*     } */
-      /*     break; */
-      /*   } */
-      /* } */
-      if(len>1)
-        out_str.append((const char*)out, len-1 );
+      for (i = 0; (i < 3); i++)
+        ret += char_array_3[i];
+      i = 0;
     }
   }
-  return( retcode );
-}
 
+  if (i) {
+    for (j = 0; j < i; j++)
+      char_array_4[j] = base64_chars.find(char_array_4[j]) & 0xff;
+
+    char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
+    char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+
+    for (j = 0; (j < i - 1); j++) ret += char_array_3[j];
+  }
+
+  return ret;
+}
