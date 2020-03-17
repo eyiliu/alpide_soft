@@ -9,10 +9,9 @@
 
 #include <signal.h>
 
-#include <libwebsockets.h>
-
-#include "common/getopt/getopt.h"
-#include "common/linenoiseng/linenoise.h"
+#include "libwebsockets.h"
+#include "getopt.h"
+#include "linenoise.h"
 
 #include "Telescope.hh"
 

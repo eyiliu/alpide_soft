@@ -5,7 +5,7 @@
 #include <vector>
 #include <chrono>
 
-#include "common/mysystem.hh"
+#include "mysystem.hh"
 #include "JadeDataFrame.hh"
 
 class AltelReader{

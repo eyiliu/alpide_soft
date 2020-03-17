@@ -1,9 +1,8 @@
 #include "JadeDataFrame.hh"
-#include "common/mysystem.hh"
+#include "mysystem.hh"
 #include <iostream>
 
-#include "common/rapidjson/myrapidjson.h"
-
+#include "myrapidjson.h"
 
 
 

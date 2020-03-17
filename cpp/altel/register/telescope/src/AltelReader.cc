@@ -10,7 +10,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "common/rapidjson/myrapidjson.h"
+#include "myrapidjson.h"
 #include "AltelReader.hh"
 
 #ifdef _WIN32

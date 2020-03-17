@@ -15,8 +15,8 @@
 #include <utility>
 #include <algorithm>
 
-#include "common/mysystem.hh"
-#include "common/rapidjson/myrapidjson.h"
+#include "mysystem.hh"
+#include "myrapidjson.h"
 
 class FirmwarePortal{
 public:

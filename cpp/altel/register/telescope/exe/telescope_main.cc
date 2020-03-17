@@ -8,8 +8,8 @@
 
 #include "Telescope.hh"
 
-#include "common/getopt/getopt.h"
-#include "common/linenoiseng/linenoise.h"
+#include "getopt.h"
+#include "linenoise.h"
 
 
 

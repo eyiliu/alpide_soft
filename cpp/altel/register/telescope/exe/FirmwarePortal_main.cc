@@ -1,6 +1,6 @@
 #include "FirmwarePortal.hh"
-#include "common/getopt/getopt.h"
-#include "common/linenoiseng/linenoise.h"
+#include "getopt.h"
+#include "linenoise.h"
 
 int main(int argc, char **argv){
   const std::string help_usage("\n\

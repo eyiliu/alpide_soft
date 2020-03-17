@@ -5,7 +5,7 @@
 #include <vector>
 #include <memory>
 
-#include "common/mysystem.hh"
+#include "mysystem.hh"
 
 class JadeDataFrame;
 using JadeDataFrameSP = std::shared_ptr<JadeDataFrame>;
