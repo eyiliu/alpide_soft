@@ -177,12 +177,27 @@ int main()
     sf::ContextSettings settings;
     settings.depthBits = 24;
     settings.stencilBits = 8;
-    settings.majorVersion = 3;
-    settings.minorVersion = 2;
+    settings.majorVersion = 4;
+    settings.minorVersion = 0;
 
     GLfloat win_width = 1200;
     GLfloat win_high  = 400;
     sf::Window window(sf::VideoMode(win_width, win_high, 32), "Telescope", sf::Style::Titlebar | sf::Style::Close, settings);
+    //
+
+    // Set up transformation matrices
+    glm::mat4 model = glm::mat4(1.0f);
+    // auto t_now = std::chrono::high_resolution_clock::now();
+    // float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_now - t_start).count();
+    // model = glm::rotate(model,
+    //                     0.25f * time * glm::radians(180.0f),
+    //                     glm::vec3(0.0f, 0.0f, 1.0f));
+    
+    glm::mat4 view = glm::lookAt(glm::vec3(-200.0f, 0.0f, 90.0f),
+                                 glm::vec3(0.0f, 0.0f, 90.0f),
+                                 glm::vec3(0.0f, 1.0f, 0.0f));
+    
+    glm::mat4 proj = glm::perspective(glm::radians(30.0f), win_width/win_high, 1.0f, 500.0f);
     
     // data part ====================================
     GLfloat points[] = {
@@ -209,22 +224,8 @@ int main()
          0.0f,  0.0f,  210.0f, 1.0f, 0.5f, 0.5f,
          0.0f,  0.0f,  240.0f, 0.5f, 1.0f, 0.5f,
     };
-    
-
-    // Set up transformation matrices
-    glm::mat4 model = glm::mat4(1.0f);
-    // auto t_now = std::chrono::high_resolution_clock::now();
-    // float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_now - t_start).count();
-    // model = glm::rotate(model,
-    //                     0.25f * time * glm::radians(180.0f),
-    //                     glm::vec3(0.0f, 0.0f, 1.0f));
-    
-    glm::mat4 view = glm::lookAt(glm::vec3(-200.0f, 0.0f, 90.0f),
-                                 glm::vec3(0.0f, 0.0f, 90.0f),
-                                 glm::vec3(0.0f, 1.0f, 0.0f));
-    
-    glm::mat4 proj = glm::perspective(glm::radians(30.0f), win_width/win_high, 1.0f, 500.0f);
     //end of data part==================================
+
     
     auto t_start = std::chrono::high_resolution_clock::now();
 
@@ -243,8 +244,6 @@ int main()
     glAttachShader(shaderProgram, geometryShader);
     glAttachShader(shaderProgram, fragmentShader);
     glLinkProgram(shaderProgram);
-    //glUseProgram(shaderProgram);
-
 
     // Compile and activate shaders for hit
     GLuint vertexShader_hit = createShader(GL_VERTEX_SHADER, vertexShaderSrc);
@@ -256,10 +255,7 @@ int main()
     glAttachShader(shaderProgram_hit, geometryShader_hit);
     glAttachShader(shaderProgram_hit, fragmentShader_hit);
     glLinkProgram(shaderProgram_hit);
-    glUseProgram(shaderProgram_hit);
-    
 
-    // Create VBO with point coordinates
     
     // tele
     glUseProgram(shaderProgram);
@@ -318,8 +314,6 @@ int main()
     glUniformMatrix4fv(uniView_hit, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(uniProj_hit, 1, GL_FALSE, glm::value_ptr(proj));
 
-    
-    glUseProgram(shaderProgram);
     bool running = true;
     while (running)
     {
