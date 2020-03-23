@@ -8,7 +8,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-
 GLuint TelescopeGL::createShader(GLenum type, const GLchar* src) {
     GLuint shader = glCreateShader(type);
     glShaderSource(shader, 1, &src, nullptr);
@@ -28,47 +27,35 @@ GLuint TelescopeGL::createShader(GLenum type, const GLchar* src) {
 }
 
 
+void TelescopeGL::addTelLayer(float hx, float hy, float hz, 
+                              float px, float py, float pz,
+                              float rx, float ry, float rz,
+                              float cr, float cg, float cb 
+                              ){
+
+  ///////////////////////position , color
+  std::vector<GLfloat> l{px, py, pz, cr, cg, cb};
+  m_points.insert(m_points.end(), l.begin(), l.end());  
+}
+
+
 TelescopeGL::TelescopeGL(){
-  points =
-  {//  Coordinates             Color
-   0.0f,  0.0f,  0.0f, 1.0f, 0.0f, 0.0f,
-   0.0f,  0.0f,  30.0f, 0.0f, 1.0f, 0.0f,
-   0.0f,  0.0f,  60.0f, 0.0f, 0.0f, 1.0f,
-   0.0f,  0.0f,  120.0f, 1.0f, 1.0f, 0.0f,
-   0.0f,  0.0f,  150.0f, 0.0f, 1.0f, 1.0f,
-   0.0f,  0.0f,  180.0f, 1.0f, 0.0f, 1.0f,
-   0.0f,  0.0f,  210.0f, 1.0f, 0.5f, 0.5f,
-   0.0f,  0.0f,  240.0f, 0.5f, 1.0f, 0.5f,
-  };
-
-  points_hit =
-  {//  Coordinates             Color
-   0.0f,  0.0f,  0.0f, 1.0f, 0.0f, 0.0f,
-   0.0f,  0.0f,  30.0f, 0.0f, 0.0f, 1.0f,
-   0.0f,  0.0f,  60.0f, 0.0f, 1.0f, 0.0f,
-   0.0f,  0.0f,  120.0f, 1.0f, 1.0f, 0.0f,
-   0.0f,  0.0f,  150.0f, 0.0f, 1.0f, 1.0f,
-   0.0f,  0.0f,  180.0f, 1.0f, 0.0f, 1.0f,
-   0.0f,  0.0f,  210.0f, 1.0f, 0.5f, 0.5f,
-   0.0f,  0.0f,  240.0f, 0.5f, 1.0f, 0.5f,
-  };
-
   
   GLfloat win_width = 1200;
   GLfloat win_high  = 400;
   
-  model = glm::mat4(1.0f);
+  m_model = glm::mat4(1.0f);
     // auto t_now = std::chrono::high_resolution_clock::now();
     // float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_now - t_start).count();
     // model = glm::rotate(model,
     //                     0.25f * time * glm::radians(180.0f),
     //                     glm::vec3(0.0f, 0.0f, 1.0f));
     
-  view = glm::lookAt(glm::vec3(-200.0f, 0.0f, 90.0f),
-                               glm::vec3(0.0f, 0.0f, 90.0f),
-                               glm::vec3(0.0f, 1.0f, 0.0f));
+  m_view = glm::lookAt(glm::vec3(-300.0f, 0.0f, 90.0f),
+                       glm::vec3(0.0f, 0.0f, 90.0f),
+                       glm::vec3(0.0f, 1.0f, 0.0f));
     
-  proj = glm::perspective(glm::radians(30.0f), win_width/win_high, 1.0f, 500.0f);
+  m_proj = glm::perspective(glm::radians(15.0f), win_width/win_high, 1.0f, 500.0f);
   
   initializeGL();
 }
@@ -84,7 +71,7 @@ void TelescopeGL::initializeGL(){
 
   GLfloat win_width = 1200;
   GLfloat win_high  = 400;
-  window = std::make_unique<sf::Window>(sf::VideoMode(win_width, win_high, 32), "Telescope", sf::Style::Titlebar | sf::Style::Close, settings);
+  m_window = std::make_unique<sf::Window>(sf::VideoMode(win_width, win_high, 32), "Telescope", sf::Style::Titlebar | sf::Style::Close, settings);
 
   glewExperimental = GL_TRUE;
   if (glewInit() != GLEW_OK){
@@ -100,79 +87,75 @@ TelescopeGL::~TelescopeGL(){
 }
 
 void TelescopeGL::buildProgramTel(){
-  vertexShader = createShader(GL_VERTEX_SHADER, vertexShaderSrc);
-  geometryShader = createShader(GL_GEOMETRY_SHADER, geometryShaderSrc);
-  fragmentShader = createShader(GL_FRAGMENT_SHADER, fragmentShaderSrc);
+  m_vertexShader = createShader(GL_VERTEX_SHADER, vertexShaderSrc);
+  m_geometryShader = createShader(GL_GEOMETRY_SHADER, geometryShaderSrc);
+  m_fragmentShader = createShader(GL_FRAGMENT_SHADER, fragmentShaderSrc);
 
-  shaderProgram = glCreateProgram();
-  glAttachShader(shaderProgram, vertexShader);
-  glAttachShader(shaderProgram, geometryShader);
-  glAttachShader(shaderProgram, fragmentShader);
-  glLinkProgram(shaderProgram);
+  m_shaderProgram = glCreateProgram();
+  glAttachShader(m_shaderProgram, m_vertexShader);
+  glAttachShader(m_shaderProgram, m_geometryShader);
+  glAttachShader(m_shaderProgram, m_fragmentShader);
+  glLinkProgram(m_shaderProgram);
   
-  glUseProgram(shaderProgram);
-  glGenVertexArrays(1, &vao);
-  glBindVertexArray(vao);
+  glUseProgram(m_shaderProgram);
+  glGenVertexArrays(1, &m_vao);
+  glBindVertexArray(m_vao);
 
-  glGenBuffers(1, &vbo);
+  glGenBuffers(1, &m_vbo);
   
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glNamedBufferData(vbo, sizeof(GLfloat)*points.size(), points.data(), GL_STATIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+  glNamedBufferData(m_vbo, sizeof(GLfloat)*m_points.size(), m_points.data(), GL_STATIC_DRAW);
   
-  GLint posAttrib = glGetAttribLocation(shaderProgram, "pos");
+  GLint posAttrib = glGetAttribLocation(m_shaderProgram, "pos");
   glEnableVertexAttribArray(posAttrib);
   glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
 
-  GLint colAttrib = glGetAttribLocation(shaderProgram, "color");
+  GLint colAttrib = glGetAttribLocation(m_shaderProgram, "color");
   glEnableVertexAttribArray(colAttrib);
   glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
 
-  uniModel = glGetUniformLocation(shaderProgram, "model");
-  uniView = glGetUniformLocation(shaderProgram, "view");
-  uniProj = glGetUniformLocation(shaderProgram, "proj");
+  m_uniModel = glGetUniformLocation(m_shaderProgram, "model");
+  m_uniView = glGetUniformLocation(m_shaderProgram, "view");
+  m_uniProj = glGetUniformLocation(m_shaderProgram, "proj");
 
-  glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
-  glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
-  glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
-
+  glUniformMatrix4fv(m_uniModel, 1, GL_FALSE, glm::value_ptr(m_model));
+  glUniformMatrix4fv(m_uniView, 1, GL_FALSE, glm::value_ptr(m_view));
+  glUniformMatrix4fv(m_uniProj, 1, GL_FALSE, glm::value_ptr(m_proj));
 }
 
 
 void TelescopeGL::buildProgramHit(){
-  vertexShader_hit = createShader(GL_VERTEX_SHADER, vertexShaderSrc);
-  geometryShader_hit = createShader(GL_GEOMETRY_SHADER, geometryShaderSrc_hit);
-  fragmentShader_hit = createShader(GL_FRAGMENT_SHADER, fragmentShaderSrc);
+  m_vertexShader_hit = createShader(GL_VERTEX_SHADER, vertexShaderSrc_hit);
+  m_geometryShader_hit = createShader(GL_GEOMETRY_SHADER, geometryShaderSrc_hit);
+  m_fragmentShader_hit = createShader(GL_FRAGMENT_SHADER, fragmentShaderSrc);
 
-  shaderProgram_hit = glCreateProgram();
-  glAttachShader(shaderProgram_hit, vertexShader_hit);
-  glAttachShader(shaderProgram_hit, geometryShader_hit);
-  glAttachShader(shaderProgram_hit, fragmentShader_hit);
-  glLinkProgram(shaderProgram_hit);
+  m_shaderProgram_hit = glCreateProgram();
+  glAttachShader(m_shaderProgram_hit, m_vertexShader_hit);
+  glAttachShader(m_shaderProgram_hit, m_geometryShader_hit);
+  glAttachShader(m_shaderProgram_hit, m_fragmentShader_hit);
+  glLinkProgram(m_shaderProgram_hit);
 
-  glUseProgram(shaderProgram_hit);
-  glGenVertexArrays(1, &vao_hit);
-  glBindVertexArray(vao_hit);
+  glUseProgram(m_shaderProgram_hit);
+  glGenVertexArrays(1, &m_vao_hit);
+  glBindVertexArray(m_vao_hit);
 
-  glGenBuffers(1, &vbo_hit);
+  glGenBuffers(1, &m_vbo_hit);
     
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_hit);
-  glNamedBufferData(vbo_hit, sizeof(GLfloat)*points_hit.size(), points_hit.data(), GL_STATIC_DRAW); //hit
+  glBindBuffer(GL_ARRAY_BUFFER, m_vbo_hit);
+  glNamedBufferData(m_vbo_hit, sizeof(GLfloat)*m_points_hit.size(), m_points_hit.data(), GL_STATIC_DRAW); //hit
   
-  GLint posAttrib_hit = glGetAttribLocation(shaderProgram_hit, "pos");
+  GLint posAttrib_hit = glGetAttribLocation(m_shaderProgram_hit, "pos");
   glEnableVertexAttribArray(posAttrib_hit);
-  glVertexAttribPointer(posAttrib_hit, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
+  glVertexAttribPointer(posAttrib_hit, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
 
-  GLint colAttrib_hit = glGetAttribLocation(shaderProgram_hit, "color");
-  glEnableVertexAttribArray(colAttrib_hit);
-  glVertexAttribPointer(colAttrib_hit, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
 
-  GLint uniModel_hit = glGetUniformLocation(shaderProgram_hit, "model");
-  GLint uniView_hit = glGetUniformLocation(shaderProgram_hit, "view");
-  GLint uniProj_hit = glGetUniformLocation(shaderProgram_hit, "proj");
+  m_uniModel_hit = glGetUniformLocation(m_shaderProgram_hit, "model");
+  m_uniView_hit = glGetUniformLocation(m_shaderProgram_hit, "view");
+  m_uniProj_hit = glGetUniformLocation(m_shaderProgram_hit, "proj");
 
-  glUniformMatrix4fv(uniModel_hit, 1, GL_FALSE, glm::value_ptr(model));
-  glUniformMatrix4fv(uniView_hit, 1, GL_FALSE, glm::value_ptr(view));
-  glUniformMatrix4fv(uniProj_hit, 1, GL_FALSE, glm::value_ptr(proj));
+  glUniformMatrix4fv(m_uniModel_hit, 1, GL_FALSE, glm::value_ptr(m_model));
+  glUniformMatrix4fv(m_uniView_hit, 1, GL_FALSE, glm::value_ptr(m_view));
+  glUniformMatrix4fv(m_uniProj_hit, 1, GL_FALSE, glm::value_ptr(m_proj));
 }
 
 void TelescopeGL::clearFrame(){
@@ -180,48 +163,62 @@ void TelescopeGL::clearFrame(){
   glClear(GL_COLOR_BUFFER_BIT);
 }
 
+
 void TelescopeGL::drawTel(){
-  glBindVertexArray(vao);
-  glUseProgram(shaderProgram);
+  glUseProgram(m_shaderProgram);
+  glBindVertexArray(m_vao);
   glDrawArrays(GL_POINTS, 0, 6);
+}
+
+
+void TelescopeGL::addHit(float px, float py, float pz){  
+  std::vector<GLfloat> h{px, py, pz};
+  m_points_hit.insert(m_points_hit.end(), h.begin(), h.end());
+}
+
+void TelescopeGL::clearHit(){
+  m_points_hit.clear();
 }
 
 void TelescopeGL::drawHit(){
-  points_hit[4] += 0.1;
-  if(points_hit[4] > 1.0){
-    points_hit[4] = 0;
-  }
-  glNamedBufferSubData(vbo_hit, 0, sizeof(GLfloat)*points_hit.size(), points_hit.data());
-  glBindVertexArray(vao_hit);
-  glUseProgram(shaderProgram_hit);
-  glDrawArrays(GL_POINTS, 0, 6);
+  glUseProgram(m_shaderProgram_hit);
+  glBindVertexArray(m_vao_hit);
+  glNamedBufferData(m_vbo_hit, sizeof(GLfloat)*m_points_hit.size(), m_points_hit.data(), GL_STATIC_DRAW);
+  glDrawArrays(GL_POINTS, 0, m_points_hit.size()/3);  
 }
 
 void TelescopeGL::flushFrame(){
-  if(window){
-    window->display();
+  if(m_window){
+    m_window->display();
   }
 }
 
 void TelescopeGL::terminateGL(){
-  if(shaderProgram) {glDeleteProgram(shaderProgram); shaderProgram = 0;}
-  if(fragmentShader){glDeleteShader(fragmentShader); fragmentShader = 0;}
-  if(geometryShader){glDeleteShader(geometryShader); geometryShader = 0;}
-  if(vertexShader){glDeleteShader(vertexShader); vertexShader = 0;}
-  if(vbo){glDeleteBuffers(1, &vbo); vbo = 0;}
-  if(vao){glDeleteVertexArrays(1, &vao); vao = 0;}
-  if(shaderProgram_hit){glDeleteProgram(shaderProgram_hit); shaderProgram_hit = 0;}
-  if(fragmentShader_hit){glDeleteShader(fragmentShader_hit); fragmentShader_hit = 0;}
-  if(geometryShader_hit){glDeleteShader(geometryShader_hit); geometryShader_hit = 0;}
-  if(vertexShader_hit){glDeleteShader(vertexShader_hit); vertexShader_hit = 0;}
-  if(vbo_hit){glDeleteBuffers(1, &vbo_hit); vbo_hit = 0;}
-  if(vao_hit){glDeleteVertexArrays(1, &vao_hit); vao_hit = 0;}
-  if(window){window->close(); window.reset();}  
+  if(m_shaderProgram) {glDeleteProgram(m_shaderProgram); m_shaderProgram = 0;}
+  if(m_fragmentShader){glDeleteShader(m_fragmentShader); m_fragmentShader = 0;}
+  if(m_geometryShader){glDeleteShader(m_geometryShader); m_geometryShader = 0;}
+  if(m_vertexShader){glDeleteShader(m_vertexShader); m_vertexShader = 0;}
+  if(m_vbo){glDeleteBuffers(1, &m_vbo); m_vbo = 0;}
+  if(m_vao){glDeleteVertexArrays(1, &m_vao); m_vao = 0;}
+  if(m_shaderProgram_hit){glDeleteProgram(m_shaderProgram_hit); m_shaderProgram_hit = 0;}
+  if(m_fragmentShader_hit){glDeleteShader(m_fragmentShader_hit); m_fragmentShader_hit = 0;}
+  if(m_geometryShader_hit){glDeleteShader(m_geometryShader_hit); m_geometryShader_hit = 0;}
+  if(m_vertexShader_hit){glDeleteShader(m_vertexShader_hit); m_vertexShader_hit = 0;}
+  if(m_vbo_hit){glDeleteBuffers(1, &m_vbo_hit); m_vbo_hit = 0;}
+  if(m_vao_hit){glDeleteVertexArrays(1, &m_vao_hit); m_vao_hit = 0;}
+  if(m_window){m_window->close(); m_window.reset();}  
 }
 
 
 int main(){
   TelescopeGL tel;
+  tel.addTelLayer(30, 15, 0.1, 0, 0, 0, 0, 0, 0, 1, 0, 0);
+  tel.addTelLayer(30, 15, 0.1, 0, 0, 30, 0, 0, 0, 0, 1, 0);
+  tel.addTelLayer(30, 15, 0.1, 0, 0, 60, 0, 0, 0, 0, 0, 1);
+  tel.addTelLayer(30, 15, 0.1, 0, 0, 120, 0, 0, 0, 1, 1, 0);
+  tel.addTelLayer(30, 15, 0.1, 0, 0, 150, 0, 0, 0, 0, 1, 1);
+  tel.addTelLayer(30, 15, 0.1, 0, 0, 180, 0, 0, 0, 1, 0, 1);
+
   tel.buildProgramTel();
   tel.buildProgramHit();
   
@@ -229,7 +226,7 @@ int main(){
   while (running)
   {
     sf::Event windowEvent;
-    while (tel.window->pollEvent(windowEvent))
+    while (tel.m_window->pollEvent(windowEvent))
     {
       switch (windowEvent.type)
       {
@@ -238,6 +235,14 @@ int main(){
         break;
       }  
     }
+    tel.clearHit();
+    tel.addHit(0, 0, 0);
+    tel.addHit(0, 0, 30);
+    tel.addHit(0, 0, 60);
+    tel.addHit(0, 0, 120);
+    tel.addHit(0, 0, 150);
+    tel.addHit(0, 0, 180);
+
     
     tel.clearFrame();
     tel.drawTel();
