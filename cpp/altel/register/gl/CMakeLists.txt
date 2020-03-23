@@ -3,7 +3,7 @@ add_executable(mygl opengl_main.cc)
 target_link_libraries(mygl PRIVATE mycommon m glut GL GLU)
 
 
-add_executable(mygl_test src/TelescopeGL.cc)
+add_executable(mygl_test src/TelescopeGL.cc src/TelescopeGL_shaders.cc)
 target_link_libraries(mygl_test PRIVATE sfml-window sfml-system GL GLEW)
 
 target_include_directories(mygl_test

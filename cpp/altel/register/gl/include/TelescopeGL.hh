@@ -1,15 +1,12 @@
 #ifndef TELESCOPE_GL_HH
 #define TELESCOPE_GL_HH
 
-#define GLEW_STATIC
-
 #include <vector>
 #include <memory>
+
+#define GLEW_STATIC
 #include <GL/glew.h>
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
 
 namespace sf{
   class Window;
@@ -37,8 +34,6 @@ public:
   GLint uniProj{0};
   std::vector<GLfloat> points;
 
-
-
   static const GLchar* vertexShaderSrc_hit;
   static const GLchar* geometryShaderSrc_hit;
   static const GLchar* fragmentShaderSrc_hit;
@@ -56,17 +51,17 @@ public:
   TelescopeGL();
   ~TelescopeGL();
   
-  void InitializeGL();
-  void TerminateGL();
-  void BuildProgramTel();
-  void BuildProgramHit();
+  void initializeGL();
+  void terminateGL();
+  void buildProgramTel();
+  void buildProgramHit();
   
-  void ClearFrame();
-  void FlushFrame();
-  void DrawTel();
-  void DrawHit();
+  void clearFrame();
+  void flushFrame();
+  void drawTel();
+  void drawHit();
   
-  //static GLuint createShader(GLenum type, const GLchar* src);  
+  static GLuint createShader(GLenum type, const GLchar* src);  
 };
 
 #endif

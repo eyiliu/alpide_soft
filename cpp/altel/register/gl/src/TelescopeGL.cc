@@ -1,164 +1,15 @@
 #include "TelescopeGL.hh"
-#include <SFML/Window.hpp>
+
 #include <chrono>
 #include <thread>
 #include <iostream>
 
-// Vertex shader
-const GLchar* TelescopeGL::vertexShaderSrc = R"glsl(
-    #version 150 core
-
-    in vec3 pos;
-    in vec3 color;
-
-    out vec3 vColor;
-
-    void main()
-    {
-        gl_Position = vec4(pos, 1.0);
-        vColor = color;
-    }
-)glsl";
-
-// Geometry shader
-const GLchar* TelescopeGL::geometryShaderSrc = R"glsl(
-    #version 150 core
-
-    layout(points) in;
-    layout(line_strip, max_vertices = 16) out;
-
-    in vec3 vColor[];
-    out vec3 fColor;
-
-    uniform mat4 model;
-    uniform mat4 view;
-    uniform mat4 proj;
-
-    void main()
-    {
-        fColor = vColor[0];
-
-        vec4 gp = proj * view * model * gl_in[0].gl_Position;
+#include <SFML/Window.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 
-        // +X direction is "North", -X direction is "South"
-        // +Y direction is "Up",    -Y direction is "Down"
-        // +Z direction is "East",  -Z direction is "West"
-        //                                     N/S   U/D   E/W
-        //                                     X     Y     Z
-        vec4 NEU = proj * view * model * vec4( 15.0,  7.5,  1.1, 0.0);
-        vec4 NED = proj * view * model * vec4( 15.0, -7.5,  1.1, 0.0);
-        vec4 NWU = proj * view * model * vec4( 15.0,  7.5, -1.1, 0.0);
-        vec4 NWD = proj * view * model * vec4( 15.0, -7.5, -1.1, 0.0);
-        vec4 SEU = proj * view * model * vec4(-15.0,  7.5,  1.1, 0.0);
-        vec4 SED = proj * view * model * vec4(-15.0, -7.5,  1.1, 0.0);
-        vec4 SWU = proj * view * model * vec4(-15.0,  7.5, -1.1, 0.0);
-        vec4 SWD = proj * view * model * vec4(-15.0, -7.5, -1.1, 0.0);
-
-        // Create a cube centered on the given point.
-        gl_Position = gp + NED;
-        EmitVertex();
-
-        gl_Position = gp + NWD;
-        EmitVertex();
-
-        gl_Position = gp + SWD;
-        EmitVertex();
-
-        gl_Position = gp + SED;
-        EmitVertex();
-
-        gl_Position = gp + SEU;
-        EmitVertex();
-
-        gl_Position = gp + SWU;
-        EmitVertex();
-
-        gl_Position = gp + NWU;
-        EmitVertex();
-
-        gl_Position = gp + NEU;
-        EmitVertex();
-
-        gl_Position = gp + NED;
-        EmitVertex();
-
-        gl_Position = gp + SED;
-        EmitVertex();
-
-        gl_Position = gp + SEU;
-        EmitVertex();
-
-        gl_Position = gp + NEU;
-        EmitVertex();
-
-        gl_Position = gp + NWU;
-        EmitVertex();
-
-        gl_Position = gp + NWD;
-        EmitVertex();
-
-        gl_Position = gp + SWD;
-        EmitVertex();
-
-        gl_Position = gp + SWU;
-        EmitVertex();
-
-        EndPrimitive();
-    }
-)glsl";
-
-
-// Geometry shader
-const GLchar* TelescopeGL::geometryShaderSrc_hit = R"glsl(
-    #version 150 core
-
-    layout(points) in;
-    layout(line_strip, max_vertices = 2) out;
-
-    in vec3 vColor[];
-    out vec3 fColor;
-
-    uniform mat4 model;
-    uniform mat4 view;
-    uniform mat4 proj;
-
-    void main()
-    {
-        fColor = vColor[0];
-
-        vec4 gp = proj * view * model * gl_in[0].gl_Position;
-        vec4 offset = proj * view * model * vec4( 0.0,  0.0,  1.0, 0.0);
-
-        gl_Position = gp + offset;
-        EmitVertex();
-
-        gl_Position = gp - offset;
-        EmitVertex();
-
-        EndPrimitive();
-    }
-)glsl";
-
-
-
-
-// Fragment shader
-const GLchar* TelescopeGL::fragmentShaderSrc = R"glsl(
-    #version 150 core
-
-    in vec3 fColor;
-
-    out vec4 outColor;
-
-    void main()
-    {
-        outColor = vec4(fColor, 1.0);
-    }
-)glsl";
-
-
-GLuint createShader(GLenum type, const GLchar* src) {
+GLuint TelescopeGL::createShader(GLenum type, const GLchar* src) {
     GLuint shader = glCreateShader(type);
     glShaderSource(shader, 1, &src, nullptr);
     glCompileShader(shader);
@@ -167,21 +18,15 @@ GLuint createShader(GLenum type, const GLchar* src) {
     glGetShaderiv(shader, GL_COMPILE_STATUS, &IsCompiled);
     if(IsCompiled == GL_FALSE){
       GLint maxLength;
-      glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
-      
-      /* The maxLength includes the NULL character */
-      char* infoLog = (char *)malloc(maxLength);
-
-      glGetShaderInfoLog(shader, maxLength, &maxLength, infoLog);
-      
-      /* Handle the error in an appropriate way such as displaying a message or writing to a log file. */
-      /* In this simple program, we'll just leave */
-      std::cout<< infoLog<<std::endl;
-      free(infoLog);
+      glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);      
+      std::vector<GLchar> infoLog(maxLength, 0);
+      glGetShaderInfoLog(shader, maxLength, &maxLength, infoLog.data());
+      std::fprintf(stderr, "ERROR, unable to create shader.\n%s\n", infoLog.data());
       throw;
     }
     return shader;
 }
+
 
 TelescopeGL::TelescopeGL(){
   points =
@@ -225,11 +70,11 @@ TelescopeGL::TelescopeGL(){
     
   proj = glm::perspective(glm::radians(30.0f), win_width/win_high, 1.0f, 500.0f);
   
-  InitializeGL();
+  initializeGL();
 }
 
 
-void TelescopeGL::InitializeGL(){
+void TelescopeGL::initializeGL(){
   
   sf::ContextSettings settings;
   settings.depthBits = 24;
@@ -242,21 +87,19 @@ void TelescopeGL::InitializeGL(){
   window = std::make_unique<sf::Window>(sf::VideoMode(win_width, win_high, 32), "Telescope", sf::Style::Titlebar | sf::Style::Close, settings);
 
   glewExperimental = GL_TRUE;
-  GLenum err = glewInit();
-  if (err != GLEW_OK){
-    std::cerr<< "glew error\n";
+  if (glewInit() != GLEW_OK){
+    std::fprintf(stderr, "glew error\n");
     throw;
   }
-  
 }
 
 
 TelescopeGL::~TelescopeGL(){
-  TerminateGL();
+  terminateGL();
   
 }
 
-void TelescopeGL::BuildProgramTel(){
+void TelescopeGL::buildProgramTel(){
   vertexShader = createShader(GL_VERTEX_SHADER, vertexShaderSrc);
   geometryShader = createShader(GL_GEOMETRY_SHADER, geometryShaderSrc);
   fragmentShader = createShader(GL_FRAGMENT_SHADER, fragmentShaderSrc);
@@ -295,7 +138,7 @@ void TelescopeGL::BuildProgramTel(){
 }
 
 
-void TelescopeGL::BuildProgramHit(){
+void TelescopeGL::buildProgramHit(){
   vertexShader_hit = createShader(GL_VERTEX_SHADER, vertexShaderSrc);
   geometryShader_hit = createShader(GL_GEOMETRY_SHADER, geometryShaderSrc_hit);
   fragmentShader_hit = createShader(GL_FRAGMENT_SHADER, fragmentShaderSrc);
@@ -305,7 +148,6 @@ void TelescopeGL::BuildProgramHit(){
   glAttachShader(shaderProgram_hit, geometryShader_hit);
   glAttachShader(shaderProgram_hit, fragmentShader_hit);
   glLinkProgram(shaderProgram_hit);
-
 
   glUseProgram(shaderProgram_hit);
   glGenVertexArrays(1, &vao_hit);
@@ -333,18 +175,18 @@ void TelescopeGL::BuildProgramHit(){
   glUniformMatrix4fv(uniProj_hit, 1, GL_FALSE, glm::value_ptr(proj));
 }
 
-void TelescopeGL::ClearFrame(){
+void TelescopeGL::clearFrame(){
   glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
 }
 
-void TelescopeGL::DrawTel(){
+void TelescopeGL::drawTel(){
   glBindVertexArray(vao);
   glUseProgram(shaderProgram);
   glDrawArrays(GL_POINTS, 0, 6);
 }
 
-void TelescopeGL::DrawHit(){
+void TelescopeGL::drawHit(){
   points_hit[4] += 0.1;
   if(points_hit[4] > 1.0){
     points_hit[4] = 0;
@@ -355,13 +197,13 @@ void TelescopeGL::DrawHit(){
   glDrawArrays(GL_POINTS, 0, 6);
 }
 
-void TelescopeGL::FlushFrame(){
+void TelescopeGL::flushFrame(){
   if(window){
     window->display();
   }
 }
 
-void TelescopeGL::TerminateGL(){
+void TelescopeGL::terminateGL(){
   if(shaderProgram) {glDeleteProgram(shaderProgram); shaderProgram = 0;}
   if(fragmentShader){glDeleteShader(fragmentShader); fragmentShader = 0;}
   if(geometryShader){glDeleteShader(geometryShader); geometryShader = 0;}
@@ -374,15 +216,14 @@ void TelescopeGL::TerminateGL(){
   if(vertexShader_hit){glDeleteShader(vertexShader_hit); vertexShader_hit = 0;}
   if(vbo_hit){glDeleteBuffers(1, &vbo_hit); vbo_hit = 0;}
   if(vao_hit){glDeleteVertexArrays(1, &vao_hit); vao_hit = 0;}
-  if(window){window->close(); window.reset();}
-  
+  if(window){window->close(); window.reset();}  
 }
 
 
 int main(){
   TelescopeGL tel;
-  tel.BuildProgramTel();
-  tel.BuildProgramHit();
+  tel.buildProgramTel();
+  tel.buildProgramHit();
   
   bool running = true;
   while (running)
@@ -395,14 +236,13 @@ int main(){
       case sf::Event::Closed:
         running = false;
         break;
-      }
-
+      }  
     }
-
-    tel.ClearFrame();
-    tel.DrawTel();
-    tel.DrawHit();
-    tel.FlushFrame();    
+    
+    tel.clearFrame();
+    tel.drawTel();
+    tel.drawHit();
+    tel.flushFrame();    
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 }
