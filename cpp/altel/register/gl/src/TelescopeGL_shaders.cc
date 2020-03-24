@@ -2,23 +2,46 @@
 #include "TelescopeGL.hh"
 
 const GLchar* TelescopeGL::vertexShaderSrc = R"glsl(
-    #version 150 core
+#version 150 core
 
-    in vec3 color;
-    //in vec3 thick;
+layout (std140) uniform UniformLayer{
+  vec3  positon; //
+  vec3  color;  //
+  vec3  pitch;  // pitch_x pitch_y pitch_z/thick_z
+  uvec3 npixel; // pixel_x pixel_y pixel_z/always1
+  mat4  miss_alignment;
+} layers[6];
 
-    in uint id;
-    in uint amount;
+in int l;
+in vec3 pos;
+out vec3 vColor;
 
-    in vec3 pos;
+void main(){
+  //gl_Position = vec4(layers[pos].pos, 1.0);
+  gl_Position = vec4(pos, 1.0);
+  //vColor =  vec3(1.0, 1.0, 0.0);
+if(l==0)
+    vColor = layers[0].color;
+else
+if(l==1)
+    vColor = layers[1].color;
+else
+if(l==2)
+    vColor = layers[2].color;
+else
+if(l==3)
+    vColor = layers[3].color;
+else
+if(l==4)
+    vColor = layers[4].color;
+else
+if(l==5)
+    vColor = layers[5].color;
+else
+    vColor = layers[2].color;
 
-    out vec3 vColor;
 
-    void main()
-    {
-        gl_Position = vec4(pos, 1.0);
-        vColor = color;
-    }
+}
 )glsl";
 
 // Geometry shader

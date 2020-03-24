@@ -35,7 +35,9 @@ void TelescopeGL::addTelLayer(float hx, float hy, float hz,
 
   ///////////////////////position , color
   std::vector<GLfloat> l{px, py, pz, cr, cg, cb};
-  m_points.insert(m_points.end(), l.begin(), l.end());  
+  m_points.insert(m_points.end(), l.begin(), l.end());
+  
+  
 }
 
 
@@ -56,6 +58,38 @@ TelescopeGL::TelescopeGL(){
                        glm::vec3(0.0f, 1.0f, 0.0f));
     
   m_proj = glm::perspective(glm::radians(15.0f), win_width/win_high, 1.0f, 500.0f);
+
+  m_points_tel= {0, 1, 2, 3, 4, 5};
+  UniformLayer tmp=
+    {
+     0, 0, 100, 0,        //pos
+     0, 0, 0, 0,        //cloor
+     0.028, 0.026, 1, 0,//pitch
+     1024, 512, 1, 0,   //pixel number
+     1, 0, 0, 0,
+     0, 1, 0, 0,
+     0, 0, 1, 0,
+     0, 0, 0, 1
+    };
+
+  m_uniLayers[0] = tmp;
+  m_uniLayers[0].pos[2]=0;
+  m_uniLayers[0].color[0] =1;
+  m_uniLayers[1] = m_uniLayers[0];
+  m_uniLayers[1].pos[2]=30;
+  m_uniLayers[1].color[1] =1;
+  m_uniLayers[2] = m_uniLayers[0];
+  m_uniLayers[2].pos[2]=60;
+  m_uniLayers[2].color[2] =1;
+  m_uniLayers[3] = m_uniLayers[0];
+  m_uniLayers[3].pos[2]=120;
+  m_uniLayers[3].color[0] =1;
+  m_uniLayers[4] = m_uniLayers[0];
+  m_uniLayers[4].pos[2]=150;
+  m_uniLayers[4].color[1] =1;
+  m_uniLayers[5] = m_uniLayers[0];
+  m_uniLayers[5].pos[2]=180;
+  m_uniLayers[5].color[2] =1;
   
   initializeGL();
 }
@@ -67,7 +101,7 @@ void TelescopeGL::initializeGL(){
   settings.depthBits = 24;
   settings.stencilBits = 8;
   settings.majorVersion = 4;
-  settings.minorVersion = 0;
+  settings.minorVersion = 5;
 
   GLfloat win_width = 1200;
   GLfloat win_high  = 400;
@@ -101,19 +135,40 @@ void TelescopeGL::buildProgramTel(){
   glGenVertexArrays(1, &m_vao);
   glBindVertexArray(m_vao);
 
-  glGenBuffers(1, &m_vbo);
+
+  glGenBuffers(6, m_uboLayers);
+  GLint bindLayers = 0; // bind pointer
+
+  for(GLint layern = 0; layern<6; layern++ ){
+    std::string blockname = "UniformLayer["+std::to_string(layern)+"]";
+    GLint uniLayers_index = glGetUniformBlockIndex(m_shaderProgram, blockname.data()); 
+    glUniformBlockBinding(m_shaderProgram, uniLayers_index, bindLayers);
+    glBindBuffer(GL_UNIFORM_BUFFER, m_uboLayers[layern]);
+    glBufferData(GL_UNIFORM_BUFFER, 1 * sizeof(UniformLayer), NULL, GL_STATIC_DRAW);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0); //reset bind, need?
+    glBindBufferRange(GL_UNIFORM_BUFFER, bindLayers, m_uboLayers[layern], 0, 1 * sizeof(UniformLayer));
+    glBindBuffer(GL_UNIFORM_BUFFER, m_uboLayers[layern]);
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, 1 * sizeof(UniformLayer), &m_uniLayers[layern]);  
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    bindLayers ++ ; // bind pointer
+  }
   
+  glGenBuffers(1, &m_vbo_tel);
+  glBindBuffer(GL_ARRAY_BUFFER, m_vbo_tel);
+  glNamedBufferData(m_vbo_tel, sizeof(GLint)*m_points_tel.size(), m_points_tel.data(), GL_STATIC_DRAW);
+  GLint posAttrib_tel = glGetAttribLocation(m_shaderProgram, "l");
+  glEnableVertexAttribArray(posAttrib_tel);
+  glVertexAttribIPointer(posAttrib_tel, 1, GL_INT, sizeof(GLint), 0);
+
+  glGenBuffers(1, &m_vbo);
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
   glNamedBufferData(m_vbo, sizeof(GLfloat)*m_points.size(), m_points.data(), GL_STATIC_DRAW);
   
   GLint posAttrib = glGetAttribLocation(m_shaderProgram, "pos");
   glEnableVertexAttribArray(posAttrib);
   glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
-
-  GLint colAttrib = glGetAttribLocation(m_shaderProgram, "color");
-  glEnableVertexAttribArray(colAttrib);
-  glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
-
+  
+  
   m_uniModel = glGetUniformLocation(m_shaderProgram, "model");
   m_uniView = glGetUniformLocation(m_shaderProgram, "view");
   m_uniProj = glGetUniformLocation(m_shaderProgram, "proj");
@@ -142,7 +197,7 @@ void TelescopeGL::buildProgramHit(){
   glGenBuffers(1, &m_vbo_hit);
     
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo_hit);
-  glNamedBufferData(m_vbo_hit, sizeof(GLfloat)*m_points_hit.size(), m_points_hit.data(), GL_STATIC_DRAW); //hit
+  glNamedBufferData(m_vbo_hit, sizeof(GLfloat)*m_points_hit.size(), m_points_hit.data(), GL_STATIC_DRAW);
   
   GLint posAttrib_hit = glGetAttribLocation(m_shaderProgram_hit, "pos");
   glEnableVertexAttribArray(posAttrib_hit);
@@ -199,6 +254,8 @@ void TelescopeGL::terminateGL(){
   if(m_geometryShader){glDeleteShader(m_geometryShader); m_geometryShader = 0;}
   if(m_vertexShader){glDeleteShader(m_vertexShader); m_vertexShader = 0;}
   if(m_vbo){glDeleteBuffers(1, &m_vbo); m_vbo = 0;}
+  for(int i=0; i<6; i++)
+    if(m_uboLayers[i]){glDeleteBuffers(1, &m_uboLayers[i]); m_uboLayers[i] = 0;}
   if(m_vao){glDeleteVertexArrays(1, &m_vao); m_vao = 0;}
   if(m_shaderProgram_hit){glDeleteProgram(m_shaderProgram_hit); m_shaderProgram_hit = 0;}
   if(m_fragmentShader_hit){glDeleteShader(m_fragmentShader_hit); m_fragmentShader_hit = 0;}
@@ -218,7 +275,7 @@ int main(){
   tel.addTelLayer(30, 15, 0.1, 0, 0, 120, 0, 0, 0, 1, 1, 0);
   tel.addTelLayer(30, 15, 0.1, 0, 0, 150, 0, 0, 0, 0, 1, 1);
   tel.addTelLayer(30, 15, 0.1, 0, 0, 180, 0, 0, 0, 1, 0, 1);
-
+  
   tel.buildProgramTel();
   tel.buildProgramHit();
   

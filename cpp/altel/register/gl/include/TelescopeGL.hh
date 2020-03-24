@@ -12,6 +12,16 @@ namespace sf{
   class Window;
 }
 
+
+struct UniformLayer
+{
+  GLfloat pos[4];   //vec3, pad
+  GLfloat color[4]; //vec3, pad
+  GLfloat pitch[4]; //pitch x,y, thick z, pad
+  GLint   npixel[4];//pixe number x, y, z/1, pad
+  GLfloat miss_alignment[16]; //mat4
+};
+
 class TelescopeGL{
 public:
   glm::mat4 m_model;
@@ -19,7 +29,8 @@ public:
   glm::mat4 m_proj;
   std::unique_ptr<sf::Window> m_window;
   
-
+  UniformLayer m_uniLayers[6];
+  
   static const GLchar* vertexShaderSrc;
   static const GLchar* geometryShaderSrc;
   static const GLchar* fragmentShaderSrc;
@@ -29,11 +40,14 @@ public:
   GLuint m_shaderProgram{0};
   GLuint m_vao{0};
   GLuint m_vbo{0};
+  GLuint m_vbo_tel{0};
+  GLuint m_uboLayers[6]{0,0,0,0,0,0};
   GLint m_uniModel{0};
   GLint m_uniView{0};
   GLint m_uniProj{0};
   std::vector<GLfloat> m_points;
-
+  std::vector<GLint> m_points_tel;
+  
   static const GLchar* vertexShaderSrc_hit;
   static const GLchar* geometryShaderSrc_hit;
   static const GLchar* fragmentShaderSrc_hit;
@@ -63,15 +77,13 @@ public:
   void buildProgramTel();
   void buildProgramHit();
 
-
   void clearFrame();
   void flushFrame();
   void drawTel();
   void drawHit();
 
   void addHit(float px, float py, float pz);
-  void clearHit();
-  
+  void clearHit();  
   
   static GLuint createShader(GLenum type, const GLchar* src);  
 };
