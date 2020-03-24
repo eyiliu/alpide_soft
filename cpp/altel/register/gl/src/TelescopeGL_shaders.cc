@@ -194,44 +194,121 @@ void main(){
 ////////////////////////
 
 const GLchar* TelescopeGL::vertexShaderSrc_hit = R"glsl(
-    #version 150 core
-    in vec3 pos;
-    out vec3 vColor;
+#version 150 core
 
-    void main()
-    {
-        gl_Position = vec4(pos, 1.0);
-        vColor = vec3(0, 1, 0);
-    }
+in ivec3 pos;
+
+out int  nl;
+out vec3 vColor;
+
+void main()
+{
+  gl_Position = vec4(float(pos.x), float(pos.y), float(pos.z), 1.0);
+  vColor = vec3(0, 1, 0);
+  //nl = pos.z;
+  nl = 2;
+}
+
 )glsl";
 
 
 const GLchar* TelescopeGL::geometryShaderSrc_hit = R"glsl(
-    #version 150 core
+#version 150 core
 
-    layout(points) in;
-    layout(line_strip, max_vertices = 2) out;
+layout(points) in;
+in vec3 vColor[];
+in int nl[];
 
-    in vec3 vColor[];
-    out vec3 fColor;
+layout(line_strip, max_vertices = 2) out;
+out vec3 fColor;
 
-    uniform mat4 model;
-    uniform mat4 view;
-    uniform mat4 proj;
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 proj;
 
-    void main()
-    {
-        fColor = vColor[0];
+layout (std140) uniform UniformLayer{
+  vec3  position; //
+  vec3  color;    //
+  vec3  pitch;    // pitch_x pitch_y pitch_z/thick_z
+  uvec3 npixel;   // pixel_x pixel_y pixel_z/always1
+  mat4  trans;    // 
+} layers[6];
 
-        vec4 gp = proj * view * model * gl_in[0].gl_Position;
-        vec4 offset = proj * view * model * vec4( 0.0,  0.0,  1.0, 0.0);
+void main(){
+  //int   nl = round(gl_in[0].gl_Position.z+0.1);
+  vec3   pos;
+  vec3   color;
+  vec3   pitch;
+  uvec3  npixel;
+  mat4   trans;
 
-        gl_Position = gp + offset;
-        EmitVertex();
+  switch(5){
+  case 1:
+    pos    = layers[0].position;
+    color  = layers[0].color;
+    pitch  = layers[0].pitch;
+    npixel = layers[0].npixel;
+    trans  = layers[0].trans;
+    break;
+  case 0:
+    pos    = layers[1].position;
+    color  = layers[1].color;
+    pitch  = layers[1].pitch;
+    npixel = layers[1].npixel;
+    trans  = layers[1].trans;
+    break;
+  case 2:
+    pos    = layers[2].position;
+    color  = layers[2].color;
+    pitch  = layers[2].pitch;
+    npixel = layers[2].npixel;
+    trans  = layers[2].trans;
+    break;
+  case 3:
+    pos    = layers[3].position;
+    color  = layers[3].color;
+    pitch  = layers[3].pitch;
+    npixel = layers[3].npixel;
+    trans  = layers[3].trans;
+    break;
+  case 4:
+    pos    = layers[4].position;
+    color  = layers[4].color;
+    pitch  = layers[4].pitch;
+    npixel = layers[4].npixel;
+    trans  = layers[4].trans;
+    break;
+  case 5:
+    pos    = layers[5].position;
+    color  = layers[5].color;
+    pitch  = layers[5].pitch;
+    npixel = layers[5].npixel;
+    trans  = layers[5].trans;
+    break;
+  default:
+    pos    = layers[5].position;
+    color  = layers[5].color;
+    pitch  = layers[5].pitch;
+    npixel = layers[5].npixel;
+    trans  = layers[5].trans;
+    break;
+  }
 
-        gl_Position = gp - offset;
-        EmitVertex();
+  vec3 pos_hit = pos.xyz + vec3(pitch.xy * gl_in[0].gl_Position.xy , 0);
+ 
+  //fColor = vColor[0];
+  fColor = color;
+  //fColor = vec3(0,1,1);
 
-        EndPrimitive();
-    }
+  vec4 gp = proj * view * model * vec4(pos_hit, 1.0);
+  vec4 offset = proj * view * model * vec4( 0.0,  0.0,  1.0, 0.0);
+
+  gl_Position = gp + offset;
+  EmitVertex();
+
+  gl_Position = gp - offset;
+  EmitVertex();
+
+  EndPrimitive();
+}
 )glsl";

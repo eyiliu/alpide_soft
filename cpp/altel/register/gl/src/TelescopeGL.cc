@@ -21,6 +21,9 @@ GLuint TelescopeGL::createShader(GLenum type, const GLchar* src) {
       std::vector<GLchar> infoLog(maxLength, 0);
       glGetShaderInfoLog(shader, maxLength, &maxLength, infoLog.data());
       std::fprintf(stderr, "ERROR, unable to create shader.\n%s\n", infoLog.data());
+      std::string code(src);
+      std::cout<<"=====(\n"<<code<<"\n)====="<<std::endl;
+      
       throw;
     }
     return shader;
@@ -165,15 +168,32 @@ void TelescopeGL::buildProgramHit(){
   glGenVertexArrays(1, &m_vao_hit);
   glBindVertexArray(m_vao_hit);
 
-  glGenBuffers(1, &m_vbo_hit);
-    
+  glGenBuffers(1, &m_vbo_hit);    
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo_hit);
-  glNamedBufferData(m_vbo_hit, sizeof(GLfloat)*m_points_hit.size(), m_points_hit.data(), GL_STATIC_DRAW);
+  glNamedBufferData(m_vbo_hit, sizeof(GLint)*m_points_hit.size(), m_points_hit.data(), GL_STATIC_DRAW);
   
   GLint posAttrib_hit = glGetAttribLocation(m_shaderProgram_hit, "pos");
   glEnableVertexAttribArray(posAttrib_hit);
-  glVertexAttribPointer(posAttrib_hit, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+  glVertexAttribIPointer(posAttrib_hit, 3,  GL_INT, 3 * sizeof(GLint), 0);
 
+
+  m_uboLayers_hit.resize(m_points_tel.size());
+  glGenBuffers(m_uboLayers_hit.size(), m_uboLayers_hit.data());
+  GLint bindLayers = 8; // bind pointer
+  for(GLint layern = 0; layern<m_points_tel.size(); layern++ ){
+    std::string blockname = "UniformLayer["+std::to_string(layern)+"]";
+    GLint uniLayers_index = glGetUniformBlockIndex(m_shaderProgram, blockname.data()); 
+    glUniformBlockBinding(m_shaderProgram, uniLayers_index, bindLayers);
+    glBindBuffer(GL_UNIFORM_BUFFER, m_uboLayers_hit[layern]);
+    glBufferData(GL_UNIFORM_BUFFER, 1 * sizeof(UniformLayer), NULL, GL_STATIC_DRAW);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0); //reset bind, need?
+    glBindBufferRange(GL_UNIFORM_BUFFER, bindLayers, m_uboLayers_hit[layern], 0, 1 * sizeof(UniformLayer));
+    glBindBuffer(GL_UNIFORM_BUFFER, m_uboLayers_hit[layern]);
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, 1 * sizeof(UniformLayer), &m_uniLayers[layern]);  
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    bindLayers ++ ; // bind pointer
+  }
+  
 
   m_uniModel_hit = glGetUniformLocation(m_shaderProgram_hit, "model");
   m_uniView_hit = glGetUniformLocation(m_shaderProgram_hit, "view");
@@ -196,9 +216,8 @@ void TelescopeGL::drawTel(){
   glDrawArrays(GL_POINTS, 0, m_points_tel.size());
 }
 
-
-void TelescopeGL::addHit(float px, float py, float pz){  
-  std::vector<GLfloat> h{px, py, pz};
+void TelescopeGL::addHit(uint32_t pixelx, uint32_t pixely, uint32_t layerz){
+  std::vector<GLuint> h{pixelx, pixely, layerz};
   m_points_hit.insert(m_points_hit.end(), h.begin(), h.end());
 }
 
@@ -226,6 +245,8 @@ void TelescopeGL::terminateGL(){
   if(m_vertexShader){glDeleteShader(m_vertexShader); m_vertexShader = 0;}
   for(int i=0; i<m_points_tel.size(); i++)
     if(m_uboLayers[i]){glDeleteBuffers(1, &m_uboLayers[i]); m_uboLayers[i] = 0;}
+  for(int i=0; i<m_points_tel.size(); i++)
+    if(m_uboLayers_hit[i]){glDeleteBuffers(1, &m_uboLayers_hit[i]); m_uboLayers_hit[i] = 0;}
   if(m_vao){glDeleteVertexArrays(1, &m_vao); m_vao = 0;}
   if(m_shaderProgram_hit){glDeleteProgram(m_shaderProgram_hit); m_shaderProgram_hit = 0;}
   if(m_fragmentShader_hit){glDeleteShader(m_fragmentShader_hit); m_fragmentShader_hit = 0;}
@@ -239,7 +260,7 @@ void TelescopeGL::terminateGL(){
 
 int main(){
   TelescopeGL tel;
-  tel.addTelLayer(0, 0, 0,   1, 0, 0, 0.028, 0.026, 1.0, 1024, 512);
+  tel.addTelLayer(0, 0, 0,   1, 1, 0, 0.028, 0.026, 1.0, 1024, 512);
   tel.addTelLayer(0, 0, 30,  0, 1, 0, 0.028, 0.026, 1.0, 1024, 512);
   tel.addTelLayer(0, 0, 60,  0, 0, 1, 0.028, 0.026, 1.0, 1024, 512);
   tel.addTelLayer(0, 0, 120, 1, 1, 0, 0.028, 0.026, 1.0, 1024, 512);
@@ -263,12 +284,12 @@ int main(){
       }  
     }
     tel.clearHit();
-    tel.addHit(0, 0, 0);
-    tel.addHit(0, 0, 30);
-    tel.addHit(0, 0, 60);
-    tel.addHit(0, 0, 120);
-    tel.addHit(0, 0, 150);
-    tel.addHit(0, 0, 180);
+    tel.addHit(100, 100, 0);
+    tel.addHit(200, 200, 1);
+    tel.addHit(300, 300, 2);
+    tel.addHit(500, 100, 3);
+    tel.addHit(500, 250, 4);
+    tel.addHit(500, 400, 5);
     
     tel.clearFrame();
     tel.drawTel();
