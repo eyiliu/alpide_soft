@@ -5,155 +5,193 @@ const GLchar* TelescopeGL::vertexShaderSrc = R"glsl(
 #version 150 core
 
 layout (std140) uniform UniformLayer{
-  vec3  positon; //
+  vec3  position; //
   vec3  color;  //
-  vec3  pitch;  // pitch_x pitch_y pitch_z/thick_z
+  vec3  pitch; 
   uvec3 npixel; // pixel_x pixel_y pixel_z/always1
-  mat4  miss_alignment;
+  mat4  trans;
 } layers[6];
 
-in int l;
-in vec3 pos;
-out vec3 vColor;
+in  int  l;
+out int  nl;
 
 void main(){
-  //gl_Position = vec4(layers[pos].pos, 1.0);
-  gl_Position = vec4(pos, 1.0);
-  //vColor =  vec3(1.0, 1.0, 0.0);
-if(l==0)
-    vColor = layers[0].color;
-else
-if(l==1)
-    vColor = layers[1].color;
-else
-if(l==2)
-    vColor = layers[2].color;
-else
-if(l==3)
-    vColor = layers[3].color;
-else
-if(l==4)
-    vColor = layers[4].color;
-else
-if(l==5)
-    vColor = layers[5].color;
-else
-    vColor = layers[2].color;
+  nl = l;
+  switch(l){
+  case 0:
+    gl_Position = vec4(layers[0].position, 1.0);
+    break;
+  case 1:
+    gl_Position = vec4(layers[1].position, 1.0);
+    break;
+  case 2:
+    gl_Position = vec4(layers[2].position, 1.0);
+    break;
+  case 3:
+    gl_Position = vec4(layers[3].position, 1.0);
+    break;
+  case 4:
+    gl_Position = vec4(layers[4].position, 1.0);
+    break;
+  case 5:
+    gl_Position = vec4(layers[5].position, 1.0);
+    break;
+  default:
+    gl_Position = vec4(layers[0].position, 1.0);
+    break;
+  }
+}
+)glsl";
 
+// // Geometry shader
+const GLchar* TelescopeGL::geometryShaderSrc = R"glsl(
+#version 150 core
+
+layout(points) in;
+layout(line_strip, max_vertices = 16) out;
+
+layout (std140) uniform UniformLayer{
+  vec3  position; //
+  vec3  color;    //
+  vec3  pitch;    // pitch_x pitch_y pitch_z/thick_z
+  uvec3 npixel;   // pixel_x pixel_y pixel_z/always1
+  mat4  trans;    // 
+} layers[6];
+
+in int nl[];
+out vec3 fColor;
+
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 proj;
+
+void main(){
+
+  vec3   pos;
+  vec3   color;
+  vec3   pitch;
+  uvec3  npixel;
+  mat4   trans;
+
+  switch(nl[0]){
+  case 0:
+    pos    = layers[0].position;
+    color  = layers[0].color;
+    pitch  = layers[0].pitch;
+    npixel = layers[0].npixel;
+    trans  = layers[0].trans;
+    break;
+  case 1:
+    pos    = layers[1].position;
+    color  = layers[1].color;
+    pitch  = layers[1].pitch;
+    npixel = layers[1].npixel;
+    trans  = layers[1].trans;
+    break;
+  case 2:
+    pos    = layers[2].position;
+    color  = layers[2].color;
+    pitch  = layers[2].pitch;
+    npixel = layers[2].npixel;
+    trans  = layers[2].trans;
+    break;
+  case 3:
+    pos    = layers[3].position;
+    color  = layers[3].color;
+    pitch  = layers[3].pitch;
+    npixel = layers[3].npixel;
+    trans  = layers[3].trans;
+    break;
+  case 4:
+    pos    = layers[4].position;
+    color  = layers[4].color;
+    pitch  = layers[4].pitch;
+    npixel = layers[4].npixel;
+    trans  = layers[4].trans;
+    break;
+  case 5:
+    pos    = layers[5].position;
+    color  = layers[5].color;
+    pitch  = layers[5].pitch;
+    npixel = layers[5].npixel;
+    trans  = layers[5].trans;
+    break;
+  default:
+    pos    = layers[0].position;
+    color  = layers[0].color;
+    pitch  = layers[0].pitch;
+    npixel = layers[0].npixel;
+    trans  = layers[0].trans;
+    break;
+  }
+  fColor = color;
+
+  vec4 gp = proj * view * model * vec4(pos, 1.0);
+  vec3 thick  = pitch.xyz * npixel.xyz;
+  //                                     N/S       U/D       E/W
+  //                                     X         Y         Z
+  vec4 NEU = proj * view * model * vec4( thick.x,  thick.y,  thick.z, 0.0);
+  vec4 NED = proj * view * model * vec4( thick.x,  0,        thick.z, 0.0);
+  vec4 NWU = proj * view * model * vec4( thick.x,  thick.y,  0,       0.0);
+  vec4 NWD = proj * view * model * vec4( thick.x,  0,        0,       0.0);
+  vec4 SEU = proj * view * model * vec4( 0,        thick.y,  thick.z, 0.0);
+  vec4 SED = proj * view * model * vec4( 0,        0,        thick.z, 0.0);
+  vec4 SWU = proj * view * model * vec4( 0,        thick.y,  0,       0.0);
+  vec4 SWD = proj * view * model * vec4( 0,        0,        0,       0.0);
+  gl_Position = gp + NED;
+  EmitVertex();
+  gl_Position = gp + NWD;
+  EmitVertex();
+  gl_Position = gp + SWD;
+  EmitVertex();
+  gl_Position = gp + SED;
+  EmitVertex();
+  gl_Position = gp + SEU;
+  EmitVertex();
+  gl_Position = gp + SWU;
+  EmitVertex();
+  gl_Position = gp + NWU;
+  EmitVertex();
+  gl_Position = gp + NEU;
+  EmitVertex();
+  gl_Position = gp + NED;
+  EmitVertex();
+  gl_Position = gp + SED;
+  EmitVertex();
+  gl_Position = gp + SEU;
+  EmitVertex();
+  gl_Position = gp + NEU;
+  EmitVertex();
+  gl_Position = gp + NWU;
+  EmitVertex();
+  gl_Position = gp + NWD;
+  EmitVertex();
+  gl_Position = gp + SWD;
+  EmitVertex();
+  gl_Position = gp + SWU;
+  EmitVertex();
+  EndPrimitive();
 
 }
 )glsl";
 
-// Geometry shader
-const GLchar* TelescopeGL::geometryShaderSrc = R"glsl(
-    #version 150 core
-
-    layout(points) in;
-    layout(line_strip, max_vertices = 16) out;
-
-    in vec3 vColor[];
-    out vec3 fColor;
-
-    uniform mat4 model;
-    uniform mat4 view;
-    uniform mat4 proj;
-
-    void main()
-    {
-        fColor = vColor[0];
-
-        vec4 gp = proj * view * model * gl_in[0].gl_Position;
-
-
-        // +X direction is "North", -X direction is "South"
-        // +Y direction is "Up",    -Y direction is "Down"
-        // +Z direction is "East",  -Z direction is "West"
-        //                                     N/S   U/D   E/W
-        //                                     X     Y     Z
-        vec4 NEU = proj * view * model * vec4( 15.0,  7.5,  1.1, 0.0);
-        vec4 NED = proj * view * model * vec4( 15.0, -7.5,  1.1, 0.0);
-        vec4 NWU = proj * view * model * vec4( 15.0,  7.5, -1.1, 0.0);
-        vec4 NWD = proj * view * model * vec4( 15.0, -7.5, -1.1, 0.0);
-        vec4 SEU = proj * view * model * vec4(-15.0,  7.5,  1.1, 0.0);
-        vec4 SED = proj * view * model * vec4(-15.0, -7.5,  1.1, 0.0);
-        vec4 SWU = proj * view * model * vec4(-15.0,  7.5, -1.1, 0.0);
-        vec4 SWD = proj * view * model * vec4(-15.0, -7.5, -1.1, 0.0);
-
-        // Create a cube centered on the given point.
-        gl_Position = gp + NED;
-        EmitVertex();
-
-        gl_Position = gp + NWD;
-        EmitVertex();
-
-        gl_Position = gp + SWD;
-        EmitVertex();
-
-        gl_Position = gp + SED;
-        EmitVertex();
-
-        gl_Position = gp + SEU;
-        EmitVertex();
-
-        gl_Position = gp + SWU;
-        EmitVertex();
-
-        gl_Position = gp + NWU;
-        EmitVertex();
-
-        gl_Position = gp + NEU;
-        EmitVertex();
-
-        gl_Position = gp + NED;
-        EmitVertex();
-
-        gl_Position = gp + SED;
-        EmitVertex();
-
-        gl_Position = gp + SEU;
-        EmitVertex();
-
-        gl_Position = gp + NEU;
-        EmitVertex();
-
-        gl_Position = gp + NWU;
-        EmitVertex();
-
-        gl_Position = gp + NWD;
-        EmitVertex();
-
-        gl_Position = gp + SWD;
-        EmitVertex();
-
-        gl_Position = gp + SWU;
-        EmitVertex();
-
-        EndPrimitive();
-
-    }
-)glsl";
-
-
 
 // Fragment shader
 const GLchar* TelescopeGL::fragmentShaderSrc = R"glsl(
-    #version 150 core
+#version 150 core
 
-    in vec3 fColor;
+in vec3 fColor;
 
-    out vec4 outColor;
+out vec4 outColor;
 
-    void main()
-    {
-        outColor = vec4(fColor, 1.0);
-    }
+void main(){
+  outColor = vec4(fColor, 1.0);
+}
 )glsl";
-
 
 
 
 ////////////////////////
-
 
 const GLchar* TelescopeGL::vertexShaderSrc_hit = R"glsl(
     #version 150 core
@@ -166,7 +204,6 @@ const GLchar* TelescopeGL::vertexShaderSrc_hit = R"glsl(
         vColor = vec3(0, 1, 0);
     }
 )glsl";
-
 
 
 const GLchar* TelescopeGL::geometryShaderSrc_hit = R"glsl(

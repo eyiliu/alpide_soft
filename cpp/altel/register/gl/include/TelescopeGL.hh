@@ -12,14 +12,12 @@ namespace sf{
   class Window;
 }
 
-
-struct UniformLayer
-{
-  GLfloat pos[4];   //vec3, pad
-  GLfloat color[4]; //vec3, pad
-  GLfloat pitch[4]; //pitch x,y, thick z, pad
-  GLint   npixel[4];//pixe number x, y, z/1, pad
-  GLfloat miss_alignment[16]; //mat4
+struct UniformLayer{
+  GLfloat pos[4]  {0,0,0,0}; //vec3, pad
+  GLfloat color[4]{0,1,0,0}; //vec3, pad
+  GLfloat pitch[4]{0.028, 0.026, 1, 0}; //pitch x,y, thick z, pad
+  GLint   npixel[4]{1024, 512,   1, 0};//pixe number x, y, z/1, pad
+  GLfloat miss_alignment[16]{1, 0, 0, 0,0, 1, 0, 0,0, 0, 1, 0,0, 0, 0, 1}; //mat4
 };
 
 class TelescopeGL{
@@ -29,7 +27,7 @@ public:
   glm::mat4 m_proj;
   std::unique_ptr<sf::Window> m_window;
   
-  UniformLayer m_uniLayers[6];
+  std::vector<UniformLayer> m_uniLayers;
   
   static const GLchar* vertexShaderSrc;
   static const GLchar* geometryShaderSrc;
@@ -39,14 +37,13 @@ public:
   GLuint m_fragmentShader{0};
   GLuint m_shaderProgram{0};
   GLuint m_vao{0};
-  GLuint m_vbo{0};
   GLuint m_vbo_tel{0};
-  GLuint m_uboLayers[6]{0,0,0,0,0,0};
   GLint m_uniModel{0};
   GLint m_uniView{0};
   GLint m_uniProj{0};
-  std::vector<GLfloat> m_points;
+  std::vector<GLuint> m_uboLayers;
   std::vector<GLint> m_points_tel;
+
   
   static const GLchar* vertexShaderSrc_hit;
   static const GLchar* geometryShaderSrc_hit;
@@ -68,10 +65,10 @@ public:
   void initializeGL();
   void terminateGL();
 
-  void addTelLayer(float hx, float hy, float hz, 
-                   float px, float py, float pz,
-                   float rx, float ry, float rz,
-                   float cr, float cg, float cb );
+  void addTelLayer(float    posx,     float posy,     float posz, 
+                   float    colorr,   float colorg,   float colorb, 
+                   float    pitchx,   float pitchy,   float thickz,
+                   uint32_t pixelx,   uint32_t pixely);
 
   
   void buildProgramTel();
