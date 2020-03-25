@@ -43,7 +43,6 @@ public:
   GLint m_uniProj{0};
   std::vector<GLuint> m_uboLayers;
   std::vector<GLint> m_points_tel;
-
   
   static const GLchar* vertexShaderSrc_hit;
   static const GLchar* geometryShaderSrc_hit;
@@ -57,7 +56,7 @@ public:
   GLint m_uniModel_hit{0};
   GLint m_uniView_hit{0};
   GLint m_uniProj_hit{0}; 
-  std::vector<GLuint> m_points_hit;
+  std::vector<GLint> m_points_hit;
   std::vector<GLuint> m_uboLayers_hit;
   
   TelescopeGL();
@@ -80,8 +79,8 @@ public:
   void drawTel();
   void drawHit();
 
-  void addHit(uint32_t px, uint32_t py, uint32_t pz);
-  void clearHit();  
+  void addHit(int32_t px, int32_t py, int32_t pz);
+  void clearHit();
   
   static GLuint createShader(GLenum type, const GLchar* src);  
 };

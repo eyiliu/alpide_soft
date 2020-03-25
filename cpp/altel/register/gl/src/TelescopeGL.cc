@@ -12,18 +12,16 @@ GLuint TelescopeGL::createShader(GLenum type, const GLchar* src) {
     GLuint shader = glCreateShader(type);
     glShaderSource(shader, 1, &src, nullptr);
     glCompileShader(shader);
-
+    
     GLint IsCompiled;
     glGetShaderiv(shader, GL_COMPILE_STATUS, &IsCompiled);
     if(IsCompiled == GL_FALSE){
       GLint maxLength;
-      glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);      
+      glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
       std::vector<GLchar> infoLog(maxLength, 0);
       glGetShaderInfoLog(shader, maxLength, &maxLength, infoLog.data());
-      std::fprintf(stderr, "ERROR, unable to create shader.\n%s\n", infoLog.data());
-      std::string code(src);
-      std::cout<<"=====(\n"<<code<<"\n)====="<<std::endl;
-      
+      std::fprintf(stderr, "ERROR is caucht at compile time of opengl GLSL.\n%s", infoLog.data());
+      std::fprintf(stderr, "==========problematic GLSL code below=======\n%s\n==========end of GLSL code===========\n", src);
       throw;
     }
     return shader;
@@ -61,11 +59,11 @@ TelescopeGL::TelescopeGL(){
   GLfloat win_high  = 400;
   
   m_model = glm::mat4(1.0f);
-    // auto t_now = std::chrono::high_resolution_clock::now();
-    // float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_now - t_start).count();
-    // model = glm::rotate(model,
-    //                     0.25f * time * glm::radians(180.0f),
-    //                     glm::vec3(0.0f, 0.0f, 1.0f));
+  // auto t_now = std::chrono::high_resolution_clock::now();
+  // float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_now - t_start).count();
+  // model = glm::rotate(model,
+  //                     0.25f * time * glm::radians(180.0f),
+  //                     glm::vec3(0.0f, 0.0f, 1.0f));
     
   m_view = glm::lookAt(glm::vec3(-300.0f, 0.0f, 90.0f),
                        glm::vec3(0.0f, 0.0f, 90.0f),
@@ -77,8 +75,7 @@ TelescopeGL::TelescopeGL(){
 }
 
 
-void TelescopeGL::initializeGL(){
-  
+void TelescopeGL::initializeGL(){ 
   sf::ContextSettings settings;
   settings.depthBits = 24;
   settings.stencilBits = 8;
@@ -87,19 +84,21 @@ void TelescopeGL::initializeGL(){
 
   GLfloat win_width = 1200;
   GLfloat win_high  = 400;
-  m_window = std::make_unique<sf::Window>(sf::VideoMode(win_width, win_high, 32), "Telescope", sf::Style::Titlebar | sf::Style::Close, settings);
-
+  m_window = std::make_unique<sf::Window>(sf::VideoMode(win_width, win_high, 32),
+                                          "TelescopeGL", sf::Style::Titlebar | sf::Style::Close, settings);
+  //glutInit(&argc, argv);
+  //glutCreateWindow("GLEW Test");
+  
   glewExperimental = GL_TRUE;
-  if (glewInit() != GLEW_OK){
-    std::fprintf(stderr, "glew error\n");
+  GLenum glew_return = glewInit();
+  if (glew_return != GLEW_OK){
+    std::fprintf(stderr, "ERROR is caucht at glewInit:  %s\n", glewGetErrorString(glew_return));
     throw;
   }
 }
 
-
 TelescopeGL::~TelescopeGL(){
-  terminateGL();
-  
+  terminateGL();  
 }
 
 void TelescopeGL::buildProgramTel(){
@@ -116,7 +115,6 @@ void TelescopeGL::buildProgramTel(){
   glUseProgram(m_shaderProgram);
   glGenVertexArrays(1, &m_vao);
   glBindVertexArray(m_vao);
-
 
   m_uboLayers.resize(m_points_tel.size());
   glGenBuffers(m_uboLayers.size(), m_uboLayers.data());
@@ -141,7 +139,6 @@ void TelescopeGL::buildProgramTel(){
   GLint posAttrib_tel = glGetAttribLocation(m_shaderProgram, "l");
   glEnableVertexAttribArray(posAttrib_tel);
   glVertexAttribIPointer(posAttrib_tel, 1, GL_INT, sizeof(GLint), 0);
-
   
   m_uniModel = glGetUniformLocation(m_shaderProgram, "model");
   m_uniView = glGetUniformLocation(m_shaderProgram, "view");
@@ -176,14 +173,13 @@ void TelescopeGL::buildProgramHit(){
   glEnableVertexAttribArray(posAttrib_hit);
   glVertexAttribIPointer(posAttrib_hit, 3,  GL_INT, 3 * sizeof(GLint), 0);
 
-
   m_uboLayers_hit.resize(m_points_tel.size());
   glGenBuffers(m_uboLayers_hit.size(), m_uboLayers_hit.data());
   GLint bindLayers = 8; // bind pointer
   for(GLint layern = 0; layern<m_points_tel.size(); layern++ ){
     std::string blockname = "UniformLayer["+std::to_string(layern)+"]";
-    GLint uniLayers_index = glGetUniformBlockIndex(m_shaderProgram, blockname.data()); 
-    glUniformBlockBinding(m_shaderProgram, uniLayers_index, bindLayers);
+    GLint uniLayers_index = glGetUniformBlockIndex(m_shaderProgram_hit, blockname.data()); 
+    glUniformBlockBinding(m_shaderProgram_hit, uniLayers_index, bindLayers);
     glBindBuffer(GL_UNIFORM_BUFFER, m_uboLayers_hit[layern]);
     glBufferData(GL_UNIFORM_BUFFER, 1 * sizeof(UniformLayer), NULL, GL_STATIC_DRAW);
     glBindBuffer(GL_UNIFORM_BUFFER, 0); //reset bind, need?
@@ -194,7 +190,6 @@ void TelescopeGL::buildProgramHit(){
     bindLayers ++ ; // bind pointer
   }
   
-
   m_uniModel_hit = glGetUniformLocation(m_shaderProgram_hit, "model");
   m_uniView_hit = glGetUniformLocation(m_shaderProgram_hit, "view");
   m_uniProj_hit = glGetUniformLocation(m_shaderProgram_hit, "proj");
@@ -209,15 +204,14 @@ void TelescopeGL::clearFrame(){
   glClear(GL_COLOR_BUFFER_BIT);
 }
 
-
 void TelescopeGL::drawTel(){
   glUseProgram(m_shaderProgram);
   glBindVertexArray(m_vao);
   glDrawArrays(GL_POINTS, 0, m_points_tel.size());
 }
 
-void TelescopeGL::addHit(uint32_t pixelx, uint32_t pixely, uint32_t layerz){
-  std::vector<GLuint> h{pixelx, pixely, layerz};
+void TelescopeGL::addHit(int32_t pixelx, int32_t pixely, int32_t layerz){
+  std::vector<GLint> h{pixelx, pixely, layerz};
   m_points_hit.insert(m_points_hit.end(), h.begin(), h.end());
 }
 
@@ -228,7 +222,7 @@ void TelescopeGL::clearHit(){
 void TelescopeGL::drawHit(){
   glUseProgram(m_shaderProgram_hit);
   glBindVertexArray(m_vao_hit);
-  glNamedBufferData(m_vbo_hit, sizeof(GLfloat)*m_points_hit.size(), m_points_hit.data(), GL_STATIC_DRAW);
+  glNamedBufferData(m_vbo_hit, sizeof(GLint)*m_points_hit.size(), m_points_hit.data(), GL_STATIC_DRAW);
   glDrawArrays(GL_POINTS, 0, m_points_hit.size()/3);  
 }
 
@@ -254,47 +248,6 @@ void TelescopeGL::terminateGL(){
   if(m_vertexShader_hit){glDeleteShader(m_vertexShader_hit); m_vertexShader_hit = 0;}
   if(m_vbo_hit){glDeleteBuffers(1, &m_vbo_hit); m_vbo_hit = 0;}
   if(m_vao_hit){glDeleteVertexArrays(1, &m_vao_hit); m_vao_hit = 0;}
-  if(m_window){m_window->close(); m_window.reset();}  
+  if(m_window){m_window->close(); m_window.reset();}
 }
 
-
-int main(){
-  TelescopeGL tel;
-  tel.addTelLayer(0, 0, 0,   1, 1, 0, 0.028, 0.026, 1.0, 1024, 512);
-  tel.addTelLayer(0, 0, 30,  0, 1, 0, 0.028, 0.026, 1.0, 1024, 512);
-  tel.addTelLayer(0, 0, 60,  0, 0, 1, 0.028, 0.026, 1.0, 1024, 512);
-  tel.addTelLayer(0, 0, 120, 1, 1, 0, 0.028, 0.026, 1.0, 1024, 512);
-  tel.addTelLayer(0, 0, 150, 0, 1, 1, 0.028, 0.026, 1.0, 1024, 512);
-  tel.addTelLayer(0, 0, 180, 1, 0, 1, 0.028, 0.026, 1.0, 1024, 512);
-  
-  tel.buildProgramTel();
-  tel.buildProgramHit();
-  
-  bool running = true;
-  while (running)
-  {
-    sf::Event windowEvent;
-    while (tel.m_window->pollEvent(windowEvent))
-    {
-      switch (windowEvent.type)
-      {
-      case sf::Event::Closed:
-        running = false;
-        break;
-      }  
-    }
-    tel.clearHit();
-    tel.addHit(100, 100, 0);
-    tel.addHit(200, 200, 1);
-    tel.addHit(300, 300, 2);
-    tel.addHit(500, 100, 3);
-    tel.addHit(500, 250, 4);
-    tel.addHit(500, 400, 5);
-    
-    tel.clearFrame();
-    tel.drawTel();
-    tel.drawHit();
-    tel.flushFrame();    
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  }
-}

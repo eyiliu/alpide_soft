@@ -261,7 +261,6 @@ int main(int argc, char **argv)
   glutInitWindowPosition(100, 100);
   glutCreateWindow("OpenGL - Telescope ALPIDE");
   initRendering();
-
   
   glutDisplayFunc(drawTelescope);
   glutReshapeFunc(handleResize);
