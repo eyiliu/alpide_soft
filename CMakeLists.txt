@@ -1,4 +1,8 @@
-project(alpide)
+project(alpide_soft)
+
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR}/INSTALL CACHE PATH "Default prefix of install directories" FORCE)
+endif()
 
 SET(ALPIDE_LIB_VERSION 1)
 
@@ -16,18 +20,14 @@ if(NOT CMAKE_BUILD_TYPE)
       "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
 endif(NOT CMAKE_BUILD_TYPE)
 
-set(ALPIDE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR} CACHE PATH "Prefix prepended to install directories")
-set(CMAKE_INSTALL_PREFIX ${ALPIDE_INSTALL_PREFIX} CACHE INTERNAL "Prefix of install directories" FORCE)
-
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  set(CMAKE_INSTALL_RPATH "@loader_path/../lib")
+  set(CMAKE_INSTALL_RPATH "@loader_path/../lib;@loader_path/../extern/lib")
 else()
-  set(CMAKE_INSTALL_RPATH "\$ORIGIN/../lib")
+  set(CMAKE_INSTALL_RPATH "\$ORIGIN/../lib:\$ORIGIN/../extern/lib")
 endif()
 set(CMAKE_SKIP_BUILD_RPATH  FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
 
 
 if(WIN32)
@@ -52,6 +52,15 @@ else()
   endif()
   list(APPEND CMAKE_SHARED_LINKER_FLAGS " -Wl,--no-undefined")
 endif()
+
+
+add_subdirectory(external)
+option(ALTEL_BUILD_ONLY_EXTERNAL "build only the external projects" OFF)
+if(ALTEL_BUILD_ONLY_EXTERNAL)
+  message("configured to build only the external projects")
+  return()
+endif()
+
 
 add_subdirectory(cpp)
 

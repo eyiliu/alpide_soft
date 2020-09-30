@@ -8,19 +8,35 @@ include_directories(include)
 
 aux_source_directory(src MODULE_SRC)
 
-find_package(eudaq CONFIG REQUIRED NO_DEFAULT_PATH)
-include_directories(${EUDAQ_INCLUDE_DIRS})
-add_subdirectory(exe)
+find_package(eudaq REQUIRED
+  COMPONENTS eudaq::core
+  OPTIONAL_COMPONENTS eudaq::lcio
+  CONFIG
+  PATHS ${CMAKE_INSTALL_PREFIX}
+  NO_DEFAULT_PATH
+  )
 
-list(FIND EUDAQ_LIBRARIES "eudaq_lcio" LCIO_FIND_POS)
-if(${LCIO_FIND_POS} EQUAL -1)
-  list(FILTER MODULE_SRC EXCLUDE REGEX "(.+)LCEventConverter(.+)")
+if(TARGET eudaq::lcio)
+  message(STATUS "Find eudaq::lcio, lcio converter is enabled in module eudaq_module_altel")
+else()
+  list(FILTER MODULE_SRC EXCLUDE REGEX "(.+)LCEventConverter(.+)")  
+  message(STATUS "Unable to find eudaq::lcio, lcio converter is disabled in module eudaq_module_altel")
 endif()
+
+add_library(eudaq_module_altel SHARED ${MODULE_SRC})
+if(TARGET eudaq::lcio)
+  set(EUDAQ_LIBRARIES eudaq::core eudaq::lcio)
+else()
+  set(EUDAQ_LIBRARIES eudaq::core)
+endif()
+
 
 set(EUDAQ_MODULE eudaq_module_jade)
 add_library(${EUDAQ_MODULE} SHARED ${MODULE_SRC})
 target_link_libraries(${EUDAQ_MODULE} ${EUDAQ_LIBRARIES} ${JADE_CORE_LIBRARY})
 set_property( TARGET ${EUDAQ_MODULE} APPEND PROPERTY INSTALL_RPATH ${EUDAQ_LIBRARIES_DIRS})
+
+add_subdirectory(exe)
 
 install(TARGETS
   ${EUDAQ_MODULE}
